@@ -138,7 +138,7 @@ export default function Home() {
 
           <a
             className='ml-auto inline-flex min-h-9 items-center justify-center gap-2 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs'
-            href='#private-access'
+            href='/signin?callbackUrl=%2Finvite'
           >
             Enter tournament
             <ArrowIcon />
@@ -175,7 +175,7 @@ export default function Home() {
             <div className='mt-7 flex flex-wrap items-center gap-3.5 max-phone:grid max-phone:grid-cols-1'>
               <a
                 className='inline-flex min-h-12.5 items-center justify-center gap-2.5 rounded-md bg-primary px-5.5 py-3.5 text-base font-bold text-primary-foreground shadow-xl shadow-primary/35 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full'
-                href='#private-access'
+                href='/signin?callbackUrl=%2Finvite'
               >
                 Enter tournament
                 <ArrowIcon />
@@ -244,9 +244,9 @@ export default function Home() {
               <span>Private tournament data stays behind sign-in.</span>
               <a
                 className='ml-auto inline-flex items-center gap-1.25 whitespace-nowrap font-semibold text-primary-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:ml-0'
-                href='#how-it-works'
+                href='/signin?callbackUrl=%2Finvite'
               >
-                See the flow
+                Sign in to continue
                 <ArrowIcon />
               </a>
             </div>

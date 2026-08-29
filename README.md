@@ -17,7 +17,7 @@ The MVP does not include public profiles, multiple tournaments, brackets, result
 
 ## Current state
 
-The Next.js, TypeScript, and Tailwind CSS scaffold exists. The responsive private-entry homepage now follows the Paper design language and the confirmed product scope. Product rules and implementation contracts are documented. Database, authentication, and tournament features have not yet been implemented.
+The responsive private-entry homepage follows the Paper design language and the confirmed product scope. Neon and Drizzle are connected, the schema migration is applied, and the first authentication and private-entry slice is implemented. Password reset, organizer invite controls, and player registration are next.
 
 ## Planned stack
 
@@ -36,9 +36,19 @@ Requirements:
 Install and run the current scaffold:
 
     pnpm install
+    cp .env.example .env.local
     pnpm dev
 
-Database and authentication environment variables will become required as their roadmap phases are implemented. See [environment variables](docs/ENV_VARIABLES.md) for the planned configuration.
+The database uses Neon PostgreSQL through Drizzle. Create a Neon project, copy its connection string into `DATABASE_URL` in `.env.local`, then generate and apply the first migration:
+
+    pnpm db:generate
+    pnpm db:migrate
+
+Create the organizer's account at `/register` using the same `ORGANIZER_EMAIL`, then initialize the one tournament and promote that account. The command prompts for the invite code and stores only its hash:
+
+    pnpm db:setup
+
+Set `AUTH_SECRET` and `ORGANIZER_EMAIL` before using authentication or running `pnpm db:setup`. Discord OAuth variables are optional until Discord sign-in is enabled. See [environment variables](docs/ENV_VARIABLES.md) for the full configuration.
 
 ## Documentation
 

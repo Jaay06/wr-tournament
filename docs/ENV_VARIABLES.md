@@ -1,11 +1,11 @@
 # Environment variables
 
-Create a local environment file from the project's example file when it is added. Never commit real credentials.
+Create a local environment file from the project's example file. Never commit real credentials.
 
 ## Required
 
-    # PostgreSQL
-    DATABASE_URL=postgresql://user:password@localhost:5432/wildrift_tournament
+    # Neon PostgreSQL
+    DATABASE_URL=postgresql://user:password@your-neon-host/neondb?sslmode=require
 
     # Application and authentication
     APP_URL=http://localhost:3000
@@ -43,3 +43,4 @@ Local development may use a protected console transport for reset links when SMT
 - ORGANIZER_EMAIL identifies the account promoted during controlled setup; it does not create a public organizer-registration path.
 - Secrets must remain server-only and must not use a public environment-variable prefix.
 - The tournament invite code belongs in the database as a hash, not in an environment variable.
+- Register the `ORGANIZER_EMAIL` account first, then run `pnpm db:setup` to initialize the singleton tournament and promote that account. The command prompts for the invite code instead of reading it from an environment variable.

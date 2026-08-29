@@ -7,18 +7,18 @@ The roadmap deliberately stops at the private friends-tournament experience. Bui
 - [x] Confirm the Paper design can be translated into the current Next.js application.
 - [x] Scaffold the Next.js application with TypeScript and Tailwind CSS.
 - [ ] Add shared UI primitives that follow the Paper design.
-- [ ] Add PostgreSQL and Drizzle ORM.
-- [ ] Create and run the initial migration.
-- [ ] Add seed or setup support for the singleton tournament and organizer.
+- [x] Add Neon PostgreSQL and Drizzle ORM.
+- [x] Create and run the initial migration against Neon.
+- [x] Add setup support for the singleton tournament and organizer.
 - [ ] Add automated checks for schema constraints and core validation rules.
 
 ## Phase 2: Authentication and private entry
 
-- [ ] Add Discord OAuth.
-- [ ] Add email and password registration and sign-in.
+- [x] Add Discord OAuth wiring.
+- [x] Add email and password registration and sign-in.
 - [ ] Add password-reset email flow.
-- [ ] Add secure sessions and route protection.
-- [ ] Add the private tournament invite flow.
+- [x] Add secure sessions and route protection.
+- [x] Add the private tournament invite flow.
 - [ ] Add organizer controls to close and replace the invite.
 
 Acceptance: a friend can authenticate and enter the tournament only with the active invite; an outsider cannot view tournament data.
