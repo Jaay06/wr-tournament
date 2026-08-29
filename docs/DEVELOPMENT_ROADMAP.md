@@ -1,31 +1,80 @@
-# Development Roadmap
+# Development roadmap
 
-## Phase 1 – MVP (Core)
+The roadmap deliberately stops at the private friends-tournament experience. Build and verify each slice before starting the next.
 
-- [ ] Project setup: Next.js, TypeScript, Tailwind, Drizzle, PostgreSQL.
-- [ ] Database schema & migrations.
-- [ ] Authentication (Discord OAuth + email/password).
-- [ ] Player registration and profile creation.
-- [ ] Admin tier review (approve/override).
-- [ ] Team creation, invite code, join by code, request to join.
-- [ ] Team composition validation (max 1 T1, max 2 T2, team size 5–7).
-- [ ] Admin team management (move players, override with warning).
-- [ ] Registration deadline enforcement (player actions locked after deadline).
-- [ ] Basic UI with tier colors and team builder.
-- [ ] Announcements (simple).
+## Phase 1: Foundation
 
-## Phase 2 – Polish & Community
+- [x] Confirm the Paper design can be translated into the current Next.js application.
+- [x] Scaffold the Next.js application with TypeScript and Tailwind CSS.
+- [ ] Add shared UI primitives that follow the Paper design.
+- [ ] Add PostgreSQL and Drizzle ORM.
+- [ ] Create and run the initial migration.
+- [ ] Add seed or setup support for the singleton tournament and organizer.
+- [ ] Add automated checks for schema constraints and core validation rules.
 
-- [ ] Team logos/avatars (upload).
-- [ ] CSV export.
-- [ ] Discord role sync (optional).
-- [ ] Email notifications (invite, tier approval).
-- [ ] Improve animations and UX micro-interactions.
-- [ ] Admin dashboard enhancements (filters, bulk actions).
+## Phase 2: Authentication and private entry
 
-## Phase 3 – Tournament Ops (Backlog)
+- [ ] Add Discord OAuth.
+- [ ] Add email and password registration and sign-in.
+- [ ] Add password-reset email flow.
+- [ ] Add secure sessions and route protection.
+- [ ] Add the private tournament invite flow.
+- [ ] Add organizer controls to close and replace the invite.
 
-- [ ] Bracket generation.
-- [ ] Match scheduling.
-- [ ] Result reporting.
-- [ ] Leaderboards.
+Acceptance: a friend can authenticate and enter the tournament only with the active invite; an outsider cannot view tournament data.
+
+## Phase 3: Registration and tier review
+
+- [ ] Build the player registration form.
+- [ ] Show the default T1–T4 rank mapping.
+- [ ] Build the participant registration-status view.
+- [ ] Build the organizer's pending tier-review queue.
+- [ ] Notify a participant when a tier is approved or adjusted.
+- [ ] Enforce registration edits and review resets.
+
+Acceptance: a participant can register, and the organizer can approve the tier used by roster validation.
+
+## Phase 4: Team formation
+
+- [ ] Create and browse draft teams.
+- [ ] Add captain ownership.
+- [ ] Add targeted team invitations.
+- [ ] Add team join requests.
+- [ ] Enforce one team per player and a seven-player maximum.
+- [ ] Build five starter slots and two substitute slots.
+- [ ] Show approved tiers and role preferences in the team room.
+
+Acceptance: friends can form a complete draft roster without violating membership or capacity rules.
+
+## Phase 5: Validation, submission, and deadline
+
+- [ ] Implement full-roster tier validation.
+- [ ] Show blocking errors separately from role warnings.
+- [ ] Add captain submission and submitted-team locking.
+- [ ] Enforce the deadline on every participant mutation.
+- [ ] Add organizer unlock and repair controls.
+- [ ] Revalidate teams after tier and membership changes.
+
+Acceptance: only a valid roster can be submitted before the deadline, and server-side checks cannot be bypassed.
+
+## Phase 6: Communication and polish
+
+- [ ] Add the announcement feed and organizer management.
+- [ ] Add direct in-app notifications and read state.
+- [ ] Complete responsive and keyboard behavior.
+- [ ] Add empty, loading, error, closed, and expired states.
+- [ ] Add reduced-motion support.
+- [ ] Run end-to-end tests for participant, captain, and organizer paths.
+- [ ] Perform deployment and security checks.
+
+Acceptance: the complete friend-group flow works on mobile and desktop and is ready for a private tournament.
+
+## Later only if the group asks
+
+- Team logos.
+- A second organizer.
+- Discord role synchronization.
+- Bracket-tool integration.
+- Match scheduling and results.
+
+These are not MVP commitments and should not shape the initial data model or interface.

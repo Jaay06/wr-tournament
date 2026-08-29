@@ -1,0 +1,384 @@
+<div id="wr-grill-round-2">
+  <style>
+    #wr-grill-round-2 {
+      display: grid;
+      gap: 18px;
+      color: var(--foreground);
+    }
+
+    #wr-grill-round-2 .grill-header,
+    #wr-grill-round-2 .grill-form,
+    #wr-grill-round-2 .grill-question {
+      display: grid;
+    }
+
+    #wr-grill-round-2 .grill-header {
+      gap: 4px;
+    }
+
+    #wr-grill-round-2 .grill-header > *,
+    #wr-grill-round-2 .grill-question > * {
+      margin: 0;
+    }
+
+    #wr-grill-round-2 .grill-form {
+      gap: 26px;
+    }
+
+    #wr-grill-round-2 .grill-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-grill-round-2 .grill-question legend {
+      padding: 0;
+      font-weight: 500;
+    }
+
+    #wr-grill-round-2 .grill-actions {
+      display: grid;
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-grill-round-2 .grill-answer-panel {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--background);
+    }
+
+    #wr-grill-round-2 .grill-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-grill-round-2 .grill-answer-code {
+      min-width: 0;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-grill-round-2 [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-grill-round-2 .viz-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #wr-grill-round-2 .grill-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="grill-header">
+    <h2>Round 2</h2>
+    <p class="text-muted">Choose one answer per question. My recommendations are selected. Your answer code updates automatically.</p>
+  </div>
+
+  <div class="grill-answer-panel">
+    <div class="grill-answer-row">
+      <div>
+        <p class="text-small text-muted">Current answer code</p>
+        <output class="grill-answer-code" data-answer-output aria-live="polite"></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small text-muted">When you finish choosing, copy this code and paste it into the chat. No typing required.</p>
+    <p class="text-small text-muted" data-status aria-live="polite"></p>
+  </div>
+
+  <form class="grill-form">
+    <fieldset class="grill-question">
+      <legend>Q10. Player records across tournaments</legend>
+      <p class="text-muted">Where should game identity and tournament-specific data live?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q10" value="A" data-answer="One global player profile stores everything" required>
+          <span class="form-check-label">A. One global player profile stores everything</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q10" value="B" data-answer="A persistent player profile plus a tournament registration snapshot" checked>
+          <span class="form-check-label">B. Persistent profile plus tournament snapshot <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q10" value="C" data-answer="Independent tournament registrations with no persistent player profile">
+          <span class="form-check-label">C. Independent tournament registrations only</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q11. Concurrent tournaments</legend>
+      <p class="text-muted">Can registration be open for multiple tournaments at once?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q11" value="A" data-answer="Only one tournament may accept registrations" required>
+          <span class="form-check-label">A. Only one open tournament</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q11" value="B" data-answer="Multiple tournaments may accept registrations concurrently">
+          <span class="form-check-label">B. Multiple open tournaments</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q11" value="C" data-answer="Support concurrency in the model but expose one public registration flow in the MVP" checked>
+          <span class="form-check-label">C. Model concurrency, expose one in MVP <span class="text-small text-muted">Recommended</span></span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q12. Team lifetime</legend>
+      <p class="text-muted">Does a team exist beyond one tournament?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q12" value="A" data-answer="Teams belong to one tournament and are recreated for later events" checked required>
+          <span class="form-check-label">A. Tournament-specific teams <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q12" value="B" data-answer="Teams persist permanently and change rosters">
+          <span class="form-check-label">B. Permanent teams with changing rosters</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q12" value="C" data-answer="Permanent team identities create separate tournament entries">
+          <span class="form-check-label">C. Permanent identity plus event entries</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q13. Admin management</legend>
+      <p class="text-muted">How should admin access be granted?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q13" value="A" data-answer="Roles are changed manually in the database" required>
+          <span class="form-check-label">A. Database changes only</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q13" value="B" data-answer="Super Admins promote and demote admins through the app" checked>
+          <span class="form-check-label">B. Super Admin manages roles in-app <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q13" value="C" data-answer="Any admin may invite another admin">
+          <span class="form-check-label">C. Any admin may add admins</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q14. Email account lifecycle</legend>
+      <p class="text-muted">What must email and password authentication include?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q14" value="A" data-answer="Email verification and password reset" checked required>
+          <span class="form-check-label">A. Verification and password reset <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q14" value="B" data-answer="Password reset without email verification">
+          <span class="form-check-label">B. Password reset only</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q14" value="C" data-answer="Neither verification nor password reset">
+          <span class="form-check-label">C. Neither</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q15. Account linking</legend>
+      <p class="text-muted">What happens when Discord and password accounts use the same email?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q15" value="A" data-answer="Link accounts automatically when emails match" required>
+          <span class="form-check-label">A. Link automatically</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q15" value="B" data-answer="Keep accounts separate until the signed-in user explicitly links them" checked>
+          <span class="form-check-label">B. Explicit linking by signed-in user <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q15" value="C" data-answer="Never allow account linking">
+          <span class="form-check-label">C. Never link accounts</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q16. Team captain</legend>
+      <p class="text-muted">Who controls a team?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q16" value="A" data-answer="The creator remains the permanent owner" required>
+          <span class="form-check-label">A. Permanent creator ownership</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q16" value="B" data-answer="One captain manages the team and may transfer captaincy" checked>
+          <span class="form-check-label">B. Transferable captaincy <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q16" value="C" data-answer="Every roster member may manage invites and requests">
+          <span class="form-check-label">C. Shared roster management</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q17. Tier limits and substitutes</legend>
+      <p class="text-muted">Do the T1 and T2 limits apply to substitutes?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q17" value="A" data-answer="Tier limits apply to the entire roster" checked required>
+          <span class="form-check-label">A. Limits cover the whole roster <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q17" value="B" data-answer="Tier limits apply only to the five starters">
+          <span class="form-check-label">B. Limits cover starters only</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q17" value="C" data-answer="Starters and substitutes have separate tier limits">
+          <span class="form-check-label">C. Separate limits</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q18. Pending tier review</legend>
+      <p class="text-muted">Can a player awaiting tier approval join a team?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q18" value="A" data-answer="No team actions until an admin approves the tier" required>
+          <span class="form-check-label">A. Block team actions</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q18" value="B" data-answer="Allow team actions using the self-assessed tier and keep the team pending" checked>
+          <span class="form-check-label">B. Allow provisional membership <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q18" value="C" data-answer="Allow team actions but count pending players as T1">
+          <span class="form-check-label">C. Count pending players as T1</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q19. In-game positions</legend>
+      <p class="text-muted">Should registration collect preferred roles?</p>
+      <div class="viz-grid">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q19" value="A" data-answer="Do not collect in-game role preferences" required>
+          <span class="form-check-label">A. Do not collect roles</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q19" value="B" data-answer="Collect optional primary and secondary role preferences" checked>
+          <span class="form-check-label">B. Optional primary and secondary roles <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q19" value="C" data-answer="Require a primary role and allow an optional secondary">
+          <span class="form-check-label">C. Require a primary role</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q19" value="D" data-answer="Assign every player a fixed team role">
+          <span class="form-check-label">D. Fixed team roles</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="grill-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to continue the grill.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-grill-round-2");
+      const form = root.querySelector("form");
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+      const questionKeys = ["q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18", "q19"];
+
+      const getSelected = () =>
+        questionKeys.map((key) => form.querySelector(`input[name="${key}"]:checked`));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "—").join(", ");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access; use the selection fallback below.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for Q${missing + 10}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small text-muted";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

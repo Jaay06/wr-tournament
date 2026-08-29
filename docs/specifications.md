@@ -1,71 +1,125 @@
-# Specifications
+# Wild Rift friends tournament specifications
 
-## Overview
+## Product goal
 
-The Wild Rift Tournament Web App facilitates player registration, tier assignment (reviewed by admins), team formation with composition rules, and tournament deadline enforcement.
+Build a private, lightweight web app where a group of friends can register for one Wild Rift tournament, agree on player tiers, form balanced teams, and submit their rosters. Match scheduling, brackets, live scores, and results remain in Discord or an external bracket tool.
 
-## User Roles
+## Product boundary
 
-### Player
+The MVP supports one tournament at a time. It is invite-only and has no public tournament pages, searchable player profiles, league management, or multi-tournament administration.
 
-- Register using Discord OAuth or email/password.
-- Create a player profile with Summoner Name, Region, Current Rank, and Self‑Assessed Tier.
-- Join or create a team (subject to tier rules).
-- View team composition and tournament announcements.
+## Roles
 
-### Admin
+### Participant
 
-- Review player tiers (approve or override self‑assessment).
-- Move players between teams.
-- Override team composition rules with warning.
-- Post announcements.
-- Export data to CSV.
+A participant may:
 
-### Super Admin
+- Join the tournament with its private invite.
+- Complete and edit a player registration before the deadline.
+- See other participants, approved tiers, role preferences, teams, and announcements.
+- Create or join one team.
+- Send team join requests and respond to team invitations.
+- Leave a draft team.
+- Submit a team when acting as its captain.
 
-- All admin capabilities.
-- Manage other admins (optional).
-- Edit tournament settings: tier definitions, team composition rules, registration deadline.
+### Organizer
 
-## Tier Definitions
+The organizer has all participant capabilities and may also:
 
-- **T1** = Sovereign – Challenger
-- **T2** = Grandmaster – Master
-- **T3** = Diamond
-- **T4** = Emerald and below
+- Configure the tournament name, region, and registration deadline.
+- Close or replace the tournament invite.
+- Approve or adjust player tiers.
+- Inspect and repair team rosters.
+- Unlock a submitted team.
+- Post and manage announcements.
 
-## Team Composition Rules
+There is one organizer role. The MVP has no Admin or Super Admin hierarchy.
 
-- Team size: **5–7 players** (adjustable by Super Admin).
-- Max **1 T1** player per team.
-- Max **2 T2** players per team.
-- No limit on T3 or T4 players (within team size).
-- Violations are blocked during normal team join/creation, but admins can override with a warning.
+## Access and authentication
 
-## Registration Flow
+Participants sign in with Discord or an email address and password. Email verification is not required. Email is used only for password recovery.
 
-1. Player signs up (Discord OAuth or email/password).
-2. Completes profile: Summoner Name, Region, Current Rank, Self‑Assessed Tier.
-3. Tier is marked `pending` until an admin reviews.
-4. Player can create a team or join an existing team via invite link/code or request to join an open team.
-5. Team composition is validated automatically.
-6. After registration deadline, no player can create/join/leave a team or change tier (admins can still edit).
+Signing in does not grant tournament access. A signed-in user must also enter the current private tournament invite link or code. The organizer may close or replace that invite.
 
-## Invite System
+## Player registration
 
-- Team creator can generate an invite link or code.
-- Invited players can accept or decline the invite.
-- Invites can be revoked by the team creator and may have an expiration (optional).
+A registration records:
 
-## Deadline Enforcement
+- Riot name and tag.
+- Current Wild Rift rank.
+- Self-assessed tier.
+- Organizer-approved tier.
+- Primary and secondary role preferences.
 
-- Super Admin sets a registration/team lock deadline.
-- After deadline, player actions (create team, join team, leave team, change tier) are disabled.
-- Admin overrides remain available.
-- Deadline can be extended by Super Admin.
+The tournament uses four tiers:
 
-## Edge Cases
+| Tier | Default rank range |
+|---|---|
+| T1 | Sovereign through Challenger |
+| T2 | Grandmaster through Master |
+| T3 | Diamond |
+| T4 | Emerald and below |
 
-- If a player’s tier is changed after joining a team and the team becomes invalid, the team is flagged; admin must resolve (override or move player).
-- A player can only be in one team at a time.
-- A team can have fewer than 5 players before deadline but is marked as incomplete.
+The organizer may adjust a player's tier. A participant may form or join a draft team while approval is pending, but that team cannot be submitted until every member has an approved tier.
+
+## Teams
+
+A participant may belong to only one team. The participant who creates a team becomes its captain.
+
+Captains may:
+
+- Invite registered friends.
+- Accept or decline join requests.
+- Assign members as starters or substitutes.
+- Arrange five starter slots.
+- Submit a valid roster before the deadline.
+
+A submitted roster must have:
+
+- Exactly five starters.
+- Zero, one, or two substitutes.
+- An approved tier for every member.
+- No more than one T1 player across the full roster.
+- No more than two T2 players across the full roster.
+
+There is no cap on T3 or T4 players.
+
+Starter slots display Baron, Jungle, Mid, Dragon, and Support. Missing or duplicated role preferences produce a warning but do not block submission.
+
+Submitting freezes the roster for participants. The organizer may unlock it or make a repair. Any change that makes a roster incomplete or invalid returns it to draft.
+
+## Deadline
+
+Before the registration deadline, participants may edit registrations and draft rosters. At the deadline:
+
+- New player registrations close.
+- Participant registration edits close.
+- Participant roster changes and team submissions close.
+- Submitted teams remain visible.
+- The organizer retains override access.
+
+The organizer may extend the deadline. Participant editing resumes only when the new deadline is in the future and the affected item is not otherwise locked.
+
+## Visibility and communication
+
+Tournament access is private. Any signed-in participant who has joined the tournament may see:
+
+- Registered participants.
+- Approved tiers and role preferences.
+- Teams, members, and submission state.
+- Tournament announcements.
+
+The app provides a simple announcement feed and in-app status notices. General conversation and match coordination happen in Discord. Email is used only for password reset.
+
+## Out of scope for the MVP
+
+- Multiple tournaments, seasons, or leagues.
+- Public pages or public player profiles.
+- Match scheduling, brackets, scores, standings, or results.
+- Waitlists, player drafts, or automated team balancing.
+- Rank screenshots, evidence uploads, smurf detection, appeals, or automated moderation.
+- Team branding and logo uploads.
+- Data exports and reporting suites.
+- Scheduled, translated, or multi-channel announcements.
+- Complex audit retention and account-deletion workflows.
+- Multiple organizer permission levels.

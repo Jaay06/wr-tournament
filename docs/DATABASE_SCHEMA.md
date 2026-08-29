@@ -1,116 +1,180 @@
-# Database Schema
+# Database schema
 
-PostgreSQL with Drizzle ORM. All tables have `id` as UUID primary key (default gen_random_uuid()).
+The MVP stores one active tournament. Tournament-specific tables therefore do not carry a tournament identifier. Supporting multiple tournaments later will require an explicit migration.
+
+## Enumerations
+
+- Account role: user, organizer
+- Tier: T1, T2, T3, T4
+- Tier status: pending, approved
+- Wild Rift role: Baron, Jungle, Mid, Dragon, Support
+- Team status: draft, submitted
+- Lineup position: starter, substitute
+- Request status: pending, accepted, declined, revoked
+- Notification status: unread, read
 
 ## Tables
 
 ### users
 
-| Column        | Type      | Constraints                   |
-| ------------- | --------- | ----------------------------- |
-| id            | uuid      | primary key                   |
-| email         | varchar   | unique, nullable              |
-| discord_id    | varchar   | unique, nullable              |
-| password_hash | varchar   | nullable (for email/password) |
-| username      | varchar   | unique, not null              |
-| avatar_url    | varchar   | nullable                      |
-| created_at    | timestamp | not null, default now()       |
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| email | Unique and nullable for Discord-only accounts |
+| discord_id | Unique and nullable for credentials-only accounts |
+| password_hash | Nullable; never stores a plain-text password |
+| display_name | Name shown inside the tournament |
+| avatar_url | Optional Discord or account avatar |
+| role | user or organizer |
+| created_at | Creation timestamp |
+| updated_at | Last update timestamp |
 
-### players
+A user must have either an email address or a Discord identity.
 
-| Column             | Type      | Constraints                       |
-| ------------------ | --------- | --------------------------------- |
-| id                 | uuid      | primary key                       |
-| user_id            | uuid      | foreign key -> users.id, unique   |
-| summoner_name      | varchar   | not null                          |
-| region             | varchar   | not null                          |
-| current_rank       | varchar   | not null (enum rank values)       |
-| self_assessed_tier | varchar   | not null (T1,T2,T3,T4)            |
-| assigned_tier      | varchar   | nullable, set by admin            |
-| tier_status        | varchar   | not null default 'pending'        |
-| team_id            | uuid      | foreign key -> teams.id, nullable |
-| created_at         | timestamp | not null default now()            |
-| updated_at         | timestamp | not null default now()            |
+### tournament_settings
+
+A singleton row containing the active tournament configuration.
+
+| Column | Notes |
+|---|---|
+| id | Primary key; the application permits one row |
+| name | Tournament name |
+| region | Organizer-selected Wild Rift region |
+| invite_code_hash | Hash of the current private invite code |
+| invite_enabled | Whether the current invite can be used |
+| registration_deadline | Registration and team-submission deadline |
+| updated_by | Organizer user reference |
+| updated_at | Last update timestamp |
+
+### tournament_participants
+
+Records which users have joined the private tournament.
+
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| user_id | Unique user reference |
+| joined_at | Join timestamp |
+
+Authentication alone does not create this row; a valid tournament invite does. Controlled organizer setup also creates this row for the organizer.
+
+### player_registrations
+
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| participant_id | Unique tournament participant reference |
+| riot_name | Riot game name |
+| riot_tag | Riot tag line |
+| current_rank | Current Wild Rift rank |
+| self_assessed_tier | T1 through T4 |
+| approved_tier | Nullable until reviewed |
+| tier_status | pending or approved |
+| primary_role | Preferred role |
+| secondary_role | Second preferred role |
+| created_at | Creation timestamp |
+| updated_at | Last update timestamp |
+
+Changing current rank or self-assessed tier returns tier status to pending.
 
 ### teams
 
-| Column     | Type      | Constraints             |
-| ---------- | --------- | ----------------------- |
-| id         | uuid      | primary key             |
-| name       | varchar   | unique, not null        |
-| logo_url   | varchar   | nullable                |
-| created_by | uuid      | foreign key -> users.id |
-| locked     | boolean   | not null default false  |
-| created_at | timestamp | not null default now()  |
-| updated_at | timestamp | not null default now()  |
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| name | Unique within the tournament |
+| status | draft or submitted |
+| submitted_at | Nullable submission timestamp |
+| created_at | Creation timestamp |
+| updated_at | Last update timestamp |
+
+### team_members
+
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| team_id | Team reference |
+| registration_id | Unique player registration reference |
+| is_captain | Whether this member manages the team |
+| lineup_position | starter or substitute |
+| starter_role | Nullable; one of the five starter slots |
+| joined_at | Membership timestamp |
+
+The unique registration reference enforces one team per player. The application must preserve exactly one captain per team. A database uniqueness constraint should prevent two starters on the same team from occupying the same starter role.
 
 ### team_invites
 
-| Column      | Type      | Constraints             |
-| ----------- | --------- | ----------------------- |
-| id          | uuid      | primary key             |
-| team_id     | uuid      | foreign key -> teams.id |
-| invite_code | varchar   | unique, not null        |
-| created_by  | uuid      | foreign key -> users.id |
-| expires_at  | timestamp | nullable                |
-| used        | boolean   | not null default false  |
-| created_at  | timestamp | not null default now()  |
+Invitations are addressed to an existing player registration.
+
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| team_id | Team reference |
+| invited_registration_id | Invited player registration |
+| invited_by_registration_id | Captain's player registration |
+| status | pending, accepted, declined, or revoked |
+| created_at | Creation timestamp |
+| responded_at | Nullable response timestamp |
+
+Only one pending invite may exist for the same player and team.
 
 ### team_join_requests
 
-| Column     | Type      | Constraints                |
-| ---------- | --------- | -------------------------- |
-| id         | uuid      | primary key                |
-| team_id    | uuid      | foreign key -> teams.id    |
-| player_id  | uuid      | foreign key -> players.id  |
-| status     | varchar   | not null default 'pending' |
-| created_at | timestamp | not null default now()     |
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| team_id | Requested team |
+| registration_id | Requesting player |
+| status | pending, accepted, declined, or revoked |
+| created_at | Creation timestamp |
+| responded_at | Nullable response timestamp |
+
+Only one pending request may exist for the same player and team.
 
 ### announcements
 
-| Column     | Type      | Constraints             |
-| ---------- | --------- | ----------------------- |
-| id         | uuid      | primary key             |
-| title      | varchar   | not null                |
-| body       | text      | not null                |
-| created_by | uuid      | foreign key -> users.id |
-| created_at | timestamp | not null default now()  |
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| title | Short heading |
+| body | Plain text or safely rendered rich text |
+| created_by | Organizer user reference |
+| created_at | Creation timestamp |
+| updated_at | Last update timestamp |
 
-### tournament_settings (single row)
+### notifications
 
-| Column                | Type      | Constraints                   |
-| --------------------- | --------- | ----------------------------- |
-| id                    | smallint  | primary key default 1         |
-| max_team_size         | int       | not null default 7            |
-| min_team_size         | int       | not null default 5            |
-| max_t1_per_team       | int       | not null default 1            |
-| max_t2_per_team       | int       | not null default 2            |
-| registration_deadline | timestamp | nullable                      |
-| tier_definitions      | jsonb     | not null (maps tier to ranks) |
-| updated_by            | uuid      | foreign key -> users.id       |
-| updated_at            | timestamp | not null default now()        |
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| user_id | Recipient user reference |
+| type | Application-defined event type |
+| message | Short in-app message |
+| status | unread or read |
+| created_at | Creation timestamp |
+| read_at | Nullable read timestamp |
 
-### admin_actions_log
+Notifications cover direct events such as tier review, team invitations, join-request decisions, submission, and organizer unlocks. They are not sent by email.
 
-| Column      | Type      | Constraints             |
-| ----------- | --------- | ----------------------- |
-| id          | uuid      | primary key             |
-| admin_id    | uuid      | foreign key -> users.id |
-| action_type | varchar   | not null                |
-| details     | jsonb     | not null                |
-| created_at  | timestamp | not null default now()  |
+### password_reset_tokens
 
-## Relationships
+| Column | Notes |
+|---|---|
+| id | Primary key |
+| user_id | User reference |
+| token_hash | Hash of the one-time reset token |
+| expires_at | Expiration timestamp |
+| used_at | Nullable consumption timestamp |
+| created_at | Creation timestamp |
 
-- User 1‑to‑1 Player (a user has exactly one player profile).
-- Player belongs to exactly one Team (nullable).
-- Team has many Players (via `team_id` on players).
-- Team has many TeamInvites, TeamJoinRequests.
-- Admin actions are logged in admin_actions_log.
+## Required constraints and transactions
 
-## Indexes
-
-- Unique index on players.user_id.
-- Index on players.team_id.
-- Index on teams.name.
-- Index on team_invites.invite_code.
+- A user may join the tournament once and register once.
+- A registration may belong to at most one team.
+- A team must have exactly one captain.
+- A submitted roster may contain no more than one T1 player and no more than two T2 players.
+- Team invite acceptance and join-request acceptance must recheck team capacity and one-team membership inside a transaction.
+- Team submission must validate the full roster and deadline inside a transaction.
+- Tier changes, member departures, and organizer repairs must revalidate affected submitted teams.
+- Invite codes and password-reset tokens are stored as hashes.
+- Foreign-key deletion behavior must preserve tournament history where practical and must not silently delete unrelated users.

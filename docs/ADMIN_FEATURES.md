@@ -1,45 +1,61 @@
-# Admin Features
+# Organizer features
 
-## Overview
+The MVP has one organizer role. It does not include Admin and Super Admin levels, permission matrices, or role-management screens.
 
-Admins can manage players, teams, and tournament settings. Super Admins have additional settings access.
+## Tournament setup
 
-## Tier Review
+The organizer can:
 
-- **Queue**: A list of players with `tier_status = 'pending'`.
-- For each player, display: Summoner Name, Rank, Self‑Assessed Tier, and optionally stats.
-- Actions:
-  - **Approve**: Set `assigned_tier` = self_assessed, `tier_status = 'approved'`.
-  - **Override**: Choose a different tier from dropdown, then approve.
-- Bulk actions: select multiple players and approve with their self‑assessed tier.
+- Set the tournament name.
+- Choose one Wild Rift region.
+- Set or extend the registration deadline.
+- View whether registration is open or closed.
+- Close, reopen, or replace the private tournament invite.
 
-## Team Management
+Replacing an invite invalidates the previous code but does not remove participants who already joined.
 
-- List all teams with member count, validity status (based on rules).
-- Clicking a team shows details and allows:
-  - Manually add/remove players (drag‑and‑drop optional).
-  - Override rule violations with a warning modal (reason optional, logged in `admin_actions_log`).
-- Ability to delete a team (if no players or after warning).
+## Tier review
+
+The organizer sees a queue of registrations awaiting review, including Riot ID, current rank, self-assessed tier, and role preferences.
+
+For each registration, the organizer can:
+
+- Approve the self-assessed tier.
+- Choose a different approved tier.
+- Reopen review if more information is needed.
+
+The app records the approved tier and review time. It does not collect rank screenshots, investigation notes, smurf evidence, or appeal records.
+
+If an approved tier changes, every affected team is revalidated. An invalid submitted team returns to draft and its captain is notified.
+
+## Team oversight
+
+The organizer can inspect all teams and see:
+
+- Captain and members.
+- Five starter slots and optional substitutes.
+- Approved tier totals.
+- Role coverage warnings.
+- Draft or submitted state.
+- Submission time.
+
+The organizer can unlock a submitted team or repair its membership and lineup. A repair must preserve one-team-per-player and seven-member capacity. The app revalidates the roster after every organizer change.
 
 ## Announcements
 
-- Create announcements with title and body.
-- They appear on player dashboard and landing page.
-- Can be edited or deleted.
+The organizer can create, edit, and delete simple tournament announcements. Announcements appear in one reverse-chronological feed for participants.
 
-## Settings (Super Admin)
+Scheduled publication, pinning, translation, email delivery, and Discord posting are outside the MVP.
 
-- **Team Size**: min and max (default 5–7).
-- **Tier Rules**: max T1 per team (default 1), max T2 per team (default 2).
-- **Registration Deadline**: date/time picker. Once passed, lock player actions.
-- **Tier Definitions**: map ranks to tiers (e.g., T1 = Sovereign–Challenger). Stored as JSON.
+## Dashboard summary
 
-## Export
+The organizer dashboard should show only actionable tournament information:
 
-- Export player list to CSV with columns: Username, Summoner Name, Region, Rank, Self Tier, Assigned Tier, Team.
-- Export team list with members and validity.
+- Time remaining until the deadline.
+- Number of joined participants.
+- Number of completed registrations.
+- Pending tier reviews.
+- Draft and submitted team counts.
+- Teams currently blocked from submission.
 
-## Audit Log
-
-- Log admin actions that override rules or change tiers/teams.
-- Viewable by super admins (optional).
+Exports, analytics suites, long-term audit reports, moderation queues, and multi-tournament switching are outside the MVP.

@@ -1,0 +1,359 @@
+<div id="wr-grill-round-6">
+  <style>
+    #wr-grill-round-6,
+    #wr-grill-round-6 .grill-header,
+    #wr-grill-round-6 .grill-form,
+    #wr-grill-round-6 .grill-questions,
+    #wr-grill-round-6 .grill-question,
+    #wr-grill-round-6 .grill-options,
+    #wr-grill-round-6 .grill-answer-panel,
+    #wr-grill-round-6 .grill-actions {
+      display: grid;
+    }
+
+    #wr-grill-round-6 {
+      gap: 18px;
+      color-scheme: light dark;
+      color: var(--foreground, CanvasText);
+    }
+
+    #wr-grill-round-6 .grill-header {
+      gap: 4px;
+    }
+
+    #wr-grill-round-6 .grill-header > *,
+    #wr-grill-round-6 .grill-question > *,
+    #wr-grill-round-6 .grill-answer-panel > * {
+      margin: 0;
+    }
+
+    #wr-grill-round-6 .grill-form,
+    #wr-grill-round-6 .grill-questions {
+      gap: 26px;
+    }
+
+    #wr-grill-round-6 .grill-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-grill-round-6 .grill-question legend {
+      padding: 0;
+    }
+
+    #wr-grill-round-6 .grill-options,
+    #wr-grill-round-6 .grill-answer-panel {
+      gap: 10px;
+    }
+
+    #wr-grill-round-6 .grill-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-grill-round-6 .grill-answer-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-grill-round-6 .grill-actions {
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-grill-round-6 [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-grill-round-6 .grill-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="grill-header">
+    <h2>Round 6</h2>
+    <p class="text-muted">Set event timing, lineup, review, privacy, and staff-operation rules. Recommendations are selected.</p>
+  </div>
+
+  <section class="card grill-answer-panel" aria-label="Current answers">
+    <div class="grill-answer-row">
+      <div>
+        <p class="text-small">Current answer code</p>
+        <output class="grill-answer-code" aria-live="polite"><code data-answer-output>A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A</code></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small">Choose your answers, copy the code, then paste it into the chat.</p>
+    <p class="text-small" data-status aria-live="polite"></p>
+  </section>
+
+  <form class="grill-form">
+    <div class="grill-questions">
+      <fieldset class="grill-question" data-question="68">
+        <legend>Q68. Event time zone</legend>
+        <p>How should tournament dates and deadlines be stored and displayed?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q68" value="A" required checked><span class="form-check-label">A. Give every tournament an IANA time zone, store instants in UTC, show the event time first, and also show the viewer's local equivalent <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q68" value="B"><span class="form-check-label">B. Show UTC everywhere</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q68" value="C"><span class="form-check-label">C. Show only the viewer's local time and do not store an event time zone</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="69">
+        <legend>Q69. Registration schedule</legend>
+        <p>How should registration opening and closing work with the explicit tournament lifecycle?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q69" value="A" required checked><span class="form-check-label">A. Store opening and closing times, gate player actions automatically, allow staff to pause registration, and audit every extension or manual transition <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q69" value="B"><span class="form-check-label">B. Automate the closing time only and open registration manually</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q69" value="C"><span class="form-check-label">C. Use manual lifecycle changes only and treat dates as display text</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="70">
+        <legend>Q70. Concurrent participation</legend>
+        <p>May one player enter multiple tournaments that overlap?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q70" value="A" required checked><span class="form-check-label">A. Yes. A player may have one registration and one team per tournament, including overlapping tournaments <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q70" value="B"><span class="form-check-label">B. No. A player may belong to only one active tournament at a time</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q70" value="C"><span class="form-check-label">C. Allow overlap only when the tournaments use different regions</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="71">
+        <legend>Q71. Submitted lineup roles</legend>
+        <p>How should the five starter slots use the fixed Baron, Jungle, Mid, Dragon, and Support roles?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q71" value="A" required checked><span class="form-check-label">A. Require exactly one starter in each role. Substitutes keep primary and secondary preferences but hold no starter slot until swapped in <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q71" value="B"><span class="form-check-label">B. Require five starters but allow duplicate or empty role assignments</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q71" value="C"><span class="form-check-label">C. Treat every role as an optional preference and do not validate the lineup</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="72">
+        <legend>Q72. Emergency substitutions after lock</legend>
+        <p>What roster change is allowed after registration locks or the tournament starts?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q72" value="A" required checked><span class="form-check-label">A. An Admin may swap a registered substitute into a starter role with a required reason, audit entry, and full revalidation. No new player may join after lock <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q72" value="B"><span class="form-check-label">B. The captain may swap starters and substitutes at any time without staff approval</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q72" value="C"><span class="form-check-label">C. Never allow a starter and substitute to swap after lock</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="73">
+        <legend>Q73. Duplicate Riot identity</legend>
+        <p>What happens when the same Riot ID and tag appear on more than one account or registration?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q73" value="A" required checked><span class="form-check-label">A. Create a private review flag and block eligibility, not account creation. An Admin must resolve the duplicate before either affected registration can compete <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q73" value="B"><span class="form-check-label">B. Reject the second account or registration automatically</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q73" value="C"><span class="form-check-label">C. Allow both without a review flag</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="74">
+        <legend>Q74. Tier review outcomes</legend>
+        <p>Which states should an event registration use during tier and evidence review?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q74" value="A" required checked><span class="form-check-label">A. Use pending, needs changes, approved, overridden, and rejected. Needs changes permits resubmission before the deadline, and every decision keeps its history <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q74" value="B"><span class="form-check-label">B. Use pending, approved, and rejected only</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q74" value="C"><span class="form-check-label">C. Let Admins edit evidence and player answers directly instead of returning them</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="75">
+        <legend>Q75. Team rule overrides</legend>
+        <p>How should an Admin-approved exception to team size or tier caps behave?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q75" value="A" required checked><span class="form-check-label">A. Scope it to one team and tournament, require a reason, show the roster an approved-exception state, expire it with the tournament, and log it <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q75" value="B"><span class="form-check-label">B. Make the reason optional and keep the exception hidden from players</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q75" value="C"><span class="form-check-label">C. Permit overrides only from Super Admins</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="76">
+        <legend>Q76. Staff audit trail</legend>
+        <p>Which staff activity should the app retain?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q76" value="A" required checked><span class="form-check-label">A. Keep an append-only record of staff changes and exports with actor, time, before and after values, and reason where required. Super Admins can view it, and records remain for two years <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q76" value="B"><span class="form-check-label">B. Log only rule overrides and moderation actions</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q76" value="C"><span class="form-check-label">C. Store editable staff notes for 90 days</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="77">
+        <legend>Q77. Account deletion</legend>
+        <p>What happens when a user deletes their account during an active tournament?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q77" value="A" required checked><span class="form-check-label">A. Accept the request at any time, sign the user out, withdraw active registrations, hide the profile, delete personal data after 30 days, and retain only anonymized audit and event records <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q77" value="B"><span class="form-check-label">B. Block deletion until every active tournament finishes</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q77" value="C"><span class="form-check-label">C. Require an Admin to process every deletion manually</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="78">
+        <legend>Q78. Player profile discovery</legend>
+        <p>How should the optional standalone player profile relate to signed-in roster visibility?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q78" value="A" required checked><span class="form-check-label">A. Let the player hide their standalone profile from discovery, but keep their identity, tier, roles, and team visible to signed-in participants in that tournament. Admins always retain access <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q78" value="B"><span class="form-check-label">B. Make every player profile and roster identity public</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q78" value="C"><span class="form-check-label">C. Show player identity only to Admins and teammates</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="79">
+        <legend>Q79. Team branding</legend>
+        <p>How should team logos and branding changes work?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q79" value="A" required checked><span class="form-check-label">A. Let captains upload a validated image and edit the team name or logo before submission. Admins may moderate or edit them later, and staff changes are audited <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q79" value="B"><span class="form-check-label">B. Accept an external logo URL and lock the team name at creation</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q79" value="C"><span class="form-check-label">C. Omit team logos from the MVP</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="80">
+        <legend>Q80. Tournament management authority</legend>
+        <p>Who may create tournaments and change their operational settings?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q80" value="A" required checked><span class="form-check-label">A. Admins may create and operate tournaments. Super Admins control publication, staff roles, the global tier map, and destructive or cross-tournament actions <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q80" value="B"><span class="form-check-label">B. Only Super Admins may create or edit tournaments</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q80" value="C"><span class="form-check-label">C. Give every Admin all tournament and global powers</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="81">
+        <legend>Q81. Completed tournament visibility</legend>
+        <p>What should happen to a tournament's page after it completes?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q81" value="A" required checked><span class="form-check-label">A. Keep a read-only public archive only when a Super Admin published that tournament. Unpublished events remain staff-only, and roster detail still requires sign-in <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q81" value="B"><span class="form-check-label">B. Publish every completed tournament automatically</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q81" value="C"><span class="form-check-label">C. Hide every completed tournament from players</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="82">
+        <legend>Q82. Team check-in</legend>
+        <p>Does the MVP need a separate check-in step before tournament play?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q82" value="A" required checked><span class="form-check-label">A. No. An eligible submitted team at registration lock counts as entered, and staff may withdraw a no-show later <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q82" value="B"><span class="form-check-label">B. Require the captain to check in during a 24-hour window</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q82" value="C"><span class="form-check-label">C. Require every starter and substitute to check in</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="83">
+        <legend>Q83. Announcement publishing</legend>
+        <p>What authoring states and targets should announcements support?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q83" value="A" required checked><span class="form-check-label">A. Support draft, scheduled, published, and withdrawn announcements; target one tournament or all users; allow pinning and an expiry; keep revision history <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q83" value="B"><span class="form-check-label">B. Publish immediately to one tournament with edit and delete only</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q83" value="C"><span class="form-check-label">C. Send announcements by email only and do not store them in the app</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="grill-question" data-question="84">
+        <legend>Q84. Staff exports</legend>
+        <p>Which tournament data may staff export?</p>
+        <div class="grill-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="q84" value="A" required checked><span class="form-check-label">A. Let Admins export event registrations and teams without email or evidence. Let Super Admins export contact emails separately. Log every export and never include screenshots or evidence hashes <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q84" value="B"><span class="form-check-label">B. Put profiles, emails, evidence metadata, and teams into one Admin CSV</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="q84" value="C"><span class="form-check-label">C. Allow exports only for Super Admins</span></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="grill-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to continue.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-grill-round-6");
+      const form = root.querySelector("form");
+      const questionFields = Array.from(form.querySelectorAll("fieldset[data-question]"));
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+
+      const getSelected = () =>
+        questionFields.map((field) => field.querySelector("input[type='radio']:checked"));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "?").join(", ");
+        status.textContent = "";
+        status.removeAttribute("role");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access. Use a selection fallback.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "absolute";
+        fallback.style.width = "1px";
+        fallback.style.height = "1px";
+        fallback.style.padding = "0";
+        fallback.style.border = "0";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for Q${questionFields[missing].dataset.question}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

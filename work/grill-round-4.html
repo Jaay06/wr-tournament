@@ -1,0 +1,420 @@
+<div id="wr-grill-round-4">
+  <style>
+    #wr-grill-round-4,
+    #wr-grill-round-4 .grill-header,
+    #wr-grill-round-4 .grill-form,
+    #wr-grill-round-4 .grill-questions,
+    #wr-grill-round-4 .grill-question,
+    #wr-grill-round-4 .grill-options,
+    #wr-grill-round-4 .grill-answer-panel,
+    #wr-grill-round-4 .grill-actions {
+      display: grid;
+    }
+
+    #wr-grill-round-4 {
+      gap: 18px;
+      color: var(--foreground);
+    }
+
+    #wr-grill-round-4 .grill-header {
+      gap: 4px;
+    }
+
+    #wr-grill-round-4 .grill-header > *,
+    #wr-grill-round-4 .grill-question > *,
+    #wr-grill-round-4 .grill-answer-panel > * {
+      margin: 0;
+    }
+
+    #wr-grill-round-4 .grill-form,
+    #wr-grill-round-4 .grill-questions {
+      gap: 26px;
+    }
+
+    #wr-grill-round-4 .grill-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-grill-round-4 .grill-question legend {
+      padding: 0;
+    }
+
+    #wr-grill-round-4 .grill-options,
+    #wr-grill-round-4 .grill-answer-panel {
+      gap: 10px;
+    }
+
+    #wr-grill-round-4 .grill-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-grill-round-4 .grill-answer-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-grill-round-4 .grill-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #wr-grill-round-4 .grill-actions {
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-grill-round-4 [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-grill-round-4 .grill-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="grill-header">
+    <h2>Round 4</h2>
+    <p class="text-muted">Set the operational rules opened by your last answers. Recommendations are selected.</p>
+  </div>
+
+  <section class="card grill-answer-panel" aria-label="Current answers">
+    <div class="grill-answer-row">
+      <div>
+        <p class="text-small">Current answer code</p>
+        <output class="grill-answer-code" aria-live="polite"><code data-answer-output></code></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small">Choose your answers, copy the code, then paste it into the chat.</p>
+    <p class="text-small" data-status aria-live="polite"></p>
+  </section>
+
+  <form class="grill-form">
+    <div class="grill-questions" data-questions></div>
+    <div class="grill-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to continue.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-grill-round-4");
+      const form = root.querySelector("form");
+      const questionsRoot = root.querySelector("[data-questions]");
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+
+      const questions = [
+        {
+          id: 33,
+          title: "Tier mapping changes",
+          prompt: "You chose the docs mapping as one global rule. Can admins change it?",
+          recommended: "A",
+          options: [
+            ["A", "No. Remove tier mapping controls from admin settings and change the rule only through a documented release"],
+            ["B", "Yes. A change immediately revalidates every active team"],
+            ["C", "Yes, but only between tournaments. Historical registrations keep the mapping used when they entered"]
+          ]
+        },
+        {
+          id: 34,
+          title: "Region list",
+          prompt: "Who controls the region values that players choose?",
+          recommended: "A",
+          options: [
+            ["A", "A Super Admin selects allowed regions per tournament from a controlled list"],
+            ["B", "Every tournament uses one fixed global region list"],
+            ["C", "Players enter any region as free text"]
+          ]
+        },
+        {
+          id: 35,
+          title: "Unverified account lifetime",
+          prompt: "You allowed full access before email verification. What happens if the user never verifies?",
+          recommended: "B",
+          options: [
+            ["A", "Nothing. Full access continues forever and verification remains a banner"],
+            ["B", "Give 24 hours of full access, then block tournament and team writes until verification"],
+            ["C", "Remove email verification and keep password reset only"]
+          ]
+        },
+        {
+          id: 36,
+          title: "Pending players and roster submission",
+          prompt: "A tier review may remain pending after the deadline. How can that team meet the captain submission rule?",
+          recommended: "A",
+          options: [
+            ["A", "Allow a provisional submission. Admin approval after the deadline activates it if the frozen roster is valid"],
+            ["B", "Block submission until every tier is approved. Unresolved teams miss the deadline"],
+            ["C", "Let an admin create a late submission after resolving reviews"]
+          ]
+        },
+        {
+          id: 37,
+          title: "Editing a submitted roster",
+          prompt: "How should a captain change a roster that was already submitted?",
+          recommended: "A",
+          options: [
+            ["A", "Require an Unlock roster action. The team returns to draft and must be submitted again"],
+            ["B", "Allow edits and silently remove the submission"],
+            ["C", "Keep the team submitted while edits are made"]
+          ]
+        },
+        {
+          id: 38,
+          title: "Tournament capacity",
+          prompt: "What should the configurable participant cap count?",
+          recommended: "A",
+          options: [
+            ["A", "Submitted teams"],
+            ["B", "Individual player registrations"],
+            ["C", "Nothing. Do not enforce a hard cap"]
+          ]
+        },
+        {
+          id: 39,
+          title: "Moderation model",
+          prompt: "What kinds of bans must admins control?",
+          recommended: "A",
+          options: [
+            ["A", "Global account suspension and per-tournament disqualification, each with a reason, expiry, and audit record"],
+            ["B", "Global account suspension only"],
+            ["C", "Per-tournament disqualification only"]
+          ]
+        },
+        {
+          id: 40,
+          title: "Rank evidence",
+          prompt: "What evidence should support tier review and rank history?",
+          recommended: "A",
+          options: [
+            ["A", "Require Riot ID and tag plus a current profile screenshot for each tournament. Admins verify and retain a history"],
+            ["B", "Make screenshots optional and rely mainly on the player's declaration"],
+            ["C", "Collect text declarations only"]
+          ]
+        },
+        {
+          id: 41,
+          title: "Automated smurf detection",
+          prompt: "The official API catalog has no Wild Rift player API. What may automation do?",
+          recommended: "A",
+          sources: [
+            ["Official Riot API catalog", "https://developer.riotgames.com/apis/"],
+            ["Riot general policy", "https://developer.riotgames.com/policies/general"]
+          ],
+          options: [
+            ["A", "Create review flags from internal evidence and duplicate signals. An admin decides every action and automation never bans"],
+            ["B", "Scrape unsupported third-party data and automatically ban accounts above a risk score"],
+            ["C", "Block the product launch until Riot offers an official Wild Rift API or approved sign-on access"]
+          ]
+        },
+        {
+          id: 42,
+          title: "Localization model",
+          prompt: "What does multilingual support cover?",
+          recommended: "A",
+          options: [
+            ["A", "Human-translated UI and event content, a user locale chooser, and English fallback for missing strings"],
+            ["B", "Translated event content only. Keep the app UI in English"],
+            ["C", "Use browser or machine translation instead of maintained locale files"]
+          ]
+        },
+        {
+          id: 43,
+          title: "Notification channels",
+          prompt: "Which channels belong in the MVP?",
+          recommended: "A",
+          options: [
+            ["A", "Email and in-app notifications. Do not add a Discord bot"],
+            ["B", "Email, in-app notifications, and Discord bot direct messages"],
+            ["C", "In-app notifications only"]
+          ]
+        },
+        {
+          id: 44,
+          title: "Tournament streams",
+          prompt: "How should stream information appear?",
+          recommended: "A",
+          options: [
+            ["A", "Allow zero or more labeled external stream links. Do not autoplay or embed them"],
+            ["B", "Allow one embedded stream per tournament"],
+            ["C", "Autoplay stream embeds on the landing page"]
+          ]
+        },
+        {
+          id: 45,
+          title: "Captain transfer",
+          prompt: "Does the next captain have to accept the role?",
+          recommended: "A",
+          options: [
+            ["A", "Yes. Send a transfer request and keep the current captain until acceptance"],
+            ["B", "No. The captain may assign any teammate immediately"],
+            ["C", "Only admins may transfer captaincy"]
+          ]
+        },
+        {
+          id: 46,
+          title: "In-game role vocabulary",
+          prompt: "Which values may players choose for optional primary and secondary roles?",
+          recommended: "A",
+          options: [
+            ["A", "Use the five fixed roles: Baron, Jungle, Mid, Dragon, and Support. Primary and secondary must differ"],
+            ["B", "Allow free-text role names"],
+            ["C", "Let each tournament define custom roles"]
+          ]
+        },
+        {
+          id: 47,
+          title: "Public tournament selection",
+          prompt: "The model supports concurrent tournaments, but the MVP exposes one. How is that one chosen?",
+          recommended: "A",
+          options: [
+            ["A", "A Super Admin explicitly publishes one featured tournament. Other tournament records remain admin-only"],
+            ["B", "Automatically show whichever open tournament has the nearest deadline"],
+            ["C", "Launch with a public index of every tournament"]
+          ]
+        }
+      ];
+
+      const createQuestion = (question) => {
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "grill-question";
+
+        const legend = document.createElement("legend");
+        legend.textContent = `Q${question.id}. ${question.title}`;
+        fieldset.append(legend);
+
+        const prompt = document.createElement("p");
+        prompt.className = "text-muted";
+        prompt.textContent = question.prompt;
+        fieldset.append(prompt);
+
+        if (question.sources != null) {
+          const sources = document.createElement("p");
+          sources.className = "grill-sources text-small text-muted";
+          question.sources.forEach(([label, url]) => {
+            const link = document.createElement("a");
+            link.href = url;
+            link.textContent = label;
+            sources.append(link);
+          });
+          fieldset.append(sources);
+        }
+
+        const options = document.createElement("div");
+        options.className = "grill-options";
+
+        question.options.forEach(([value, labelText]) => {
+          const label = document.createElement("label");
+          label.className = "form-check";
+
+          const input = document.createElement("input");
+          input.className = "form-check-input";
+          input.type = "radio";
+          input.name = `q${question.id}`;
+          input.value = value;
+          input.required = true;
+          input.checked = value === question.recommended;
+
+          const textLabel = document.createElement("span");
+          textLabel.className = "form-check-label";
+          textLabel.textContent = `${value}. ${labelText}`;
+
+          if (value === question.recommended) {
+            const recommendation = document.createElement("span");
+            recommendation.className = "text-small text-muted";
+            recommendation.textContent = " Recommended";
+            textLabel.append(recommendation);
+          }
+
+          label.append(input, textLabel);
+          options.append(label);
+        });
+
+        fieldset.append(options);
+        return fieldset;
+      };
+
+      questions.forEach((question) => questionsRoot.append(createQuestion(question)));
+
+      const getSelected = () =>
+        questions.map((question) => form.querySelector(`input[name="q${question.id}"]:checked`));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "?").join(", ");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access. Use a selection fallback.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for Q${questions[missing].id}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

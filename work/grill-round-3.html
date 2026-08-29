@@ -1,0 +1,425 @@
+<div id="wr-grill-round-3">
+  <style>
+    #wr-grill-round-3,
+    #wr-grill-round-3 .grill-header,
+    #wr-grill-round-3 .grill-form,
+    #wr-grill-round-3 .grill-question,
+    #wr-grill-round-3 .grill-options,
+    #wr-grill-round-3 .grill-answer-panel,
+    #wr-grill-round-3 .grill-actions {
+      display: grid;
+    }
+
+    #wr-grill-round-3 {
+      gap: 18px;
+      color: var(--foreground);
+    }
+
+    #wr-grill-round-3 .grill-header {
+      gap: 4px;
+    }
+
+    #wr-grill-round-3 .grill-header > *,
+    #wr-grill-round-3 .grill-question > *,
+    #wr-grill-round-3 .grill-answer-panel > * {
+      margin: 0;
+    }
+
+    #wr-grill-round-3 .grill-form {
+      gap: 26px;
+    }
+
+    #wr-grill-round-3 .grill-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-grill-round-3 .grill-question legend {
+      padding: 0;
+    }
+
+    #wr-grill-round-3 .grill-options,
+    #wr-grill-round-3 .grill-answer-panel {
+      gap: 10px;
+    }
+
+    #wr-grill-round-3 .grill-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-grill-round-3 .grill-answer-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-grill-round-3 .grill-actions {
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-grill-round-3 [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-grill-round-3 .grill-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="grill-header">
+    <h2>Round 3</h2>
+    <p class="text-muted">Resolve the remaining model conflicts. Recommendations are selected.</p>
+  </div>
+
+  <section class="card grill-answer-panel" aria-label="Current answers">
+    <div class="grill-answer-row">
+      <div>
+        <p class="text-small text-muted">Current answer code</p>
+        <output class="grill-answer-code" aria-live="polite"><code data-answer-output></code></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small text-muted">Choose your answers, copy the code, then paste it into the chat.</p>
+    <p class="text-small text-muted" data-status aria-live="polite"></p>
+  </section>
+
+  <form class="grill-form">
+    <fieldset class="grill-question">
+      <legend>Q20. Tier rules</legend>
+      <p class="text-muted">What should resolve the rank mapping conflict between the docs and the Paper design?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q20" value="A" required>
+          <span class="form-check-label">A. Use the docs mapping globally: T1 Sovereign/Challenger, T2 Grandmaster/Master, T3 Diamond, T4 Emerald and below</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q20" value="B">
+          <span class="form-check-label">B. Use the Paper mapping globally: T1 Challenger/Master, T2 Diamond/Emerald I, T3 Platinum/Emerald II-IV, T4 Gold and below</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q20" value="C" checked>
+          <span class="form-check-label">C. Store a mapping per tournament and seed new tournaments with the docs mapping <span class="text-small text-muted">Recommended</span></span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q21. Registration snapshots</legend>
+      <p class="text-muted">After a player registers, how should rank and self-assessed tier edits behave?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q21" value="A" required>
+          <span class="form-check-label">A. Freeze the snapshot at registration</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q21" value="B" checked>
+          <span class="form-check-label">B. Allow edits until the deadline; rank or tier edits reopen review and revalidate the team <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q21" value="C">
+          <span class="form-check-label">C. Always mirror the persistent profile, including after the tournament</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q22. Region enforcement</legend>
+      <p class="text-muted">How should a team's region constrain its roster?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q22" value="A" checked required>
+          <span class="form-check-label">A. Each registration chooses a region; the team inherits its creator's region and only matching players may join <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q22" value="B">
+          <span class="form-check-label">B. The captain chooses a team region, but mixed-region rosters are allowed</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q22" value="C">
+          <span class="form-check-label">C. Region is only a display and search filter</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q23. Team name uniqueness</legend>
+      <p class="text-muted">Tournament-specific teams make the current global uniqueness rule questionable.</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q23" value="A" required>
+          <span class="form-check-label">A. Keep team names unique across all tournaments</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q23" value="B" checked>
+          <span class="form-check-label">B. Require uniqueness only within one tournament <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q23" value="C">
+          <span class="form-check-label">C. Allow duplicate names in the same tournament</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q24. Captain departure</legend>
+      <p class="text-muted">What happens when a captain wants to leave?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q24" value="A" checked required>
+          <span class="form-check-label">A. A captain with teammates must transfer captaincy first; a solo captain may disband; admins may transfer at any time <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q24" value="B">
+          <span class="form-check-label">B. Automatically promote the longest-serving teammate</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q24" value="C">
+          <span class="form-check-label">C. Let the team remain without a captain until an admin intervenes</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q25. Pending reviews at the deadline</legend>
+      <p class="text-muted">What happens when a roster still contains a player awaiting tier approval?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q25" value="A" checked required>
+          <span class="form-check-label">A. Keep the registration and team ineligible until an admin resolves the review, including after the deadline <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q25" value="B">
+          <span class="form-check-label">B. Auto-approve the player's self-assessed tier at the deadline</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q25" value="C">
+          <span class="form-check-label">C. Count every pending player as T1</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q26. Unverified email accounts</legend>
+      <p class="text-muted">What may an email and password user do before verifying their address?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q26" value="A" checked required>
+          <span class="form-check-label">A. Sign in and read public/account pages, but block registration and team actions until verified <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q26" value="B">
+          <span class="form-check-label">B. Block sign-in until verification</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q26" value="C">
+          <span class="form-check-label">C. Grant full access before verification</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q27. Same-email Discord sign-in</legend>
+      <p class="text-muted">Explicit linking means an OAuth login must not silently claim an existing credentials account.</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q27" value="A" checked required>
+          <span class="form-check-label">A. Block duplicate account creation and ask the user to sign in with the existing method, then link Discord in settings <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q27" value="B">
+          <span class="form-check-label">B. Create a separate account with the same email</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q27" value="C">
+          <span class="form-check-label">C. Link the Discord identity automatically</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q28. First Super Admin</legend>
+      <p class="text-muted">How should production bootstrap its first privileged account?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q28" value="A" checked required>
+          <span class="form-check-label">A. Seed one explicit email or Discord ID through deployment configuration or a setup command, then manage roles in-app <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q28" value="B">
+          <span class="form-check-label">B. Promote the first registered account automatically</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q28" value="C">
+          <span class="form-check-label">C. Require manual database edits for every admin</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q29. Public team summaries</legend>
+      <p class="text-muted">Which information should unauthenticated visitors see?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q29" value="A" checked required>
+          <span class="form-check-label">A. Team name, logo, region, member count, and validity; require sign-in for roster names, tiers, and role preferences <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q29" value="B">
+          <span class="form-check-label">B. Also show roster names and tiers publicly</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q29" value="C">
+          <span class="form-check-label">C. Publish a full player directory</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q30. Final roster entry</legend>
+      <p class="text-muted">Does a valid team need an explicit final submission?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q30" value="A" required>
+          <span class="form-check-label">A. Treat every valid team as eligible automatically when the deadline passes</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q30" value="B" checked>
+          <span class="form-check-label">B. Require the captain to submit; allow unlock, edits, and resubmission until the deadline <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q30" value="C">
+          <span class="form-check-label">C. Let admins submit every team manually</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q31. Paper-only operational scope</legend>
+      <p class="text-muted">The design adds bans, rank history, participant caps, reminders, streams, automated smurf detection, and languages. What belongs in the production MVP?</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q31" value="A" checked required>
+          <span class="form-check-label">A. Include admin bans, evidence-based rank history, a configurable team cap, email reminders, and stream links; keep an English-only UI and defer automated smurf detection <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q31" value="B">
+          <span class="form-check-label">B. Include everything shown, including automated smurf detection and a multilingual UI</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q31" value="C">
+          <span class="form-check-label">C. Treat all of it as Phase 2 and keep the current MVP scope</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="grill-question">
+      <legend>Q32. Prize and event content</legend>
+      <p class="text-muted">The mobile and desktop designs currently show different prize amounts and currencies.</p>
+      <div class="grill-options">
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q32" value="A" checked required>
+          <span class="form-check-label">A. Configure prize amount, currency, and display text per tournament; hard-code neither value <span class="text-small text-muted">Recommended</span></span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q32" value="B">
+          <span class="form-check-label">B. Use ₦100,000 everywhere</span>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" type="radio" name="q32" value="C">
+          <span class="form-check-label">C. Use $2,500 everywhere</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="grill-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to continue.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-grill-round-3");
+      const form = root.querySelector("form");
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+      const questionKeys = ["q20", "q21", "q22", "q23", "q24", "q25", "q26", "q27", "q28", "q29", "q30", "q31", "q32"];
+
+      const getSelected = () =>
+        questionKeys.map((key) => form.querySelector(`input[name="${key}"]:checked`));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "?").join(", ");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access; use a selection fallback.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for Q${missing + 20}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small text-muted";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

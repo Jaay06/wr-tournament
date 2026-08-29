@@ -1,0 +1,209 @@
+<div id="wr-grill-round-5">
+  <style>
+    #wr-grill-round-5,
+    #wr-grill-round-5 .grill-header,
+    #wr-grill-round-5 .grill-form,
+    #wr-grill-round-5 .grill-questions,
+    #wr-grill-round-5 .grill-question,
+    #wr-grill-round-5 .grill-options,
+    #wr-grill-round-5 .grill-answer-panel,
+    #wr-grill-round-5 .grill-actions {
+      display: grid;
+    }
+
+    #wr-grill-round-5 {
+      gap: 18px;
+      color-scheme: light dark;
+      color: var(--foreground, CanvasText);
+    }
+
+    #wr-grill-round-5 .grill-header {
+      gap: 4px;
+    }
+
+    #wr-grill-round-5 .grill-header > *,
+    #wr-grill-round-5 .grill-question > *,
+    #wr-grill-round-5 .grill-answer-panel > * {
+      margin: 0;
+    }
+
+    #wr-grill-round-5 .grill-form,
+    #wr-grill-round-5 .grill-questions {
+      gap: 26px;
+    }
+
+    #wr-grill-round-5 .grill-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-grill-round-5 .grill-question legend {
+      padding: 0;
+    }
+
+    #wr-grill-round-5 .grill-options,
+    #wr-grill-round-5 .grill-answer-panel {
+      gap: 10px;
+    }
+
+    #wr-grill-round-5 .grill-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-grill-round-5 .grill-answer-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-grill-round-5 .grill-sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #wr-grill-round-5 .grill-actions {
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-grill-round-5 [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-grill-round-5 .grill-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="grill-header">
+    <h2>Round 5</h2>
+    <p class="text-muted">Set queue, moderation, evidence, lifecycle, and team interaction rules. Recommendations are selected.</p>
+  </div>
+
+  <section class="card grill-answer-panel" aria-label="Current answers">
+    <div class="grill-answer-row">
+      <div>
+        <p class="text-small">Current answer code</p>
+        <output class="grill-answer-code" aria-live="polite"><code data-answer-output>A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A, A</code></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small">Choose your answers, copy the code, then paste it into the chat.</p>
+    <p class="text-small" data-status aria-live="polite"></p>
+  </section>
+
+  <form class="grill-form">
+    <div class="grill-questions" data-questions>
+      <fieldset class="grill-question" data-question="48"><legend>Q48. Global tier change impact</legend><p>An admin changes the global rank mapping and a submitted active team becomes invalid. What happens?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q48" value="A" required="" checked=""><span class="form-check-label">A. Mark the submission invalid, preserve its roster and submission timestamp, notify both sides, and require a captain fix before the deadline or an admin resolution after it<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q48" value="B" required=""><span class="form-check-label">B. Keep the old mapping for every already submitted team</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q48" value="C" required=""><span class="form-check-label">C. Automatically remove whichever player causes the new violation</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="49"><legend>Q49. Fixed region values</legend><p>Which global region list should every tournament use?</p><p class="grill-sources text-small text-muted"><a href="https://www.riotgames.com/en/news/2024-regional-price-updates">Riot regional grouping</a><a href="https://wildrift.leagueoflegends.com/en-gb/news/dev/dev-wild-rift-esports/">Wild Rift esports regions</a></p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q49" value="A" required="" checked=""><span class="form-check-label">A. Americas; Europe and MENA; Asia-Pacific and Oceania; China<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q49" value="B" required=""><span class="form-check-label">B. Americas; Europe and Asia; China</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q49" value="C" required=""><span class="form-check-label">C. North America; Latin America; Brazil; Europe; MENA; Southeast Asia; Korea; Japan; Oceania; China</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="50"><legend>Q50. Abuse controls without verification</legend><p>Email accounts now get immediate access without address verification. What limits automated sign-up abuse?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q50" value="A" required="" checked=""><span class="form-check-label">A. Unique emails, endpoint rate limits, challenge checks after suspicious activity, and admin suspension tools<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q50" value="B" required=""><span class="form-check-label">B. Rate limits only</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q50" value="C" required=""><span class="form-check-label">C. Make account creation invite-only</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="51"><legend>Q51. Provisional submissions and capacity</legend><p>Does a provisional submission with pending tier reviews reserve one of the submitted-team slots?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q51" value="A" required="" checked=""><span class="form-check-label">A. Yes. Reserve the slot at submission time and release it if the team unlocks, fails review, or is disqualified<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q51" value="B" required=""><span class="form-check-label">B. No. Only a fully approved submission may claim a slot</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q51" value="C" required=""><span class="form-check-label">C. Let admins decide which provisional teams reserve slots</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="52"><legend>Q52. Waitlist promotion</legend><p>How should the system fill a released team slot?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q52" value="A" required="" checked=""><span class="form-check-label">A. Promote the oldest eligible waitlisted submission automatically and notify its captain<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q52" value="B" required=""><span class="form-check-label">B. Require an admin to choose the promoted team</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q52" value="C" required=""><span class="form-check-label">C. Run a random draw among eligible teams</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="53"><legend>Q53. Moderation authority</legend><p>Which staff roles may apply each moderation action?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q53" value="A" required="" checked=""><span class="form-check-label">A. Admins may disqualify a registration from one tournament. Super Admins may also suspend or restore whole accounts<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q53" value="B" required=""><span class="form-check-label">B. Any Admin may perform every moderation action</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q53" value="C" required=""><span class="form-check-label">C. Only Super Admins may perform any moderation action</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="54"><legend>Q54. Moderation effect on teams</legend><p>What happens when a roster member is suspended or disqualified?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q54" value="A" required="" checked=""><span class="form-check-label">A. Keep the player on the roster but mark them ineligible and invalidate the submission until the captain or an admin resolves it<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q54" value="B" required=""><span class="form-check-label">B. Remove the player from the team automatically</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q54" value="C" required=""><span class="form-check-label">C. Leave the team and submission unchanged</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="55"><legend>Q55. Rank evidence retention</legend><p>How long should the app keep uploaded rank screenshots?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q55" value="A" required="" checked=""><span class="form-check-label">A. Keep originals private to admins, delete them 30 days after the tournament ends, and retain the extracted rank, verdict, file hash, and audit history<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q55" value="B" required=""><span class="form-check-label">B. Keep original screenshots indefinitely</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q55" value="C" required=""><span class="form-check-label">C. Delete originals immediately after review and retain no evidence hash</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="56"><legend>Q56. Smurf detection signals</legend><p>Which internal signals may create an admin review flag?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q56" value="A" required="" checked=""><span class="form-check-label">A. Riot ID reuse, declared and verified rank history, screenshot similarity, and linked account history. Do not fingerprint devices or use IP addresses<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q56" value="B" required=""><span class="form-check-label">B. All of those plus hashed IP addresses and device fingerprints</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q56" value="C" required=""><span class="form-check-label">C. Exact duplicate screenshots only</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="57"><legend>Q57. Smurf flag visibility</legend><p>Who may see automated flag reasons or scores?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q57" value="A" required="" checked=""><span class="form-check-label">A. Admins see private reasons. The player sees only an under-review state, never a risk score<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q57" value="B" required=""><span class="form-check-label">B. The player sees the full risk score and every signal</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q57" value="C" required=""><span class="form-check-label">C. Publish risk flags on player profiles</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="58"><legend>Q58. Translated event content</legend><p>How should Admins author multilingual event content while the app UI stays English?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q58" value="A" required="" checked=""><span class="form-check-label">A. Store English as the default plus optional manual translations per event. Use browser preference, allow a manual switch, and fall back to English<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q58" value="B" required=""><span class="form-check-label">B. Store English only and machine-translate it on every page view</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q58" value="C" required=""><span class="form-check-label">C. Allow exactly one alternate language per tournament</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="59"><legend>Q59. Notification events</legend><p>Which events send email and in-app notifications?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q59" value="A" required="" checked=""><span class="form-check-label">A. Invites, requests, captain transfers, tier decisions, invalid rosters, submissions, waitlists, and announcements; add deadline reminders at 7 days and 24 hours<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q59" value="B" required=""><span class="form-check-label">B. Every profile, roster, and settings change</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q59" value="C" required=""><span class="form-check-label">C. Password resets and direct admin messages only</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="60"><legend>Q60. Notification preferences</legend><p>Which messages may a user turn off?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q60" value="A" required="" checked=""><span class="form-check-label">A. Allow opt-out for announcements and deadline reminders. Keep security, moderation, tier, roster, invite, request, submission, and waitlist messages required<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q60" value="B" required=""><span class="form-check-label">B. Allow opt-out from every email</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q60" value="C" required=""><span class="form-check-label">C. Do not allow any notification preferences</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="61"><legend>Q61. Tournament lifecycle</legend><p>How should tournament state work?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q61" value="A" required="" checked=""><span class="form-check-label">A. Use explicit states: draft, registration open, registration locked, in progress, completed, cancelled, and archived. Public featured status is separate<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q61" value="B" required=""><span class="form-check-label">B. Derive all state from dates and the current time</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q61" value="C" required=""><span class="form-check-label">C. Let Admins type a free-form status label</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="62"><legend>Q62. Team invitations</legend><p>What replaces the current optional reusable invite code?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q62" value="A" required="" checked=""><span class="form-check-label">A. A single-use invitation tied to one account. It expires after 72 hours or at the deadline, may be revoked, and validates region, tier limits, and team size on acceptance<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q62" value="B" required=""><span class="form-check-label">B. A shareable code that anyone may reuse until revoked</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q62" value="C" required=""><span class="form-check-label">C. A permanent team link with no expiration</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="63"><legend>Q63. Join requests</legend><p>How may players request open teams?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q63" value="A" required="" checked=""><span class="form-check-label">A. Captains toggle whether a team accepts requests. A player may hold up to three pending requests, and one acceptance cancels the rest<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q63" value="B" required=""><span class="form-check-label">B. Allow only one pending request across the tournament</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q63" value="C" required=""><span class="form-check-label">C. Every team always accepts unlimited requests</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="64"><legend>Q64. Member leaves a submitted team</legend><p>What happens if a non-captain leaves before the deadline?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q64" value="A" required="" checked=""><span class="form-check-label">A. Allow the leave, return the team to draft, release its capacity slot, preserve its queue timestamp for audit only, and notify the captain<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q64" value="B" required=""><span class="form-check-label">B. Block leaving until the captain unlocks the roster</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q64" value="C" required=""><span class="form-check-label">C. Require captain approval for a member to leave</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="65"><legend>Q65. Player edits on a submitted team</legend><p>May a player change rank, self-assessed tier, or region while their team is submitted?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q65" value="A" required="" checked=""><span class="form-check-label">A. Block those edits until the captain unlocks the roster. While in draft, a player must leave the team before changing region<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q65" value="B" required=""><span class="form-check-label">B. Allow the edit and return the team to draft automatically</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q65" value="C" required=""><span class="form-check-label">C. Allow the edit while keeping the team submitted</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="66"><legend>Q66. Captain transfer expiry</legend><p>How long may a captain transfer request remain pending?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q66" value="A" required="" checked=""><span class="form-check-label">A. Until 72 hours pass or the tournament deadline arrives, whichever comes first. The sender may cancel and the recipient may decline<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q66" value="B" required=""><span class="form-check-label">B. Until the recipient responds, with no expiration</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q66" value="C" required=""><span class="form-check-label">C. For 24 hours in every case</span></label></div></fieldset>
+      <fieldset class="grill-question" data-question="67"><legend>Q67. Evidence and detection consent</legend><p>When should a player accept the rules for screenshots, retention, and automated review flags?</p><div class="grill-options"><label class="form-check"><input class="form-check-input" type="radio" name="q67" value="A" required="" checked=""><span class="form-check-label">A. At every tournament registration using the current rules and privacy notice. Record the accepted version and timestamp<span class="text-small text-muted"> Recommended</span></span></label><label class="form-check"><input class="form-check-input" type="radio" name="q67" value="B" required=""><span class="form-check-label">B. Once when the account is created, even if later tournaments change the rules</span></label><label class="form-check"><input class="form-check-input" type="radio" name="q67" value="C" required=""><span class="form-check-label">C. Do not require an explicit acceptance record</span></label></div></fieldset>
+    </div>
+    <div class="grill-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to continue.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-grill-round-5");
+      const form = root.querySelector("form");
+      const questionFields = Array.from(form.querySelectorAll("fieldset[data-question]"));
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+
+      const getSelected = () =>
+        questionFields.map((field) => field.querySelector("input[type='radio']:checked"));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "?").join(", ");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access. Use a selection fallback.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "fixed";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for Q${questionFields[missing].dataset.question}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

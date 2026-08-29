@@ -1,53 +1,73 @@
-# Authentication Setup
+# Authentication and private access
 
-## NextAuth Configuration
+## Supported sign-in methods
 
-We use NextAuth (Auth.js) with two providers:
+The MVP supports:
 
-1. **Discord OAuth**
-2. **Credentials (email/password)**
+- Discord OAuth.
+- Email and password.
 
-## Environment Variables
+Email verification is not required. Email delivery is used only for password reset.
 
-- `DISCORD_CLIENT_ID`
-- `DISCORD_CLIENT_SECRET`
-- `NEXTAUTH_URL`
-- `NEXTAUTH_SECRET`
-- `DATABASE_URL` (used by Drizzle adapter if using database sessions)
+## Account rules
 
-## Discord Provider Setup
+- Email addresses are normalized and unique when present.
+- Discord identities are unique.
+- Passwords are hashed with a current password-hashing algorithm and never logged or stored in plain text.
+- A Discord-only user may add credentials later only through an authenticated account-linking flow.
+- Accounts are not linked automatically only because a Discord email matches an existing credentials email.
+- Sign-in responses must not reveal whether an email address exists.
+- Authentication endpoints require rate limiting appropriate to the deployment environment.
 
-1. Create a Discord Application at https://discord.com/developers/applications.
-2. Add OAuth2 redirect URL: `http://localhost:3000/api/auth/callback/discord` (and production equivalent).
-3. Copy Client ID and Secret into `.env`.
-4. In NextAuth providers array:
-   ```ts
-   DiscordProvider({
-     clientId: process.env.DISCORD_CLIENT_ID,
-     clientSecret: process.env.DISCORD_CLIENT_SECRET,
-   });
-   ```
+## Sessions
 
-## Credentials Provider
+Use secure, HTTP-only cookies with JWT-backed sessions unless implementation constraints require a database session. Production cookies must use secure transport and an appropriate same-site policy.
 
-Use the `CredentialsProvider` with email/password.
+The session exposes only the identity and role needed by the app:
 
-- Store password hash (bcrypt) in `users.password_hash`.
-- On login, verify and return user object.
-- On registration, create a user with a unique username and email.
+- User identifier.
+- Display name and avatar when available.
+- user or organizer account role.
+- Whether the user has joined the tournament.
 
-## User Role Assignment
+Server-side authorization remains authoritative. Hiding a control in the interface is not access control.
 
-- Add `role` column to `users` (e.g., 'player', 'admin', 'super_admin') or use a separate `user_roles` table.
-- Default role is 'player'.
-- Admins are manually set in database or via environment variable during initial setup.
+## Tournament invite
 
-## Session Strategy
+Authentication and tournament access are separate.
 
-- Use JWT sessions for simplicity. Include `user.id` and `role` in token.
-- Ensure admin routes check token role.
+After signing in, a user who has not joined the tournament must enter the active private invite link or code. The server hashes the submitted code and compares it with the stored hash. A successful join creates a tournament participant record.
 
-## Protecting Routes
+The organizer may:
 
-- Middleware or per-page checks: if not authenticated, redirect to login.
-- Admin pages require `role === 'admin'` or `'super_admin'`.
+- Close the invite without removing existing participants.
+- Reopen the current invite.
+- Replace the invite, immediately invalidating the old code.
+
+The invite grants participant access only. It never grants organizer privileges.
+
+## Organizer assignment
+
+The MVP has one organizer role and no role-management screen. The initial organizer is assigned through a controlled deployment or database setup step using the configured organizer email. Setup also grants that account tournament participation, so the organizer does not need an invite. Changing the organizer is an operational task, not a participant-facing feature.
+
+## Password reset
+
+A credentials user may request a one-time password-reset link.
+
+- The stored token is hashed.
+- The token expires after a short configured period.
+- The token is invalid after first use.
+- A successful reset invalidates any other outstanding reset tokens for the user.
+- The request endpoint returns a neutral response even when no account matches.
+- Discord-only accounts receive no password-reset email unless credentials have been added.
+
+In local development, the reset link may be logged to a protected development console when email delivery is not configured. It must never be logged in production.
+
+## Route protection
+
+- Public: sign-in, registration, OAuth callback, password-reset request, and password-reset completion.
+- Signed-in only: tournament summary and invite entry.
+- Participant only: registrations, participant directory, teams, announcements, and tournament notices.
+- Organizer only: tournament settings, tier review, team overrides, and announcement management.
+
+Every mutation repeats its authorization check on the server.

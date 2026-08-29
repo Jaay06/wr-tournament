@@ -1,0 +1,289 @@
+<div id="wr-final-scope-check">
+  <style>
+    #wr-final-scope-check,
+    #wr-final-scope-check .scope-header,
+    #wr-final-scope-check .scope-form,
+    #wr-final-scope-check .scope-questions,
+    #wr-final-scope-check .scope-question,
+    #wr-final-scope-check .scope-options,
+    #wr-final-scope-check .scope-answer-panel,
+    #wr-final-scope-check .scope-actions {
+      display: grid;
+    }
+
+    #wr-final-scope-check {
+      gap: 18px;
+      color-scheme: light dark;
+      color: var(--foreground, CanvasText);
+    }
+
+    #wr-final-scope-check .scope-header {
+      gap: 4px;
+    }
+
+    #wr-final-scope-check .scope-header > *,
+    #wr-final-scope-check .scope-question > *,
+    #wr-final-scope-check .scope-answer-panel > * {
+      margin: 0;
+    }
+
+    #wr-final-scope-check .scope-form,
+    #wr-final-scope-check .scope-questions {
+      gap: 26px;
+    }
+
+    #wr-final-scope-check .scope-question {
+      gap: 10px;
+      padding: 0;
+      border: 0;
+    }
+
+    #wr-final-scope-check .scope-question legend {
+      padding: 0;
+    }
+
+    #wr-final-scope-check .scope-options,
+    #wr-final-scope-check .scope-answer-panel {
+      gap: 10px;
+    }
+
+    #wr-final-scope-check .scope-answer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #wr-final-scope-check .scope-answer-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      user-select: all;
+    }
+
+    #wr-final-scope-check .scope-actions {
+      gap: 8px;
+      justify-items: start;
+    }
+
+    #wr-final-scope-check [data-status]:empty {
+      display: none;
+    }
+
+    @media (max-width: 520px) {
+      #wr-final-scope-check .scope-answer-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <div class="scope-header">
+    <h2>Final scope check</h2>
+    <p class="text-muted">Only the rules needed for a private tournament among friends.</p>
+  </div>
+
+  <section class="card scope-answer-panel" aria-label="Current answers">
+    <div class="scope-answer-row">
+      <div>
+        <p class="text-small">Current answer code</p>
+        <output class="scope-answer-code" aria-live="polite"><code data-answer-output>A, A, A, A, A, A, A, A, A, A</code></output>
+      </div>
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+    </div>
+    <p class="text-small">Choose your answers, copy the code, then paste it into the chat.</p>
+    <p class="text-small" data-status aria-live="polite"></p>
+  </section>
+
+  <form class="scope-form">
+    <div class="scope-questions">
+      <fieldset class="scope-question" data-question="F1">
+        <legend>F1. Friend access</legend>
+        <p>How should friends enter the tournament?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f1" value="A" required checked><span class="form-check-label">A. Share a private tournament invite link or code. Friends still sign in, and the organizer may close or replace the invite <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f1" value="B"><span class="form-check-label">B. The organizer creates every account manually</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f1" value="C"><span class="form-check-label">C. Anyone may discover the tournament and register</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F2">
+        <legend>F2. Tier review</legend>
+        <p>How much verification does a friends-only tournament need?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f2" value="A" required checked><span class="form-check-label">A. Players report their rank and tier. The organizer approves or adjusts it. No screenshots or smurf detector <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f2" value="B"><span class="form-check-label">B. Require a rank screenshot from every player</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f2" value="C"><span class="form-check-label">C. Remove tiers and team-composition rules</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F3">
+        <legend>F3. Tournament region</legend>
+        <p>How should region work when only one tournament is active?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f3" value="A" required checked><span class="form-check-label">A. The organizer chooses one region for the tournament, and every registration uses it <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f3" value="B"><span class="form-check-label">B. Players choose their own region, but each team must match</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f3" value="C"><span class="form-check-label">C. Do not track region</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F4">
+        <legend>F4. Team formation</legend>
+        <p>What is the simplest useful team flow?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f4" value="A" required checked><span class="form-check-label">A. A captain creates a team, invites friends or accepts join requests, and manages five starters plus up to two substitutes. Each player joins one team <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f4" value="B"><span class="form-check-label">B. The organizer builds every team</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f4" value="C"><span class="form-check-label">C. Players may join any team without captain approval</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F5">
+        <legend>F5. Role handling</legend>
+        <p>Should the app block a team because of Baron, Jungle, Mid, Dragon, or Support assignments?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f5" value="A" required checked><span class="form-check-label">A. Show preferred roles and the five starter slots. Warn about duplicate or missing roles, but let friends submit the team anyway <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f5" value="B"><span class="form-check-label">B. Require exactly one starter in every role</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f5" value="C"><span class="form-check-label">C. Remove roles from the app</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F6">
+        <legend>F6. MVP finish line</legend>
+        <p>Where should the first version stop?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f6" value="A" required checked><span class="form-check-label">A. Stop after registration, tier approval, valid teams, submission, and announcements. Run matches and brackets through Discord or an external bracket tool <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f6" value="B"><span class="form-check-label">B. Include bracket generation and match-result reporting</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f6" value="C"><span class="form-check-label">C. Stop at a player directory without teams</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F7">
+        <legend>F7. Organizer controls</legend>
+        <p>How much staff structure does the app need?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f7" value="A" required checked><span class="form-check-label">A. Use one organizer role that can approve tiers, edit teams, set the deadline, and post announcements. Skip Admin and Super Admin hierarchy <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f7" value="B"><span class="form-check-label">B. Keep separate Admin and Super Admin roles</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f7" value="C"><span class="form-check-label">C. Do not build organizer controls</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F8">
+        <legend>F8. Deadline and submission</legend>
+        <p>How should registration close?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f8" value="A" required checked><span class="form-check-label">A. The organizer sets one deadline. Captains submit their roster before it, and the organizer may unlock or repair a team afterward <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f8" value="B"><span class="form-check-label">B. Do not use team submission; freeze whatever exists at the deadline</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f8" value="C"><span class="form-check-label">C. Keep registration open until the organizer closes it manually</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F9">
+        <legend>F9. Notifications</legend>
+        <p>How should the app contact players?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f9" value="A" required checked><span class="form-check-label">A. Use in-app notices and let the organizer share updates in Discord. Send email only for password reset <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f9" value="B"><span class="form-check-label">B. Send email for invitations, approvals, deadlines, and announcements</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f9" value="C"><span class="form-check-label">C. Build a Discord bot</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset class="scope-question" data-question="F10">
+        <legend>F10. Privacy</legend>
+        <p>Who should see tournament teams and player details?</p>
+        <div class="scope-options">
+          <label class="form-check"><input class="form-check-input" type="radio" name="f10" value="A" required checked><span class="form-check-label">A. Require sign-in and the private tournament invite. Every participant may see teams, rosters, tiers, and roles <span class="text-small text-muted">Recommended</span></span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f10" value="B"><span class="form-check-label">B. Make the team list public but keep player details private</span></label>
+          <label class="form-check"><input class="form-check-input" type="radio" name="f10" value="C"><span class="form-check-label">C. Let players see only their own team</span></label>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="scope-actions">
+      <button class="btn btn-primary" type="button" data-copy-answers>Copy answers</button>
+      <p class="text-small text-muted">Paste the copied code into the chat to finish the scope check.</p>
+    </div>
+  </form>
+
+  <script>
+    (() => {
+      const root = document.getElementById("wr-final-scope-check");
+      const form = root.querySelector("form");
+      const questionFields = Array.from(form.querySelectorAll("fieldset[data-question]"));
+      const answerOutput = root.querySelector("[data-answer-output]");
+      const copyButtons = root.querySelectorAll("[data-copy-answers]");
+      const status = root.querySelector("[data-status]");
+
+      const getSelected = () =>
+        questionFields.map((field) => field.querySelector("input[type='radio']:checked"));
+
+      const updateAnswerCode = () => {
+        const selected = getSelected();
+        answerOutput.textContent = selected.map((input) => input?.value ?? "?").join(", ");
+        status.textContent = "";
+        status.removeAttribute("role");
+        return selected;
+      };
+
+      const copyText = async (value) => {
+        if (navigator.clipboard?.writeText != null) {
+          try {
+            await navigator.clipboard.writeText(value);
+            return true;
+          } catch (error) {
+            // The sandbox may deny Clipboard API access. Use a selection fallback.
+          }
+        }
+
+        const fallback = document.createElement("textarea");
+        fallback.value = value;
+        fallback.setAttribute("readonly", "");
+        fallback.style.position = "absolute";
+        fallback.style.width = "1px";
+        fallback.style.height = "1px";
+        fallback.style.padding = "0";
+        fallback.style.border = "0";
+        fallback.style.opacity = "0";
+        root.append(fallback);
+        fallback.select();
+
+        let copied = false;
+        try {
+          copied = document.execCommand("copy");
+        } catch (error) {
+          copied = false;
+        }
+
+        fallback.remove();
+        return copied;
+      };
+
+      const handleCopy = async () => {
+        const selected = updateAnswerCode();
+        const missing = selected.findIndex((input) => input == null);
+
+        if (missing !== -1) {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = `Choose an answer for ${questionFields[missing].dataset.question}.`;
+          return;
+        }
+
+        const answerCode = selected.map((input) => input.value).join(", ");
+        const copied = await copyText(answerCode);
+
+        if (copied) {
+          status.removeAttribute("role");
+          status.className = "text-small";
+          status.textContent = `Copied: ${answerCode}. Paste it into the chat.`;
+        } else {
+          status.setAttribute("role", "alert");
+          status.className = "text-small text-destructive";
+          status.textContent = "Clipboard access is blocked. Select the answer code above and copy it manually.";
+        }
+      };
+
+      form.addEventListener("change", updateAnswerCode);
+      copyButtons.forEach((button) => button.addEventListener("click", handleCopy));
+      updateAnswerCode();
+    })();
+  </script>
+</div>

@@ -1,46 +1,54 @@
-# Wild Rift Tournament Web App
+# Wild Rift friends tournament
 
-A modern web platform for managing a Wild Rift community tournament. It handles player registration, tier assignment (T1–T4), team formation with rule enforcement, and admin oversight. Built with Next.js, Drizzle ORM, PostgreSQL, and NextAuth.
+A private web app for one group of friends to register for a Wild Rift tournament, confirm player tiers, form teams, and submit valid rosters. Match coordination and brackets stay in Discord or an external bracket tool.
 
-## Tech Stack
+## Confirmed MVP
 
-- **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS
-- **Backend:** Next.js API routes / server actions
-- **Database:** PostgreSQL with Drizzle ORM
-- **Authentication:** NextAuth (Discord OAuth + Email/Password)
+- Private tournament invite.
+- Discord or email-and-password sign-in.
+- Riot ID, rank, tier, and role registration.
+- Organizer tier approval.
+- Captain-led teams with five starters and up to two substitutes.
+- Full-roster caps of one T1 and two T2 players.
+- Team submission and deadline enforcement.
+- Simple in-app announcements and direct notices.
 
-## Getting Started
+The MVP does not include public profiles, multiple tournaments, brackets, results, exports, evidence uploads, or advanced moderation.
 
-### Prerequisites
+## Current state
 
-- Node.js 18+
-- PostgreSQL database (local or hosted)
-- Discord OAuth application (for Discord login)
-- SMTP credentials (optional for email verification)
+The Next.js, TypeScript, and Tailwind CSS scaffold exists. The responsive private-entry homepage now follows the Paper design language and the confirmed product scope. Product rules and implementation contracts are documented. Database, authentication, and tournament features have not yet been implemented.
 
-### Installation
+## Planned stack
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-3. Copy `.env.example` to `.env` and fill in required variables (see `docs/ENV_VARIABLES.md`).
-4. Run database migrations:
-   ```bash
-   pnpm run db:migrate
-   ```
-5. Start development server:
-   ```bash
-   pnpm run dev
-   ```
+- Next.js App Router and TypeScript.
+- Tailwind CSS.
+- PostgreSQL with Drizzle ORM.
+- Auth.js or NextAuth with Discord OAuth and credentials.
+
+## Local development
+
+Requirements:
+
+- Node.js 20.9 or newer.
+- pnpm.
+
+Install and run the current scaffold:
+
+    pnpm install
+    pnpm dev
+
+Database and authentication environment variables will become required as their roadmap phases are implemented. See [environment variables](docs/ENV_VARIABLES.md) for the planned configuration.
 
 ## Documentation
 
-- `docs/SPECIFICATIONS.md` – functional requirements and rules
-- `docs/DATABASE_SCHEMA.md` – data model
-- `docs/API_ENDPOINTS.md` – API design
-- `docs/UI_UX_GUIDELINES.md` – design guidelines
-- `docs/AUTHENTICATION.md` – auth setup
-- `docs/ADMIN_FEATURES.md` – admin capabilities
-- `docs/DEVELOPMENT_ROADMAP.md` – phased plan
+- [Domain glossary](CONTEXT.md)
+- [Product specifications](docs/specifications.md)
+- [Database schema](docs/DATABASE_SCHEMA.md)
+- [API and server-action contract](docs/API_ENDPOINTS.md)
+- [Authentication and private access](docs/AUTHENTICATION.md)
+- [Organizer features](docs/ADMIN_FEATURES.md)
+- [UI and UX guidelines](docs/UI_UX_GUIDELINES.md)
+- [Edge cases and business rules](docs/EDGE_CASES_AND_RULES.md)
+- [Environment variables](docs/ENV_VARIABLES.md)
+- [Development roadmap](docs/DEVELOPMENT_ROADMAP.md)
