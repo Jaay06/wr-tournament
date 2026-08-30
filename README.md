@@ -17,7 +17,7 @@ The MVP does not include public profiles, multiple tournaments, brackets, result
 
 ## Current state
 
-The responsive private-entry homepage follows the Paper design language and the confirmed product scope. Neon and Drizzle are connected, the schema migration is applied, and the first authentication and private-entry slice is implemented. Password reset, organizer invite controls, and player registration are next.
+The responsive private-entry homepage follows the Paper design language and the confirmed product scope. Neon and Drizzle are connected, the schema migration is applied, and authentication, private entry, and organizer tournament settings are implemented. Password reset and player registration are next.
 
 ## Planned stack
 
@@ -44,11 +44,13 @@ The database uses Neon PostgreSQL through Drizzle. Create a Neon project, copy i
     pnpm db:generate
     pnpm db:migrate
 
-Create the organizer's account at `/register` using the same `ORGANIZER_EMAIL`, then initialize the one tournament and promote that account. The command prompts for the invite code and stores only its hash:
+Create the organizer's account at `/register` using the same `ORGANIZER_EMAIL`, then initialize the one tournament and promote that account. Setup defaults to `Rift Clash` in `EU`, leaves the deadline open, generates an invite code, and prints it once:
 
     pnpm db:setup
 
 Set `AUTH_SECRET` and `ORGANIZER_EMAIL` before using authentication or running `pnpm db:setup`. Discord OAuth variables are optional until Discord sign-in is enabled. See [environment variables](docs/ENV_VARIABLES.md) for the full configuration.
+
+After setup, the organizer can visit `/admin` to set or extend the registration deadline, close or reopen entry, and generate a replacement invite code.
 
 ## Documentation
 

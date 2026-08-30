@@ -4,24 +4,18 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
-import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import { tournamentSettings } from "@/db/schema";
 import { formatDeadline } from "@/lib/tournament";
 
-export default async function TournamentPage() {
+export default async function TierReviewPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/signin?callbackUrl=%2Ftournament");
+    redirect("/signin?callbackUrl=%2Fadmin%2Ftier-review");
   }
 
-  const [participant] = await db
-    .select({ joinedAt: tournamentParticipants.joinedAt })
-    .from(tournamentParticipants)
-    .where(eq(tournamentParticipants.userId, session.user.id))
-    .limit(1);
-
-  if (!participant) {
-    redirect("/invite");
+  if (session.user.role !== "organizer") {
+    redirect("/tournament");
   }
 
   const [settings] = await db
@@ -34,18 +28,14 @@ export default async function TournamentPage() {
     .where(eq(tournamentSettings.id, 1))
     .limit(1);
 
-  if (!settings) {
-    redirect("/invite");
-  }
-
   return (
     <TournamentApp
-      deadline={formatDeadline(settings.registrationDeadline)}
-      region={settings.region}
+      deadline={formatDeadline(settings?.registrationDeadline)}
+      region={settings?.region}
       showSignOut
-      tournamentName={settings.name}
-      userName={session.user.name ?? "player"}
-      view="dashboard"
+      tournamentName={settings?.name}
+      userName={session.user.name ?? "organizer"}
+      view="tier-review"
     />
   );
 }

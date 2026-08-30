@@ -52,6 +52,7 @@ A submitted team is read-only for participants. The organizer may unlock it, whi
 
 ## Deadline
 
+- A null deadline keeps registration and participant changes open until the organizer sets one.
 - The deadline is stored as an absolute timestamp and displayed in the viewer's local time with the tournament time zone or offset made clear.
 - At the deadline, participants cannot create or edit registrations, create or alter teams, resolve invites or requests, or submit teams.
 - The organizer may continue to review tiers, repair teams, and update settings.

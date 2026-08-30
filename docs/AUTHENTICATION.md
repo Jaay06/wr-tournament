@@ -42,7 +42,9 @@ The organizer may:
 
 - Close the invite without removing existing participants.
 - Reopen the current invite.
-- Replace the invite, immediately invalidating the old code.
+- Generate a new random invite code, immediately invalidating the old code.
+
+The raw code is shown to the organizer once after generation. Only its hash is stored in the database.
 
 The invite grants participant access only. It never grants organizer privileges.
 

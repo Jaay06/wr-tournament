@@ -7,15 +7,15 @@ import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
 import { formatDeadline } from "@/lib/tournament";
 
-export default async function TournamentPage() {
+export default async function PlayerRegistrationPage() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/signin?callbackUrl=%2Ftournament");
+    redirect("/signin?callbackUrl=%2Ftournament%2Fregister");
   }
 
   const [participant] = await db
-    .select({ joinedAt: tournamentParticipants.joinedAt })
+    .select({ id: tournamentParticipants.id })
     .from(tournamentParticipants)
     .where(eq(tournamentParticipants.userId, session.user.id))
     .limit(1);
@@ -45,7 +45,7 @@ export default async function TournamentPage() {
       showSignOut
       tournamentName={settings.name}
       userName={session.user.name ?? "player"}
-      view="dashboard"
+      view="registration"
     />
   );
 }

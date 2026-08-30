@@ -32,7 +32,7 @@ const accessSteps = [
 ] as const;
 
 const teamRules = [
-  ['5–7', 'Five starters', 'Add up to two substitutes.'],
+  ['5-7', 'Five starters', 'Add up to two substitutes.'],
   ['T1', 'Maximum one T1', 'The cap covers starters and substitutes.'],
   ['T2', 'Maximum two T2', 'T3 and T4 have no roster cap.'],
 ] as const;

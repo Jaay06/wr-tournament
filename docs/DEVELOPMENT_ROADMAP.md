@@ -19,7 +19,7 @@ The roadmap deliberately stops at the private friends-tournament experience. Bui
 - [ ] Add password-reset email flow.
 - [x] Add secure sessions and route protection.
 - [x] Add the private tournament invite flow.
-- [ ] Add organizer controls to close and replace the invite.
+- [x] Add organizer controls to set or extend the deadline, close or reopen the invite, and replace the invite.
 
 Acceptance: a friend can authenticate and enter the tournament only with the active invite; an outsider cannot view tournament data.
 

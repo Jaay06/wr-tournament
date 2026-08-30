@@ -79,7 +79,7 @@ export const tournamentSettings = pgTable(
     inviteEnabled: boolean("invite_enabled").default(true).notNull(),
     registrationDeadline: timestamp("registration_deadline", {
       withTimezone: true,
-    }).notNull(),
+    }),
     updatedBy: uuid("updated_by")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

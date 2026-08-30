@@ -90,6 +90,8 @@ Submitting freezes the roster for participants. The organizer may unlock it or m
 
 ## Deadline
 
+The organizer may leave the deadline unset while preparing the tournament. When it is unset, registration remains open until the organizer sets a deadline.
+
 Before the registration deadline, participants may edit registrations and draft rosters. At the deadline:
 
 - New player registrations close.

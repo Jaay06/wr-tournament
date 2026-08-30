@@ -1,19 +1,19 @@
 import type { Metadata } from 'next';
-import { Inter, JetBrains_Mono, Poppins, Geist } from 'next/font/google';
+import {
+  Inter_Tight,
+  JetBrains_Mono,
+  Space_Grotesk,
+} from 'next/font/google';
 import './globals.css';
-import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
-
-const inter = Inter({
-  variable: '--font-inter',
+const interTight = Inter_Tight({
+  variable: '--font-inter-tight',
   subsets: ['latin'],
 });
 
-const poppins = Poppins({
-  variable: '--font-poppins',
+const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
   subsets: ['latin'],
-  weight: ['600', '700', '800'],
 });
 
 const jetBrainsMono = JetBrains_Mono({
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang='en'
-      className={cn(inter.variable, poppins.variable, jetBrainsMono.variable, "font-sans", geist.variable)}
+      className={`${interTight.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans`}
     >
       <body>{children}</body>
     </html>

@@ -15,5 +15,5 @@ export const proxy = auth((request) => {
 });
 
 export const config = {
-  matcher: ["/invite/:path*", "/tournament/:path*"],
+  matcher: ["/admin/:path*", "/invite/:path*", "/tournament/:path*"],
 };

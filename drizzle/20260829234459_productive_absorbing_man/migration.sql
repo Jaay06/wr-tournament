@@ -1,0 +1,1 @@
+ALTER TABLE "tournament_settings" ALTER COLUMN "registration_deadline" DROP NOT NULL;

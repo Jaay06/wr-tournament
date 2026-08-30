@@ -13,43 +13,47 @@ export function EntryShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-background px-5 py-6 text-foreground max-tablet:px-4 max-tablet:py-4">
-      <header className="mx-auto flex w-full max-w-page items-center justify-between gap-5 border-b border-border pb-5">
+    <div className="min-h-svh bg-background px-5 py-5 text-foreground max-tablet:px-4">
+      <header className="mx-auto flex min-h-14 w-full max-w-page items-center justify-between gap-5 border-b border-border pb-5">
         <Link
-          className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted"
+          className="flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted"
           href="/"
         >
-          <span className="grid size-9 place-items-center rounded-md bg-primary text-sm font-extrabold text-primary-foreground">
+          <span className="grid size-10 place-items-center rounded-xl bg-primary font-display text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">
             WR
           </span>
           <span className="flex flex-col">
-            <strong className="text-base font-bold leading-4.5 tracking-[-0.02em]">
+            <strong className="font-display text-base font-bold leading-5 tracking-[-0.025em]">
               RIFT CLASH
             </strong>
-            <small className="font-mono text-3xs leading-3.25 tracking-[0.12em] text-muted-foreground max-phone:hidden">
-              PRIVATE WILD RIFT TOURNAMENT
+            <small className="font-mono text-3xs leading-4 tracking-[0.14em] text-muted-foreground max-phone:hidden">
+              PRIVATE TOURNAMENT
             </small>
           </span>
         </Link>
-        <span className="rounded-full border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
+        <span className="rounded-full border border-primary/25 bg-primary-soft px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-primary-muted">
           FRIENDS ONLY
         </span>
       </header>
 
-      <main className="mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_420px] items-center gap-16 py-16 max-desktop:grid-cols-[minmax(0,1fr)_380px] max-desktop:gap-9 max-tablet:grid-cols-1 max-tablet:gap-8 max-tablet:py-10">
-        <section className="max-w-copy">
-          <p className="m-0 font-mono text-xs font-semibold tracking-[0.13em] text-success">
+      <main className="mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_430px] items-center gap-16 py-14 max-desktop:grid-cols-[minmax(0,1fr)_390px] max-desktop:gap-9 max-tablet:grid-cols-1 max-tablet:gap-8 max-tablet:py-9">
+        <section className="max-w-2xl">
+          <p className="m-0 font-mono text-2xs font-semibold tracking-[0.14em] text-primary-muted">
             {eyebrow}
           </p>
-          <h1 className="mt-5.5 mb-0 font-display text-3xl font-extrabold leading-[0.98] tracking-[-0.055em] text-primary max-phone:text-2xl">
+          <h1 className="mt-4 mb-0 font-display text-[clamp(36px,5vw,58px)] font-bold leading-[1.02] tracking-[-0.05em] text-foreground">
             {title}
           </h1>
-          <p className="mt-5.5 mb-0 text-lg leading-[1.6] text-secondary-foreground max-phone:text-base">
+          <p className="mt-5 mb-0 max-w-copy text-lg leading-7 text-secondary-foreground max-phone:text-base max-phone:leading-6">
             {description}
           </p>
+          <div className="mt-7 flex flex-wrap gap-2 font-mono text-2xs tracking-[0.08em] text-muted-foreground">
+            <span className="rounded-full border border-border bg-card px-3 py-1.5">PRIVATE ACCESS</span>
+            <span className="rounded-full border border-border bg-card px-3 py-1.5">ORGANIZER REVIEWED TIERS</span>
+          </div>
         </section>
 
-        <section className="rounded-card border border-border bg-card p-5.5 shadow-2xl shadow-background/40">
+        <section className="rounded-card border border-border bg-card p-5 shadow-2xl shadow-black/25 tablet:p-6">
           {children}
         </section>
       </main>

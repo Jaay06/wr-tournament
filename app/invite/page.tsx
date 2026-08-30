@@ -48,9 +48,9 @@ export default async function InvitePage({
 
   return (
     <EntryShell
-      description="This room is private to the group. Enter the code your organizer shared and the tournament details will open up."
-      eyebrow="INVITE REQUIRED"
-      title={settings?.name ?? "The room is waiting."}
+      description="Use the code from the organizer to enter this private tournament. Your registration and team details stay inside the room."
+      eyebrow="PRIVATE INVITE"
+      title={settings?.name ?? "Enter the tournament"}
     >
       <div className="flex flex-col gap-5">
         {settings ? (
@@ -68,6 +68,11 @@ export default async function InvitePage({
               <p className="mt-1 mb-0 text-sm font-semibold text-foreground">
                 {formatDeadline(settings.registrationDeadline)}
               </p>
+              {!settings.registrationDeadline ? (
+                <p className="mt-1 mb-0 text-xs leading-5 text-muted-foreground">
+                  The organizer has not set a closing time.
+                </p>
+              ) : null}
             </div>
           </div>
         ) : null}
