@@ -69,7 +69,7 @@ export default async function TeamBuilderPage() {
       participants={participants}
       registration={registration}
       team={team}
-      view="builder"
+      view={team?.status === "submitted" ? "submitted" : "builder"}
     />
   );
 }

@@ -1,8 +1,21 @@
+import type { Metadata } from 'next';
 import { MotionReveal } from '@/components/marketing/motion-reveal';
+import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
 import { Badge } from '@/components/ui/badge';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
 
 const tiers = [
   {
@@ -102,20 +115,13 @@ export default function Home() {
             href='#top'
             aria-label='Rift Clash home'
           >
-            <span className='grid size-9 shrink-0 place-items-center rounded-md bg-primary text-sm font-extrabold text-primary-foreground'>
-              WR
-            </span>
-            <span className='flex flex-col'>
-              <strong className='text-base font-bold leading-4.5 tracking-[-0.02em]'>
-                RIFT CLASH
-              </strong>
-              <small className='font-mono text-3xs leading-3.25 tracking-[0.12em] text-muted-foreground max-phone:hidden'>
-                PRIVATE WILD RIFT TOURNAMENT
-              </small>
-            </span>
+            <RiftClashLogo className='h-12 w-auto max-phone:h-10' />
           </a>
 
-          <nav className='flex items-center gap-7 max-desktop:hidden' aria-label='Homepage'>
+          <nav
+            className='flex items-center gap-7 max-desktop:hidden'
+            aria-label='Homepage'
+          >
             <a
               className='border-b-2 border-primary pb-1.25 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
               href='#top'
@@ -143,7 +149,10 @@ export default function Home() {
           </nav>
 
           <a
-            className={cn(buttonVariants({ size: 'sm' }), 'ml-auto min-h-9 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs')}
+            className={cn(
+              buttonVariants({ size: 'sm' }),
+              'ml-auto min-h-9 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs',
+            )}
             href='/signin?callbackUrl=%2Finvite'
           >
             Enter tournament
@@ -160,7 +169,10 @@ export default function Home() {
           <MotionReveal>
             <div className='max-w-hero max-tablet:max-w-none'>
               <p className='m-0 flex items-center gap-2.5 font-mono text-xs font-semibold tracking-[0.13em] text-success max-phone:text-3xs'>
-                <span className='size-1.75 shrink-0 rounded-full bg-success shadow-sm shadow-success/60' aria-hidden='true' />
+                <span
+                  className='size-1.75 shrink-0 rounded-full bg-success shadow-sm shadow-success/60'
+                  aria-hidden='true'
+                />
                 PRIVATE TOURNAMENT · INVITE ONLY
               </p>
 
@@ -174,21 +186,27 @@ export default function Home() {
                   CLASH
                 </h1>
                 <p className='mt-7 max-w-copy text-lg leading-[1.6] text-secondary-foreground max-phone:mt-5.5 max-phone:text-base max-phone:leading-normal'>
-                  A simple place for friends to register, settle tiers, form teams,
-                  and get into the game.
+                  A simple place for friends to register, settle tiers, form
+                  teams, and get into the game.
                 </p>
               </div>
 
               <div className='mt-7 flex flex-wrap items-center gap-3.5 max-phone:grid max-phone:grid-cols-1'>
                 <a
-                  className={cn(buttonVariants({ size: 'lg' }), 'inline-flex min-h-12.5 rounded-md bg-primary px-5.5 py-3.5 text-base font-bold text-primary-foreground shadow-xl shadow-primary/35 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full')}
+                  className={cn(
+                    buttonVariants({ size: 'lg' }),
+                    'inline-flex min-h-12.5 rounded-md bg-primary px-5.5 py-3.5 text-base font-bold text-primary-foreground shadow-xl shadow-primary/35 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
+                  )}
                   href='/signin?callbackUrl=%2Finvite'
                 >
                   Enter tournament
                   <ArrowIcon />
                 </a>
                 <a
-                  className={cn(buttonVariants({ variant: 'secondary', size: 'lg' }), 'inline-flex min-h-12.5 rounded-md border border-border bg-secondary px-5.5 py-3.5 text-base font-bold text-foreground hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full')}
+                  className={cn(
+                    buttonVariants({ variant: 'secondary', size: 'lg' }),
+                    'inline-flex min-h-12.5 rounded-md border border-border bg-secondary px-5.5 py-3.5 text-base font-bold text-foreground hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
+                  )}
                   href='#rules'
                 >
                   View team rules
@@ -221,7 +239,10 @@ export default function Home() {
               <div className='flex items-center justify-between px-5.5 pt-5 font-mono text-2xs font-semibold tracking-[0.12em] text-muted-foreground'>
                 <span>PRIVATE ACCESS</span>
                 <Badge className='h-auto rounded-full border-primary/25 bg-primary/15 px-2 py-1 font-mono text-2xs tracking-[0.04em] text-primary-muted'>
-                  <i className='size-1.5 rounded-full bg-primary' aria-hidden='true' />
+                  <i
+                    className='size-1.5 rounded-full bg-primary'
+                    aria-hidden='true'
+                  />
                   INVITE REQUIRED
                 </Badge>
               </div>
@@ -243,8 +264,12 @@ export default function Home() {
                       {number}
                     </span>
                     <span className='flex min-w-0 flex-col gap-0.75'>
-                      <strong className='text-sm leading-4.5 text-foreground'>{title}</strong>
-                      <small className='text-xs leading-4.25 text-muted-foreground'>{description}</small>
+                      <strong className='text-sm leading-4.5 text-foreground'>
+                        {title}
+                      </strong>
+                      <small className='text-xs leading-4.25 text-muted-foreground'>
+                        {description}
+                      </small>
                     </span>
                   </li>
                 ))}
@@ -252,28 +277,30 @@ export default function Home() {
 
               <div className='flex items-center gap-3 border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground max-phone:flex-col max-phone:items-start'>
                 <span>Private tournament data stays behind sign-in.</span>
-                <a
-                  className='ml-auto inline-flex items-center gap-1.25 whitespace-nowrap font-semibold text-primary-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:ml-0'
-                  href='/signin?callbackUrl=%2Finvite'
-                >
-                  Sign in to continue
-                  <ArrowIcon />
-                </a>
+                <Button variant={'link'}>
+                  <Link
+                    className='ml-auto inline-flex items-center gap-1.25 whitespace-nowrap font-semibold text-primary-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:ml-0'
+                    href='/signin?callbackUrl=%2Finvite'
+                  >
+                    Sign in to continue
+                    <ArrowIcon />
+                  </Link>
+                </Button>
               </div>
             </Card>
           </MotionReveal>
         </section>
 
-        <section
-          className='mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_380px] items-start gap-6 px-12 pb-14 pt-6 max-desktop:grid-cols-1 max-tablet:px-5 max-tablet:pb-10.5 max-tablet:pt-7'
-        >
+        <section className='mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_380px] items-start gap-6 px-12 pb-14 pt-6 max-desktop:grid-cols-1 max-tablet:px-5 max-tablet:pb-10.5 max-tablet:pt-7'>
           <div className='min-w-0' id='tiers'>
             <div className='mb-4 flex items-end justify-between gap-5 max-phone:items-start max-phone:flex-col max-phone:gap-2'>
               <div>
                 <p className='mb-1.25 font-mono text-3xs tracking-[0.13em] text-primary-muted'>
                   TEAM BALANCE
                 </p>
-                <h2 className='m-0 font-display text-xl font-bold leading-7'>Tier system</h2>
+                <h2 className='m-0 font-display text-xl font-bold leading-7'>
+                  Tier system
+                </h2>
               </div>
               <span className='font-mono text-2xs tracking-widest text-muted-foreground'>
                 SELF-ASSESS · ORGANIZER REVIEW
@@ -299,8 +326,12 @@ export default function Home() {
                     {tier.tier}
                   </Badge>
                   <div>
-                    <h3 className='mb-1.25 mt-px text-sm font-bold leading-4.5'>{tier.range}</h3>
-                    <p className='m-0 text-xs leading-[1.45] text-secondary-foreground'>{tier.detail}</p>
+                    <h3 className='mb-1.25 mt-px text-sm font-bold leading-4.5'>
+                      {tier.range}
+                    </h3>
+                    <p className='m-0 text-xs leading-[1.45] text-secondary-foreground'>
+                      {tier.detail}
+                    </p>
                   </div>
                 </Card>
               ))}
@@ -310,43 +341,67 @@ export default function Home() {
               className='mt-3.5 grid grid-cols-3 gap-3 max-tablet:grid-cols-1'
               id='how-it-works'
             >
-              <Card className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0' role='article'>
+              <Card
+                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
+                role='article'
+              >
                 <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-primary bg-primary font-mono text-xs font-bold text-primary-foreground'>
                   1
                 </span>
                 <div className='flex min-w-0 flex-col gap-0.75'>
                   <strong className='text-sm leading-4.5'>Register</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>Add Riot ID, rank, tier, and roles.</small>
+                  <small className='text-xs leading-4.25 text-muted-foreground'>
+                    Add Riot ID, rank, tier, and roles.
+                  </small>
                 </div>
               </Card>
-              <Card className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0' role='article'>
+              <Card
+                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
+                role='article'
+              >
                 <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-secondary font-mono text-xs font-bold text-secondary-foreground'>
                   2
                 </span>
                 <div className='flex min-w-0 flex-col gap-0.75'>
                   <strong className='text-sm leading-4.5'>Get approved</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>The organizer confirms your tier.</small>
+                  <small className='text-xs leading-4.25 text-muted-foreground'>
+                    The organizer confirms your tier.
+                  </small>
                 </div>
               </Card>
-              <Card className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0' role='article'>
+              <Card
+                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
+                role='article'
+              >
                 <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-secondary font-mono text-xs font-bold text-secondary-foreground'>
                   3
                 </span>
                 <div className='flex min-w-0 flex-col gap-0.75'>
                   <strong className='text-sm leading-4.5'>Form a team</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>Build five starters and optional subs.</small>
+                  <small className='text-xs leading-4.25 text-muted-foreground'>
+                    Build five starters and optional subs.
+                  </small>
                 </div>
               </Card>
             </div>
           </div>
 
-          <Card className='overflow-hidden rounded-2xl border border-border bg-card gap-0 py-0 ring-0' id='rules' role='complementary'>
+          <Card
+            className='overflow-hidden rounded-2xl border border-border bg-card gap-0 py-0 ring-0'
+            id='rules'
+            role='complementary'
+          >
             <div className='flex items-center gap-2.5 border-b border-border bg-linear-to-r from-secondary to-card px-4.5 py-4'>
-              <span className='grid size-7.5 shrink-0 place-items-center rounded-lg bg-primary text-lg text-primary-foreground' aria-hidden='true'>
+              <span
+                className='grid size-7.5 shrink-0 place-items-center rounded-lg bg-primary text-lg text-primary-foreground'
+                aria-hidden='true'
+              >
                 ◇
               </span>
-              <h2 className='m-0 font-display text-base font-bold leading-5'>Team rules</h2>
-                <Badge className='ml-auto h-auto rounded-full bg-primary/15 px-2 py-1 font-mono text-3xs font-semibold text-primary-muted'>
+              <h2 className='m-0 font-display text-base font-bold leading-5'>
+                Team rules
+              </h2>
+              <Badge className='ml-auto h-auto rounded-full bg-primary/15 px-2 py-1 font-mono text-3xs font-semibold text-primary-muted'>
                 ENFORCED
               </Badge>
             </div>
@@ -360,15 +415,21 @@ export default function Home() {
                   <Badge
                     className={[
                       'h-9 w-10 shrink-0 rounded-lg border border-border bg-background p-0 font-mono text-xs font-bold',
-                      index === 1 ? 'border-tier-t1/20 bg-tier-t1/10 text-tier-t1' : '',
-                      index === 2 ? 'border-tier-t2/20 bg-tier-t2/10 text-tier-t2' : 'text-tier-t1',
+                      index === 1
+                        ? 'border-tier-t1/20 bg-tier-t1/10 text-tier-t1'
+                        : '',
+                      index === 2
+                        ? 'border-tier-t2/20 bg-tier-t2/10 text-tier-t2'
+                        : 'text-tier-t1',
                     ].join(' ')}
                   >
                     {badge}
                   </Badge>
                   <span className='flex min-w-0 flex-col gap-0.75'>
                     <strong className='text-sm leading-4.5'>{title}</strong>
-                    <small className='text-xs leading-4.25 text-muted-foreground'>{description}</small>
+                    <small className='text-xs leading-4.25 text-muted-foreground'>
+                      {description}
+                    </small>
                   </span>
                   <span className='ml-auto grid size-5.5 shrink-0 place-items-center rounded-full bg-success/15 text-success'>
                     <CheckIcon />
@@ -379,7 +440,10 @@ export default function Home() {
 
             <div className='flex items-center justify-between gap-3 bg-background px-4.5 py-3 text-2xs text-muted-foreground max-phone:items-start max-phone:flex-col'>
               <span className='inline-flex items-center gap-1.5 font-mono text-secondary-foreground'>
-                <i className='size-1.5 rounded-full bg-success' aria-hidden='true' />
+                <i
+                  className='size-1.5 rounded-full bg-success'
+                  aria-hidden='true'
+                />
                 ROSTER VALIDATION
               </span>
               <span>Role coverage warns, but does not block.</span>

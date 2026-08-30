@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { RiftClashLogo } from "@/components/brand/rift-clash-logo";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
@@ -21,20 +22,11 @@ export function EntryShell({
     <div className="min-h-svh bg-background px-5 py-5 text-foreground max-tablet:px-4">
       <header className="mx-auto flex min-h-14 w-full max-w-page items-center justify-between gap-5 border-b border-border pb-5">
         <Link
+          aria-label="Rift Clash home"
           className="flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted"
           href="/"
         >
-          <span className="grid size-10 place-items-center rounded-xl bg-primary font-display text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20">
-            WR
-          </span>
-          <span className="flex flex-col">
-            <strong className="font-display text-base font-bold leading-5 tracking-[-0.025em]">
-              RIFT CLASH
-            </strong>
-            <small className="font-mono text-3xs leading-4 tracking-[0.14em] text-muted-foreground max-phone:hidden">
-              PRIVATE WILD RIFT
-            </small>
-          </span>
+          <RiftClashLogo className="h-11 w-auto" />
         </Link>
         <Badge className="h-auto rounded-full border-primary/25 bg-primary-soft px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-primary-muted">
           {badgeLabel}

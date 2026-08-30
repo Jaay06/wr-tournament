@@ -9,6 +9,7 @@ const views: Record<string, TournamentView> = {
   builder: "builder",
   submitted: "submitted",
   teams: "teams",
+  "admin-teams": "admin-teams",
   admin: "admin",
   "tier-review": "tier-review",
 };

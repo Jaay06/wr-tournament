@@ -1,9 +1,6 @@
-import type { Metadata } from 'next';
-import {
-  Inter_Tight,
-  JetBrains_Mono,
-  Space_Grotesk,
-} from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
+import { Inter_Tight, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import { getSiteUrl, siteConfig } from '@/lib/site';
 import './globals.css';
 
 const interTight = Inter_Tight({
@@ -22,8 +19,38 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Rift Clash | Private Wild Rift tournament',
-  description: 'A private place for friends to register, approve tiers, and form Wild Rift tournament teams.',
+  metadataBase: getSiteUrl(),
+  applicationName: siteConfig.name,
+  title: {
+    default: siteConfig.title,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  category: 'gaming',
+  manifest: '/manifest.webmanifest',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    siteName: siteConfig.name,
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: '/',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.title,
+    description: siteConfig.description,
+  },
+};
+
+export const viewport: Viewport = {
+  colorScheme: 'dark',
+  themeColor: '#070B18',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

@@ -19,7 +19,7 @@ export function RoleIcon({ roleName, className, ...props }: RoleIconProps) {
     <svg
       {...props}
       aria-hidden="true"
-      className={cn("size-5 shrink-0 text-primary-muted", className)}
+      className={cn("size-5 shrink-0 text-role-icon", className)}
       data-role-icon={roleName.toLowerCase()}
       fill="currentColor"
       focusable="false"

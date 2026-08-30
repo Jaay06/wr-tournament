@@ -16,6 +16,7 @@
   --primary-foreground: oklch(1 0 0);
   --primary-muted: oklch(0.8306 0.0957 296.4);
   --primary-soft: oklch(0.2456 0.0845 294);
+  --role-icon: oklch(0.759 0.126 74);
   --selection: oklch(0.5692 0.2645 293.7 / 45%);
   --secondary: oklch(0.2645 0.0618 267.8);
   --secondary-foreground: oklch(0.8015 0.0326 267.9);
@@ -65,6 +66,7 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-muted: var(--primary-muted);
   --color-primary-soft: var(--primary-soft);
+  --color-role-icon: var(--role-icon);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
