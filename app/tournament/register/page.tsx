@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import { getRegistrationForParticipant } from "@/lib/tournament-data";
 import { formatDeadline } from "@/lib/tournament";
 
 export default async function PlayerRegistrationPage() {
@@ -38,6 +39,8 @@ export default async function PlayerRegistrationPage() {
     redirect("/invite");
   }
 
+  const registration = await getRegistrationForParticipant(participant.id);
+
   return (
     <TournamentApp
       deadline={formatDeadline(settings.registrationDeadline)}
@@ -45,6 +48,7 @@ export default async function PlayerRegistrationPage() {
       showSignOut
       tournamentName={settings.name}
       userName={session.user.name ?? "player"}
+      registration={registration}
       view="registration"
     />
   );

@@ -5,9 +5,14 @@ import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
 import { tournamentSettings } from "@/db/schema";
+import { getTierReview } from "@/lib/tournament-data";
 import { formatDeadline } from "@/lib/tournament";
 
-export default async function TierReviewPage() {
+export default async function TierReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ registration?: string | string[] }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -17,6 +22,12 @@ export default async function TierReviewPage() {
   if (session.user.role !== "organizer") {
     redirect("/tournament");
   }
+
+  const params = await searchParams;
+  const registrationId = Array.isArray(params.registration)
+    ? params.registration[0]
+    : params.registration;
+  const review = await getTierReview(registrationId);
 
   const [settings] = await db
     .select({
@@ -33,6 +44,7 @@ export default async function TierReviewPage() {
       deadline={formatDeadline(settings?.registrationDeadline)}
       region={settings?.region}
       showSignOut
+      tierReview={review}
       tournamentName={settings?.name}
       userName={session.user.name ?? "organizer"}
       view="tier-review"

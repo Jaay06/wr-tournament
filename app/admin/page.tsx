@@ -5,9 +5,12 @@ import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
 import { tournamentSettings } from "@/db/schema";
+import { getOrganizerOverviewData } from "@/lib/tournament-data";
+import { getAnnouncements } from "@/lib/tournament-data";
 import { formatDeadline, toDateTimeLocalValue } from "@/lib/tournament";
 
 import { InviteCodeForm, SettingsForm } from "./settings-form";
+import { AnnouncementManager } from "./announcement-form";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -31,12 +34,16 @@ export default async function AdminPage() {
     .where(eq(tournamentSettings.id, 1))
     .limit(1);
 
+  const overview = await getOrganizerOverviewData();
+  const announcements = await getAnnouncements();
+
   return (
     <div className="min-h-svh bg-background text-foreground">
       <TournamentApp
         deadline={formatDeadline(settings?.registrationDeadline)}
         region={settings?.region}
         showSignOut
+        overview={overview}
         tournamentName={settings?.name}
         userName={session.user.name ?? "organizer"}
         view="admin"
@@ -76,6 +83,10 @@ export default async function AdminPage() {
             </section>
           </div>
         )}
+      </section>
+
+      <section className="mx-auto w-full max-w-page px-5 pb-12 desktop:px-12">
+        <AnnouncementManager announcements={announcements} />
       </section>
     </div>
   );

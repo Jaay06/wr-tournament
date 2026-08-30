@@ -5,6 +5,11 @@ import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import {
+  getParticipantDirectory,
+  getRegistrationForParticipant,
+  getTeamForRegistration,
+} from "@/lib/tournament-data";
 import { formatDeadline } from "@/lib/tournament";
 
 export default async function TeamBuilderPage() {
@@ -38,6 +43,12 @@ export default async function TeamBuilderPage() {
     redirect("/invite");
   }
 
+  const registration = await getRegistrationForParticipant(participant.id);
+  const [team, participants] = await Promise.all([
+    registration ? getTeamForRegistration(registration.id) : Promise.resolve(null),
+    getParticipantDirectory(),
+  ]);
+
   return (
     <TournamentApp
       deadline={formatDeadline(settings.registrationDeadline)}
@@ -45,6 +56,9 @@ export default async function TeamBuilderPage() {
       showSignOut
       tournamentName={settings.name}
       userName={session.user.name ?? "player"}
+      currentRegistrationId={registration?.id}
+      participants={participants}
+      team={team}
       view="builder"
     />
   );

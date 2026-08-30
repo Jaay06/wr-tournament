@@ -5,12 +5,17 @@ import { eq } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { tournamentSettings } from "@/db/schema";
+import {
+  announcements,
+  notifications,
+  tournamentParticipants,
+  tournamentSettings,
+} from "@/db/schema";
 import {
   generateInviteCode,
   hashInviteCode,
 } from "@/lib/tournament";
-import { organizerSettingsSchema } from "@/lib/validation";
+import { announcementSchema, organizerSettingsSchema } from "@/lib/validation";
 
 export type SettingsState = {
   error?: string;
@@ -20,6 +25,11 @@ export type SettingsState = {
 export type InviteCodeState = {
   code?: string;
   error?: string;
+};
+
+export type AnnouncementState = {
+  error?: string;
+  success?: string;
 };
 
 function formString(formData: FormData, name: string) {
@@ -137,4 +147,71 @@ export async function generateTournamentInvite(
   revalidateTournamentPages();
 
   return { code };
+}
+
+export async function createAnnouncement(
+  _previousState: AnnouncementState,
+  formData: FormData,
+): Promise<AnnouncementState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Sign in before posting an announcement." };
+  }
+  if (session.user.role !== "organizer") {
+    return { error: "Only the organizer can post announcements." };
+  }
+
+  const parsed = announcementSchema.safeParse({
+    title: formString(formData, "title"),
+    body: formString(formData, "body"),
+  });
+  if (!parsed.success) {
+    return { error: "Add a title and message before posting." };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(announcements).values({
+      title: parsed.data.title,
+      body: parsed.data.body,
+      createdBy: session.user.id,
+    });
+
+    const participants = await tx
+      .select({ userId: tournamentParticipants.userId })
+      .from(tournamentParticipants);
+    if (participants.length > 0) {
+      await tx.insert(notifications).values(
+        participants.map(({ userId }) => ({
+          userId,
+          type: "announcement",
+          message: parsed.data.title,
+        })),
+      );
+    }
+  });
+
+  revalidateTournamentPages();
+  return { success: "Announcement posted." };
+}
+
+export async function deleteAnnouncement(
+  _previousState: AnnouncementState,
+  formData: FormData,
+): Promise<AnnouncementState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Sign in before deleting an announcement." };
+  }
+  if (session.user.role !== "organizer") {
+    return { error: "Only the organizer can delete announcements." };
+  }
+
+  const id = formString(formData, "id");
+  if (!id) {
+    return { error: "That announcement could not be found." };
+  }
+
+  await db.delete(announcements).where(eq(announcements.id, id));
+  revalidateTournamentPages();
+  return { success: "Announcement deleted." };
 }
