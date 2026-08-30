@@ -58,7 +58,7 @@ export function EntryShell({
           </div>
         </section>
 
-        <Card className="rounded-card border border-border bg-card p-5 shadow-2xl shadow-black/25 tablet:p-6">
+        <Card className="rounded-card border border-border bg-card p-5 shadow-2xl shadow-primary/10 tablet:p-6">
           {children}
         </Card>
       </main>

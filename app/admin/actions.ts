@@ -21,7 +21,10 @@ import {
   generateInviteCode,
   hashInviteCode,
 } from "@/lib/tournament";
-import { validateRoster } from "@/lib/tournament-rules";
+import {
+  shouldReopenSubmittedTeam,
+  validateRoster,
+} from "@/lib/tournament-rules";
 import type { TournamentMemberData } from "@/lib/tournament-types";
 import {
   announcementSchema,
@@ -79,19 +82,52 @@ function revalidateTournamentPages() {
   revalidatePath("/tournament/teams");
 }
 
+type OrganizerAccess = {
+  userId: string;
+  displayName: string;
+};
+
+async function getOrganizerAccess(): Promise<
+  | { access: OrganizerAccess }
+  | { code: "UNAUTHENTICATED" | "FORBIDDEN" | "TOURNAMENT_ACCESS_REQUIRED"; error: string }
+> {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return { code: "UNAUTHENTICATED", error: "Sign in before using organizer controls." };
+  }
+
+  if (session.user.role !== "organizer") {
+    return { code: "FORBIDDEN", error: "Only the organizer can use these controls." };
+  }
+
+  const [participant] = await db
+    .select({
+      userId: tournamentParticipants.userId,
+      displayName: users.displayName,
+    })
+    .from(tournamentParticipants)
+    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .where(eq(tournamentParticipants.userId, session.user.id))
+    .limit(1);
+
+  if (!participant) {
+    return {
+      code: "TOURNAMENT_ACCESS_REQUIRED",
+      error: "Join this tournament before using organizer controls.",
+    };
+  }
+
+  return { access: participant };
+}
+
 export async function updateTournamentSettings(
   _previousState: SettingsState,
   formData: FormData,
 ): Promise<SettingsState> {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return { error: "Sign in before changing tournament settings." };
-  }
-
-  if (session.user.role !== "organizer") {
-    return { error: "Only the organizer can change tournament settings." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return { error: accessResult.error };
+  const { access } = accessResult;
 
   const parsed = organizerSettingsSchema.safeParse({
     name: formString(formData, "name"),
@@ -132,7 +168,7 @@ export async function updateTournamentSettings(
       region: parsed.data.region,
       inviteEnabled: parsed.data.inviteEnabled,
       registrationDeadline,
-      updatedBy: session.user.id,
+      updatedBy: access.userId,
       updatedAt: new Date(),
     })
     .where(eq(tournamentSettings.id, 1));
@@ -147,15 +183,9 @@ export async function generateTournamentInvite(
 ): Promise<InviteCodeState> {
   void _previousState;
 
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return { error: "Sign in before generating an invite." };
-  }
-
-  if (session.user.role !== "organizer") {
-    return { error: "Only the organizer can generate an invite." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return { error: accessResult.error };
+  const { access } = accessResult;
 
   const [settings] = await db
     .select({ id: tournamentSettings.id })
@@ -173,7 +203,7 @@ export async function generateTournamentInvite(
     .update(tournamentSettings)
     .set({
       inviteCodeHash: hashInviteCode(code),
-      updatedBy: session.user.id,
+      updatedBy: access.userId,
       updatedAt: new Date(),
     })
     .where(eq(tournamentSettings.id, 1));
@@ -187,13 +217,9 @@ export async function createAnnouncement(
   _previousState: AnnouncementState,
   formData: FormData,
 ): Promise<AnnouncementState> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: "Sign in before posting an announcement." };
-  }
-  if (session.user.role !== "organizer") {
-    return { error: "Only the organizer can post announcements." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return { error: accessResult.error };
+  const { access } = accessResult;
 
   const parsed = announcementSchema.safeParse({
     title: formString(formData, "title"),
@@ -207,7 +233,7 @@ export async function createAnnouncement(
     await tx.insert(announcements).values({
       title: parsed.data.title,
       body: parsed.data.body,
-      createdBy: session.user.id,
+      createdBy: access.userId,
     });
 
     const participants = await tx
@@ -232,13 +258,8 @@ export async function deleteAnnouncement(
   _previousState: AnnouncementState,
   formData: FormData,
 ): Promise<AnnouncementState> {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { error: "Sign in before deleting an announcement." };
-  }
-  if (session.user.role !== "organizer") {
-    return { error: "Only the organizer can delete announcements." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return { error: accessResult.error };
 
   const id = formString(formData, "id");
   if (!id) {
@@ -297,13 +318,9 @@ export async function unlockSubmittedTeam(
   formData: FormData,
 ): Promise<TeamAdminState> {
   void _previousState;
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { code: "UNAUTHENTICATED", error: "Sign in before changing team status." };
-  }
-  if (session.user.role !== "organizer") {
-    return { code: "FORBIDDEN", error: "Only the organizer can change team status." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
 
   const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
   if (!teamId.success) {
@@ -343,11 +360,11 @@ export async function unlockSubmittedTeam(
         )
         .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.isCaptain, true)))
         .limit(1);
-      if (captain) {
+      if (captain && captain.userId !== access.userId) {
         await tx.insert(notifications).values({
           userId: captain.userId,
           type: "team_unlocked",
-          message: `${team.name} was returned to draft by the organizer.`,
+          message: `${access.displayName} returned ${team.name} to draft.`,
         });
       }
     });
@@ -367,13 +384,9 @@ export async function organizerUpdateTeamLineup(
   formData: FormData,
 ): Promise<TeamAdminState> {
   void _previousState;
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { code: "UNAUTHENTICATED", error: "Sign in before repairing a lineup." };
-  }
-  if (session.user.role !== "organizer") {
-    return { code: "FORBIDDEN", error: "Only the organizer can repair lineups." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
 
   const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
   const parsedLineup = parseLineup(formData);
@@ -493,7 +506,7 @@ export async function organizerUpdateTeamLineup(
         }),
       );
 
-      const reopened = team.status === "submitted" && !validation.valid;
+      const reopened = shouldReopenSubmittedTeam(team.status, validation);
       await tx
         .update(teams)
         .set(
@@ -503,27 +516,27 @@ export async function organizerUpdateTeamLineup(
         )
         .where(eq(teams.id, team.id));
 
-      if (reopened) {
-        const [captain] = await tx
-          .select({ userId: tournamentParticipants.userId })
-          .from(teamMembers)
-          .innerJoin(
-            playerRegistrations,
-            eq(teamMembers.registrationId, playerRegistrations.id),
-          )
-          .innerJoin(
-            tournamentParticipants,
-            eq(playerRegistrations.participantId, tournamentParticipants.id),
-          )
-          .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.isCaptain, true)))
-          .limit(1);
-        if (captain) {
-          await tx.insert(notifications).values({
-            userId: captain.userId,
-            type: "team_reopened",
-            message: `${team.name} was returned to draft after an organizer lineup repair.`,
-          });
-        }
+      const [captain] = await tx
+        .select({ userId: tournamentParticipants.userId })
+        .from(teamMembers)
+        .innerJoin(
+          playerRegistrations,
+          eq(teamMembers.registrationId, playerRegistrations.id),
+        )
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.isCaptain, true)))
+        .limit(1);
+      if (captain && captain.userId !== access.userId) {
+        await tx.insert(notifications).values({
+          userId: captain.userId,
+          type: reopened ? "team_reopened" : "team_repaired",
+          message: reopened
+            ? `${access.displayName} repaired the ${team.name} lineup and returned it to draft.`
+            : `${access.displayName} repaired the ${team.name} lineup.`,
+        });
       }
 
       return { validation, reopened };
@@ -553,13 +566,9 @@ export async function addTeamMember(
   formData: FormData,
 ): Promise<TeamAdminState> {
   void _previousState;
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { code: "UNAUTHENTICATED", error: "Sign in before adding a team member." };
-  }
-  if (session.user.role !== "organizer") {
-    return { code: "FORBIDDEN", error: "Only the organizer can repair rosters." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
 
   const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
   const registrationId = teamIdSchema.safeParse(
@@ -654,30 +663,11 @@ export async function addTeamMember(
         .where(and(eq(teamMembers.teamId, team.id), eq(teamMembers.isCaptain, true)))
         .limit(1);
 
-      if (team.status === "submitted") {
-        await tx
-          .update(teams)
-          .set({ status: "draft", submittedAt: null, updatedAt: new Date() })
-          .where(eq(teams.id, team.id));
-      } else {
-        await tx
-          .update(teams)
-          .set({ updatedAt: new Date() })
-          .where(eq(teams.id, team.id));
-      }
-
       await tx.insert(notifications).values({
         userId: target.userId,
         type: "team_added",
-        message: `The organizer added you to ${team.name}.`,
+        message: `${access.displayName} added you to ${team.name}.`,
       });
-      if (captain && captain.userId !== target.userId) {
-        await tx.insert(notifications).values({
-          userId: captain.userId,
-          type: "team_repaired",
-          message: `${team.name} was updated by the organizer.`,
-        });
-      }
 
       const rows = await tx
         .select({ member: teamMembers, registration: playerRegistrations, user: users })
@@ -694,11 +684,37 @@ export async function addTeamMember(
         .where(eq(teamMembers.teamId, team.id))
         .orderBy(asc(teamMembers.joinedAt));
 
-      return validateRoster(
+      const validation = validateRoster(
         rows.map(({ member, registration, user }) =>
           validationMember(member, registration, user),
         ),
       );
+      const reopened = shouldReopenSubmittedTeam(team.status, validation);
+
+      await tx
+        .update(teams)
+        .set(
+          reopened
+            ? { status: "draft", submittedAt: null, updatedAt: new Date() }
+            : { updatedAt: new Date() },
+        )
+        .where(eq(teams.id, team.id));
+
+      if (
+        captain &&
+        captain.userId !== target.userId &&
+        captain.userId !== access.userId
+      ) {
+        await tx.insert(notifications).values({
+          userId: captain.userId,
+          type: "team_repaired",
+          message: reopened
+            ? `${access.displayName} added a player to ${team.name} and returned it to draft.`
+            : `${access.displayName} added a player to ${team.name}.`,
+        });
+      }
+
+      return validation;
     });
 
     revalidateTournamentPages();
@@ -723,13 +739,9 @@ export async function removeTeamMember(
   formData: FormData,
 ): Promise<TeamAdminState> {
   void _previousState;
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { code: "UNAUTHENTICATED", error: "Sign in before removing a team member." };
-  }
-  if (session.user.role !== "organizer") {
-    return { code: "FORBIDDEN", error: "Only the organizer can repair rosters." };
-  }
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
 
   const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
   const registrationId = teamIdSchema.safeParse(
@@ -747,6 +759,7 @@ export async function removeTeamMember(
           teamName: teams.name,
           teamStatus: teams.status,
           userId: tournamentParticipants.userId,
+          displayName: users.displayName,
         })
         .from(teamMembers)
         .innerJoin(teams, eq(teamMembers.teamId, teams.id))
@@ -758,6 +771,7 @@ export async function removeTeamMember(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
         .where(
           and(
             eq(teamMembers.teamId, teamId.data),
@@ -830,10 +844,14 @@ export async function removeTeamMember(
         ),
       );
 
+      const reopened = shouldReopenSubmittedTeam(
+        membership.teamStatus,
+        validation,
+      );
       await tx
         .update(teams)
         .set(
-          membership.teamStatus === "submitted"
+          reopened
             ? { status: "draft", submittedAt: null, updatedAt: new Date() }
             : { updatedAt: new Date() },
         )
@@ -842,19 +860,21 @@ export async function removeTeamMember(
       await tx.insert(notifications).values({
         userId: membership.userId,
         type: "team_removed",
-        message: `The organizer removed you from ${membership.teamName}.`,
+        message: `${access.displayName} removed you from ${membership.teamName}.`,
       });
-      if (captain) {
+      if (captain && captain.userId !== access.userId) {
         await tx.insert(notifications).values({
           userId: captain.userId,
           type: "team_repaired",
-          message: `${membership.teamName} was updated by the organizer.`,
+          message: reopened
+            ? `${access.displayName} removed ${membership.displayName} from ${membership.teamName} and returned it to draft.`
+            : `${access.displayName} removed ${membership.displayName} from ${membership.teamName}.`,
         });
       }
 
       return {
         validation,
-        reopened: membership.teamStatus === "submitted",
+        reopened,
       };
     });
 

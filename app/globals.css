@@ -179,18 +179,6 @@ textarea {
   }
 }
 
-@layer components {
-  .button-feedback {
-    transition-property: transform, scale, background-color, border-color, color, opacity;
-    transition-duration: 150ms;
-    transition-timing-function: var(--ease-out-quad);
-  }
-
-  .button-feedback:active {
-    scale: 0.97;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -199,9 +187,5 @@ textarea {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .button-feedback:active {
-    scale: 1;
   }
 }

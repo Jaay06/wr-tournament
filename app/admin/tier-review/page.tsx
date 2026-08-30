@@ -23,11 +23,23 @@ export default async function TierReviewPage({
     redirect("/tournament");
   }
 
+  if (!session.user.hasJoinedTournament) {
+    redirect("/invite");
+  }
+
   const params = await searchParams;
   const registrationId = Array.isArray(params.registration)
     ? params.registration[0]
     : params.registration;
   const review = await getTierReview(registrationId);
+
+  if (registrationId && review?.id !== registrationId) {
+    redirect(
+      review
+        ? `/admin/tier-review?registration=${encodeURIComponent(review.id)}`
+        : "/admin/tier-review",
+    );
+  }
 
   const [settings] = await db
     .select({

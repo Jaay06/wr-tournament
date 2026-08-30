@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { TournamentApp, type TournamentView } from "@/components/tournament/tournament-app";
 
 const views: Record<string, TournamentView> = {
+  invite: "invite",
   registration: "registration",
   dashboard: "dashboard",
   builder: "builder",

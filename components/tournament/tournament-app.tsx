@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
-import type { FormEvent, ReactNode } from "react";
+import type { FormEvent, HTMLAttributes, ReactNode } from "react";
 import { useActionState } from "react";
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -38,12 +38,14 @@ import {
   renameTeam,
   requestToJoinTeam,
   respondToJoinRequest,
+  respondToTeamInvite,
   savePlayerRegistration,
   submitTeam,
   updateTeamLineup,
   type TournamentActionState,
 } from "@/app/tournament/actions";
 import { OrganizerTeamManager } from "@/app/admin/teams/team-manager";
+import { EntryShell } from "@/components/auth/entry-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AnimatedButtonLabel } from "@/components/ui/animated-button-label";
 import { Avatar as ShadcnAvatar, AvatarFallback } from "@/components/ui/avatar";
@@ -56,12 +58,17 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RoleIcon } from "@/components/tournament/role-icon";
-import { validateRoster } from "@/lib/tournament-rules";
+import {
+  availableTournamentParticipants,
+  roleMatchesPreferences,
+  validateRoster,
+} from "@/lib/tournament-rules";
 import { cn } from "@/lib/utils";
 import type {
   TierReviewData,
   TournamentAnnouncementData,
   TournamentDashboardData,
+  TournamentIncomingInviteData,
   TournamentMemberData,
   TournamentParticipantOption,
   TournamentRegistrationData,
@@ -71,6 +78,7 @@ import type {
 } from "@/lib/tournament-types";
 
 export type TournamentView =
+  | "invite"
   | "registration"
   | "dashboard"
   | "teams"
@@ -103,6 +111,7 @@ export type TournamentAppProps = {
   participants?: TournamentParticipantOption[];
   adminTeams?: TournamentTeamData[];
   announcements?: TournamentAnnouncementData[];
+  incomingInvites?: TournamentIncomingInviteData[];
 };
 
 type Player = {
@@ -115,6 +124,7 @@ type Player = {
   secondaryRole: Role;
   initial: string;
   avatarClass: string;
+  isCaptain?: boolean;
 };
 
 function playerFromMember(member: TournamentMemberData): Player {
@@ -133,6 +143,7 @@ function playerFromMember(member: TournamentMemberData): Player {
     secondaryRole: member.secondaryRole,
     initial: member.displayName.slice(0, 1).toUpperCase(),
     avatarClass,
+    isCaptain: member.isCaptain,
   };
 }
 
@@ -208,6 +219,7 @@ const rosterPlayers: Player[] = [
     secondaryRole: "Support",
     initial: "J",
     avatarClass: "bg-primary text-primary-foreground",
+    isCaptain: true,
   },
   {
     name: "Mori",
@@ -258,7 +270,7 @@ const teamCards = [
     members: "5 / 7",
     state: "DRAFT" as const,
     eligible: true,
-    tiers: { T1: 1, T2: 1, T3: 3, T4: 1 },
+    tiers: { T1: 1, T2: 1, T3: 2, T4: 1 },
   },
   {
     name: "Drake Raiders",
@@ -399,7 +411,7 @@ function AppHeader({
         <Button
           aria-expanded={menuOpen}
           aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-          className="button-feedback ml-auto rounded-xl border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden"
+          className="ml-auto rounded-xl border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden"
           onClick={() => setMenuOpen((open) => !open)}
           size="icon-lg"
           type="button"
@@ -454,13 +466,15 @@ function Card({
   children,
   className,
   id,
+  role,
 }: {
   children: ReactNode;
   className?: string;
   id?: string;
+  role?: HTMLAttributes<HTMLDivElement>["role"];
 }) {
   return (
-    <ShadcnCard className={cn("rounded-card border border-border bg-card gap-0", className)} id={id}>
+    <ShadcnCard className={cn("rounded-card border border-border bg-card gap-0", className)} id={id} role={role}>
       {children}
     </ShadcnCard>
   );
@@ -708,6 +722,11 @@ function RegistrationView({
   const summary = state.registration ?? submittedValues ?? initial;
 
   function captureSubmission(event: FormEvent<HTMLFormElement>) {
+    if (deadlineStatus === "passed") {
+      event.preventDefault();
+      return;
+    }
+
     const data = new FormData(event.currentTarget);
     const riotName = String(data.get("riotName") ?? "").trim();
     const riotTag = String(data.get("riotTag") ?? "").trim();
@@ -759,9 +778,11 @@ function RegistrationView({
               </div>
               <div className="mt-6 flex flex-col justify-center gap-3 tablet:flex-row">
                 <ButtonLink href="/tournament">Go to participant home <ArrowRight size={16} /></ButtonLink>
-                <Button className="min-h-11 border border-border bg-secondary text-foreground hover:border-border-strong" onClick={() => setEditing(true)} size="lg" type="button">
-                  Edit registration
-                </Button>
+                {deadlineStatus !== "passed" ? (
+                  <Button className="min-h-11 border border-border bg-secondary text-foreground hover:border-border-strong" onClick={() => setEditing(true)} size="lg" type="button">
+                    Edit registration
+                  </Button>
+                ) : null}
               </div>
             </Card>
           </motion.div>
@@ -809,6 +830,7 @@ function RegistrationView({
           </aside>
 
           <form action={formAction} className="flex flex-col gap-5" onSubmit={captureSubmission}>
+            <fieldset className="contents" disabled={deadlineStatus === "passed"}>
             <Card className="p-5 desktop:p-6">
               <div className="border-b border-border pb-5"><Kicker>PLAYER DETAILS</Kicker><h2 className="mt-2 font-display text-2xl font-bold">How should friends find you?</h2><p className="mt-2 text-sm leading-5 text-secondary-foreground">Use the Riot ID and rank you play with today.</p></div>
               <FieldGroup className="mt-6 tablet:grid tablet:grid-cols-2">
@@ -851,6 +873,7 @@ function RegistrationView({
               <div className="grid tablet:grid-cols-2">{(Object.keys(tierMeta) as Tier[]).map((tier) => <div className="flex items-center gap-3 border-b border-border p-4 last:border-0 tablet:odd:border-r" key={tier}><TierBadge tier={tier} /><p className="m-0 text-sm font-medium text-secondary-foreground">{tierMeta[tier].range}</p></div>)}</div>
               <p className="m-0 border-t border-border bg-secondary px-5 py-4 text-xs leading-5 text-muted-foreground">Tier limits apply to the full roster, including substitutes: at most one T1 and two T2 players.</p>
             </Card>
+            </fieldset>
           </form>
         </div>
       </div>
@@ -909,7 +932,9 @@ function DashboardView({
             eyebrow="PARTICIPANT HOME"
             title={`Welcome back, ${userName}`}
           />
-          <StatusPill tone="success">REGISTRATION OPEN</StatusPill>
+          <StatusPill tone={deadlineStatus === "passed" ? "danger" : "success"}>
+            {deadlineStatus === "passed" ? "REGISTRATION CLOSED" : "REGISTRATION OPEN"}
+          </StatusPill>
         </div>
 
         <div className="grid gap-3 desktop:grid-cols-[minmax(0,1fr)_230px_210px]">
@@ -1001,6 +1026,59 @@ function DashboardView({
         </div>
       </div>
     </PageFrame>
+  );
+}
+
+function InvitePreviewView({
+  tournamentName,
+  region,
+  deadline,
+  deadlineRemaining,
+  deadlineStatus,
+}: {
+  tournamentName: string;
+  region: string;
+  deadline: string;
+  deadlineRemaining?: string;
+  deadlineStatus?: "open" | "upcoming" | "passed";
+}) {
+  const closed = deadlineStatus === "passed";
+
+  return (
+    <EntryShell
+      description="Your private invite is recognized. Sign in to keep it attached and enter the tournament room."
+      eyebrow="PRIVATE INVITE"
+      title={closed ? "This invite is closed." : "Your invite is ready."}
+    >
+      <div className="flex flex-col gap-5">
+        <Card className={cn("rounded-2xl p-4", closed ? "border-danger/25 bg-danger-soft" : "border-primary/25 bg-primary-soft")} role="status">
+          <Kicker className={closed ? "text-danger" : "text-primary-muted"}>{closed ? "INVITE CLOSED" : "INVITE RECOGNIZED"}</Kicker>
+          <p className="mt-2 mb-0 text-sm leading-5 text-secondary-foreground">{closed ? "Ask the organizer to reopen the invite before continuing." : "The invite code will stay attached while you sign in or create an account."}</p>
+        </Card>
+
+        <div className="grid grid-cols-2 gap-3 max-phone:grid-cols-1">
+          <Card className="rounded-2xl border border-border bg-secondary p-3.5">
+            <Kicker>TOURNAMENT</Kicker>
+            <p className="mt-1 mb-0 text-sm font-semibold">{tournamentName}</p>
+          </Card>
+          <Card className="rounded-2xl border border-border bg-secondary p-3.5">
+            <Kicker>REGION</Kicker>
+            <p className="mt-1 mb-0 text-sm font-semibold">{region}</p>
+          </Card>
+          <Card className="col-span-2 rounded-2xl border border-border bg-secondary p-3.5 max-phone:col-span-1">
+            <Kicker>REGISTRATION CLOSES</Kicker>
+            <p className="mt-1 mb-0 text-sm font-semibold">{deadline}</p>
+            <p className={cn("mt-1 mb-0 font-mono text-2xs font-semibold tracking-[0.08em]", closed ? "text-danger" : "text-warning")}>{closed ? "CLOSED" : deadlineRemaining ?? "OPEN"}</p>
+          </Card>
+        </div>
+
+        <div className="border-t border-border pt-5">
+          <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">NEXT STEP</p>
+          <p className="mt-2 mb-0 text-sm leading-5 text-secondary-foreground">{closed ? "The organizer controls access to this private tournament." : "Sign in with Discord or email and password to continue."}</p>
+          {!closed ? <ButtonLink className="mt-4 w-full" href="/signin?callbackUrl=%2Finvite">Continue to sign in <ArrowRight size={16} /></ButtonLink> : null}
+        </div>
+      </div>
+    </EntryShell>
   );
 }
 
@@ -1119,7 +1197,10 @@ function BrowseTeamsView({
 
         <div className="grid gap-4 tablet:grid-cols-2 desktop:grid-cols-3">
           {filteredTeams.map((team) => {
-            const requestSent = requestedTeam === team.id || (teams === undefined && requestedTeam === team.name);
+            const requestSent = requestedTeam === team.id
+              || (teams === undefined && requestedTeam === team.name)
+              || (Boolean(requestState.success)
+                && requestState.teamId === team.id);
             return (
               <Card className="flex min-h-full flex-col overflow-hidden" key={team.id}>
                 <div className="p-5">
@@ -1148,28 +1229,25 @@ function BrowseTeamsView({
                 </div>
 
                 <div className="mt-auto border-t border-border bg-secondary/55 p-4">
-                  {team.eligible && canRequest ? teams === undefined ? (
-                    <Button className={cn("min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold", requestSent ? "border border-success/30 bg-success-soft text-success" : "bg-primary text-primary-foreground hover:bg-primary-hover")} disabled={requestSent} onClick={() => setRequestedTeam(team.name)} size="lg" type="button">
-                      <AnimatedButtonLabel stateKey={requestSent ? "sent" : "idle"}>
-                        {requestSent ? <><Check size={16} /> Request sent</> : <><Send size={16} /> Request to join</>}
-                      </AnimatedButtonLabel>
-                    </Button>
-                  ) : team.eligible && !canRequest ? (
-                    <div>
-                      <Button className="min-h-11 w-full rounded-xl border border-border bg-secondary text-muted-foreground" disabled size="lg" type="button"><LockKeyhole size={16} /> {alreadyOnTeam ? "Already on a team" : changesClosed ? "Requests closed" : "Registration needed"}</Button>
-                      <p className="mt-2 mb-0 text-center text-xs text-muted-foreground">{alreadyOnTeam ? "Leave your current team before requesting another." : changesClosed ? "The deadline has passed." : "Complete registration first."}</p>
-                    </div>
-                  ) : (
-                    <form action={requestAction} onSubmit={() => setRequestedTeam(team.id)}>
-                      <input name="teamId" type="hidden" value={team.id} />
-                      <FormSubmitButton className={cn("w-full", requestSent ? "border border-success/30 bg-success-soft text-success" : "bg-primary text-primary-foreground hover:bg-primary-hover")} stateKey={requestSent ? "sent" : "idle"}>
-                        {requestSent ? <><Check size={16} /> Request sent</> : <><Send size={16} /> Request to join</>}
-                      </FormSubmitButton>
-                    </form>
+                  {team.eligible && canRequest ? (
+                    preview ? (
+                      <Button className={cn("min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold", requestSent ? "border border-success/30 bg-success-soft text-success" : "bg-primary text-primary-foreground hover:bg-primary-hover")} disabled={requestSent} onClick={() => setRequestedTeam(team.name)} size="lg" type="button">
+                        <AnimatedButtonLabel stateKey={requestSent ? "sent" : "idle"}>
+                          {requestSent ? <><Check size={16} /> Request sent</> : <><Send size={16} /> Request to join</>}
+                        </AnimatedButtonLabel>
+                      </Button>
+                    ) : (
+                      <form action={requestAction}>
+                        <input name="teamId" type="hidden" value={team.id} />
+                        <FormSubmitButton className={cn("w-full", requestSent ? "border border-success/30 bg-success-soft text-success" : "bg-primary text-primary-foreground hover:bg-primary-hover")} stateKey={requestSent ? "sent" : "idle"}>
+                          {requestSent ? <><Check size={16} /> Request sent</> : <><Send size={16} /> Request to join</>}
+                        </FormSubmitButton>
+                      </form>
+                    )
                   ) : (
                     <div>
-                      <Button className="min-h-11 w-full rounded-xl border border-border bg-secondary text-muted-foreground" disabled size="lg" type="button"><LockKeyhole size={16} /> Requests closed</Button>
-                      <p className="mt-2 mb-0 text-center text-xs text-muted-foreground">The captain already submitted this roster.</p>
+                      <Button className="min-h-11 w-full rounded-xl border border-border bg-secondary text-muted-foreground" disabled size="lg" type="button"><LockKeyhole size={16} /> {team.eligible ? alreadyOnTeam ? "Already on a team" : changesClosed ? "Requests closed" : "Registration needed" : team.state === "SUBMITTED" ? "Requests closed" : "Team full"}</Button>
+                      <p className="mt-2 mb-0 text-center text-xs text-muted-foreground">{team.eligible ? alreadyOnTeam ? "Leave your current team before requesting another." : changesClosed ? "The deadline has passed." : "Complete registration first." : team.state === "SUBMITTED" ? "The captain already submitted this roster." : "This roster already has seven members."}</p>
                     </div>
                   )}
                 </div>
@@ -1194,7 +1272,10 @@ function BrowseTeamsView({
 }
 
 function RoleSlot({ role, player, submitted }: { role: Role; player?: Player; submitted: boolean }) {
-  const mismatch = role === "Dragon" && player?.name === "Mori";
+  const mismatch = Boolean(
+    player &&
+      !roleMatchesPreferences(role, player.primaryRole, player.secondaryRole),
+  );
 
   if (!player) {
     return (
@@ -1211,7 +1292,7 @@ function RoleSlot({ role, player, submitted }: { role: Role; player?: Player; su
     <ShadcnCard className={cn("rounded-2xl border bg-secondary p-4 py-4 ring-0", mismatch ? "border-warning/40" : "border-border")} role="article">
       <div className="flex items-center justify-between gap-2">
         <RoleLabel role={role} />
-        {player.name === "Jinxed" ? <Crown className="text-primary-muted" size={15} aria-label="Captain" /> : null}
+        {player.isCaptain ? <Crown className="text-primary-muted" size={15} aria-label="Captain" /> : null}
       </div>
       <div className="mt-4 flex items-center gap-3 desktop:flex-col desktop:items-start">
         <Avatar player={player} size="size-11" />
@@ -1226,7 +1307,7 @@ function RoleSlot({ role, player, submitted }: { role: Role; player?: Player; su
       </div>
       {mismatch ? (
         <p className="mt-3 flex items-start gap-1.5 text-xs leading-4 text-warning">
-          <AlertTriangle className="mt-px shrink-0" size={13} /> Prefers Baron or Support
+          <AlertTriangle className="mt-px shrink-0" size={13} /> Prefers {player.primaryRole} or {player.secondaryRole}
         </p>
       ) : null}
       {submitted ? <p className="mt-3 font-mono text-3xs tracking-widest text-muted-foreground">LOCKED</p> : null}
@@ -1234,8 +1315,16 @@ function RoleSlot({ role, player, submitted }: { role: Role; player?: Player; su
   );
 }
 
-function CreateTeamView() {
+function CreateTeamView({
+  deadlineStatus,
+  incomingInvites = [],
+}: {
+  deadlineStatus?: "open" | "upcoming" | "passed";
+  incomingInvites?: TournamentIncomingInviteData[];
+}) {
   const [state, formAction] = useActionState<TournamentActionState, FormData>(createTeam, {});
+  const [inviteState, inviteAction] = useActionState<TournamentActionState, FormData>(respondToTeamInvite, {});
+  const changesClosed = deadlineStatus === "passed";
 
   return (
     <PageFrame>
@@ -1245,30 +1334,68 @@ function CreateTeamView() {
           eyebrow="TEAM ROOM"
           title="Create your team"
         />
+        {changesClosed ? (
+          <Alert className="border-danger/30 bg-danger-soft text-danger">
+            <AlertDescription className="text-danger">Team creation and invitation decisions are closed because the registration deadline has passed.</AlertDescription>
+          </Alert>
+        ) : null}
+        {incomingInvites.length > 0 ? (
+          <Card className="p-5 desktop:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <Kicker>TEAM INVITATIONS</Kicker>
+                <h2 className="mt-2 font-display text-xl font-bold">Friends want you on their roster</h2>
+              </div>
+              <StatusPill tone="warning">{incomingInvites.length} WAITING</StatusPill>
+            </div>
+            <div className="mt-5 grid gap-3 tablet:grid-cols-2">
+              {incomingInvites.map((invite) => (
+                <div className="rounded-2xl border border-primary/30 bg-primary-soft p-4" key={invite.id}>
+                  <Kicker className="text-primary-muted">TEAM INVITE</Kicker>
+                  <p className="mt-2 text-base font-semibold">{invite.teamName}</p>
+                  <p className="mt-1 text-xs leading-5 text-secondary-foreground">Captain {invite.captainName} · {invite.captainRiotId}</p>
+                  {!changesClosed ? (
+                    <form action={inviteAction} className="mt-4 flex gap-2">
+                      <input name="inviteId" type="hidden" value={invite.id} />
+                      <Button className="min-h-11 flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" name="decision" size="lg" type="submit" value="accepted">Accept</Button>
+                      <Button className="min-h-11 flex-1 border border-border bg-secondary text-foreground hover:border-border-strong" name="decision" size="lg" type="submit" value="declined">Decline</Button>
+                    </form>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">This invitation can no longer be changed.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {inviteState.error ? <Alert aria-live="polite" className="mt-4" variant="destructive"><AlertDescription>{inviteState.error}</AlertDescription></Alert> : null}
+            {inviteState.success ? <Alert aria-live="polite" className="mt-4 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{inviteState.success}</AlertDescription></Alert> : null}
+          </Card>
+        ) : null}
         <Card className="p-5 desktop:p-6">
           <form action={formAction} className="flex flex-col gap-5">
-            <Field>
-              <FieldLabel htmlFor="teamName">Team name</FieldLabel>
-              <Input className="min-h-12 rounded-xl px-3.5 text-base" id="teamName" name="teamName" placeholder="Night Sentinels" required />
-              <FieldDescription>You can rename a draft team later as captain.</FieldDescription>
-            </Field>
-            {state.error ? <Alert aria-live="polite" variant="destructive"><AlertDescription>{state.error}</AlertDescription></Alert> : null}
-            {state.success ? (
-              <motion.div
-                animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
-                aria-live="polite"
-                className="rounded-xl"
-                initial={{ opacity: 0, transform: "translateY(8px) scale(0.99)" }}
-                transition={{ duration: 0.22, ease: easeOutExpo }}
-              >
-                <Alert className="border-success/30 bg-success-soft text-success" aria-live="polite"><AlertDescription className="text-success">{state.success}</AlertDescription></Alert>
-                <ButtonLink className="mt-4" href="/tournament/team">Open team room <ArrowRight size={16} /></ButtonLink>
-              </motion.div>
-            ) : (
-              <FormSubmitButton className="self-start bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover">
-                <Plus size={17} /> Create team
-              </FormSubmitButton>
-            )}
+            <fieldset className="contents" disabled={changesClosed}>
+              <Field>
+                <FieldLabel htmlFor="teamName">Team name</FieldLabel>
+                <Input className="min-h-12 rounded-xl px-3.5 text-base" id="teamName" name="teamName" placeholder="Night Sentinels" required />
+                <FieldDescription>You can rename a draft team later as captain.</FieldDescription>
+              </Field>
+              {state.error ? <Alert aria-live="polite" variant="destructive"><AlertDescription>{state.error}</AlertDescription></Alert> : null}
+              {state.success ? (
+                <motion.div
+                  animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+                  aria-live="polite"
+                  className="rounded-xl"
+                  initial={{ opacity: 0, transform: "translateY(8px) scale(0.99)" }}
+                  transition={{ duration: 0.22, ease: easeOutExpo }}
+                >
+                  <Alert className="border-success/30 bg-success-soft text-success" aria-live="polite"><AlertDescription className="text-success">{state.success}</AlertDescription></Alert>
+                  <ButtonLink className="mt-4" href="/tournament/team">Open team room <ArrowRight size={16} /></ButtonLink>
+                </motion.div>
+              ) : (
+                <FormSubmitButton className="self-start bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover">
+                  <Plus size={17} /> Create team
+                </FormSubmitButton>
+              )}
+            </fieldset>
           </form>
         </Card>
       </div>
@@ -1356,13 +1483,13 @@ function LineupEditor({ team, currentRegistrationId, deadlineStatus }: { team: T
   );
 }
 
-function TeamRoomView(props: { initialSubmitted?: boolean; team?: TournamentTeamData | null; registration?: TournamentRegistrationData | null; currentRegistrationId?: string; participants?: TournamentParticipantOption[]; deadlineStatus?: "open" | "upcoming" | "passed" }) {
+function TeamRoomView(props: { initialSubmitted?: boolean; team?: TournamentTeamData | null; registration?: TournamentRegistrationData | null; currentRegistrationId?: string; participants?: TournamentParticipantOption[]; incomingInvites?: TournamentIncomingInviteData[]; deadlineStatus?: "open" | "upcoming" | "passed" }) {
   if (props.team === null && props.registration === null) {
     return <RegistrationRequiredTeamView />;
   }
 
   if (props.team === null) {
-    return <CreateTeamView />;
+    return <CreateTeamView deadlineStatus={props.deadlineStatus} incomingInvites={props.incomingInvites} />;
   }
 
   return <TeamRoomContent {...props} team={props.team ?? undefined} />;
@@ -1399,8 +1526,20 @@ function TeamRoomContent({ initialSubmitted = false, team, currentRegistrationId
   const isCaptain = Boolean(actualTeam && currentRegistrationId && actualTeam.members.some((member) => member.registrationId === currentRegistrationId && member.isCaptain));
   const changesClosed = deadlineStatus === "passed";
   const showCaptainControls = (preview || isCaptain) && !changesClosed;
-  const canRename = preview || isCaptain;
-  const inviteOptions = participants?.filter((participant) => !actualTeam?.members.some((member) => member.registrationId === participant.id));
+  const canRename = preview || (isCaptain && !changesClosed);
+  const inviteOptions = participants
+    ? availableTournamentParticipants(
+        participants,
+        actualTeam?.members.map((member) => member.registrationId),
+        actualTeam?.invites
+          .filter((invite) => invite.status === "pending")
+          .map((invite) => invite.invitedRegistrationId),
+      )
+    : undefined;
+  const pendingInvites = actualTeam?.invites.filter((invite) => invite.status === "pending") ?? [];
+  const pendingJoinRequests = actualTeam?.joinRequests.filter(
+    (request) => request.status === "pending",
+  ) ?? [];
 
   function submitPreviewTeam() {
     setSubmitted(true);
@@ -1515,8 +1654,59 @@ function TeamRoomContent({ initialSubmitted = false, team, currentRegistrationId
                   </form>
                 ) : null}
                 {inviteState.error ? <Alert aria-live="polite" className="mt-4" variant="destructive"><AlertDescription>{inviteState.error}</AlertDescription></Alert> : null}
-                {actualTeam && actualTeam.joinRequests.length > 0 ? <div className="mt-5 grid gap-3 tablet:grid-cols-2">{actualTeam.joinRequests.filter((request) => request.status === "pending").map((request) => <div className="rounded-2xl border border-primary/30 bg-primary-soft p-4" key={request.id}><div className="flex items-start justify-between gap-3"><div><Kicker className="text-primary-muted">JOIN REQUEST</Kicker><p className="mt-2 text-sm font-semibold">{request.displayName} · {request.approvedTier ?? "Pending"} · {request.primaryRole}</p></div><StatusPill tone="warning">WAITING</StatusPill></div><form action={requestAction} className="mt-4 flex gap-2"><input name="requestId" type="hidden" value={request.id} /><Button className="min-h-11 flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" name="decision" size="lg" type="submit" value="accepted">Accept</Button><Button className="min-h-11 flex-1 border border-border bg-secondary text-foreground hover:border-border-strong" name="decision" size="lg" type="submit" value="declined">Decline</Button></form></div>)}</div> : preview ? <div className="mt-5 grid gap-3 tablet:grid-cols-2"><div className="rounded-2xl border border-border bg-secondary p-4"><div className="flex items-start justify-between gap-3"><div><Kicker>TEAM INVITE</Kicker><p className="mt-2 text-sm font-semibold">Kai#2288</p></div><StatusPill>WAITING</StatusPill></div><p className="mt-3 text-xs leading-5 text-muted-foreground">The invite expires when Kai joins another team.</p></div><div className="rounded-2xl border border-primary/30 bg-primary-soft p-4"><div className="flex items-start justify-between gap-3"><div><Kicker className="text-primary-muted">JOIN REQUEST</Kicker><p className="mt-2 text-sm font-semibold">Niko#8128 · T2 · Mid</p></div><StatusPill tone={requestState === "accepted" ? "success" : requestState === "declined" ? "danger" : "warning"}>{requestState.toUpperCase()}</StatusPill></div>{requestState === "pending" ? <div className="mt-4 flex gap-2"><Button className="min-h-11 flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" onClick={() => setRequestState("accepted")} size="lg" type="button">Accept</Button><Button className="min-h-11 flex-1 border border-border bg-secondary text-foreground hover:border-border-strong" onClick={() => setRequestState("declined")} size="lg" type="button">Decline</Button></div> : <p className="mt-3 text-xs text-secondary-foreground">Request {requestState}.</p>}</div></div> : <p className="mt-5 text-sm text-muted-foreground">No pending invites or join requests.</p>}
+                {inviteState.success ? <Alert aria-live="polite" className="mt-4 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{inviteState.success}</AlertDescription></Alert> : null}
+                {pendingInvites.length > 0 ? (
+                  <div className="mt-5 grid gap-3 tablet:grid-cols-2">
+                    {pendingInvites.map((invite) => (
+                      <div className="rounded-2xl border border-border bg-secondary p-4" key={invite.id}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div><Kicker>TEAM INVITE</Kicker><p className="mt-2 text-sm font-semibold">Invitation sent to {invite.displayName}</p></div>
+                          <StatusPill tone="warning">WAITING</StatusPill>
+                        </div>
+                        <p className="mt-3 text-xs leading-5 text-muted-foreground">{invite.riotName}#{invite.riotTag} can accept while this roster remains a draft.</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {pendingJoinRequests.length > 0 ? (
+                  <div className="mt-5 grid gap-3 tablet:grid-cols-2">
+                    {pendingJoinRequests.map((request) => (
+                        <div className="rounded-2xl border border-primary/30 bg-primary-soft p-4" key={request.id}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <Kicker className="text-primary-muted">JOIN REQUEST</Kicker>
+                              <p className="mt-2 text-sm font-semibold">{request.displayName} · {request.approvedTier ?? "Pending"} · {request.primaryRole}</p>
+                            </div>
+                            <StatusPill tone="warning">WAITING</StatusPill>
+                          </div>
+                          {showCaptainControls ? (
+                            <form action={requestAction} className="mt-4 flex gap-2">
+                              <input name="requestId" type="hidden" value={request.id} />
+                              <Button className="min-h-11 flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" name="decision" size="lg" type="submit" value="accepted">Accept</Button>
+                              <Button className="min-h-11 flex-1 border border-border bg-secondary text-foreground hover:border-border-strong" name="decision" size="lg" type="submit" value="declined">Decline</Button>
+                            </form>
+                          ) : (
+                            <p className="mt-3 text-xs leading-5 text-muted-foreground">{changesClosed ? "The deadline has passed. The captain can no longer resolve requests." : "Only the team captain can resolve requests."}</p>
+                          )}
+                        </div>
+                    ))}
+                  </div>
+                ) : preview ? (
+                  <div className="mt-5 grid gap-3 tablet:grid-cols-2">
+                    <div className="rounded-2xl border border-border bg-secondary p-4">
+                      <div className="flex items-start justify-between gap-3"><div><Kicker>TEAM INVITE</Kicker><p className="mt-2 text-sm font-semibold">Kai#2288</p></div><StatusPill>WAITING</StatusPill></div>
+                      <p className="mt-3 text-xs leading-5 text-muted-foreground">The invite expires when Kai joins another team.</p>
+                    </div>
+                    <div className="rounded-2xl border border-primary/30 bg-primary-soft p-4">
+                      <div className="flex items-start justify-between gap-3"><div><Kicker className="text-primary-muted">JOIN REQUEST</Kicker><p className="mt-2 text-sm font-semibold">Niko#8128 · T2 · Mid</p></div><StatusPill tone={requestState === "accepted" ? "success" : requestState === "declined" ? "danger" : "warning"}>{requestState.toUpperCase()}</StatusPill></div>
+                      {requestState === "pending" ? <div className="mt-4 flex gap-2"><Button className="min-h-11 flex-1 bg-primary text-primary-foreground hover:bg-primary-hover" onClick={() => setRequestState("accepted")} size="lg" type="button">Accept</Button><Button className="min-h-11 flex-1 border border-border bg-secondary text-foreground hover:border-border-strong" onClick={() => setRequestState("declined")} size="lg" type="button">Decline</Button></div> : <p className="mt-3 text-xs text-secondary-foreground">Request {requestState}.</p>}
+                    </div>
+                  </div>
+                ) : pendingInvites.length === 0 ? (
+                  <p className="mt-5 text-sm text-muted-foreground">No pending invites or join requests.</p>
+                ) : null}
                 {requestActionState.error ? <Alert aria-live="polite" className="mt-4" variant="destructive"><AlertDescription>{requestActionState.error}</AlertDescription></Alert> : null}
+                {requestActionState.success ? <Alert aria-live="polite" className="mt-4 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{requestActionState.success}</AlertDescription></Alert> : null}
               </Card>
             ) : null}
           </div>
@@ -1527,18 +1717,18 @@ function TeamRoomContent({ initialSubmitted = false, team, currentRegistrationId
               <div className={cn("mt-4 rounded-xl border p-4", liveValidation?.valid === false ? "border-danger/25 bg-danger-soft" : "border-success/25 bg-success-soft")}>
                 <div className={cn("flex items-start gap-2.5", liveValidation?.valid === false ? "text-danger" : "text-success")}>
                   {liveValidation?.valid === false ? <AlertTriangle className="mt-0.5 shrink-0" size={18} /> : <CheckCircle2 className="mt-0.5 shrink-0" size={18} />}
-                  <div><p className="m-0 text-sm font-semibold">{liveValidation?.valid === false ? "Blocking issues" : "No blocking issues"}</p><p className="mt-1 text-xs leading-5 text-secondary-foreground">{liveValidation?.valid === false ? liveValidation.blockingIssues[0] : "Five starters, approved tiers, and tier caps all pass."}</p></div>
+                  <div><p className="m-0 text-sm font-semibold">{liveValidation?.valid === false ? "Blocking issues" : "No blocking issues"}</p>{liveValidation?.valid === false ? <ul className="mt-1 mb-0 list-disc space-y-1 pl-4 text-xs leading-5 text-secondary-foreground">{liveValidation.blockingIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul> : <p className="mt-1 text-xs leading-5 text-secondary-foreground">Five starters, approved tiers, and tier caps all pass.</p>}</div>
                 </div>
               </div>
-              {(liveValidation?.warnings.length ?? 1) > 0 ? <div className="mt-3 rounded-xl border border-warning/25 bg-warning-soft p-4"><div className="flex items-start gap-2.5 text-warning"><AlertTriangle className="mt-0.5 shrink-0" size={18} /><div><p className="m-0 text-sm font-semibold">Role warnings</p><p className="mt-1 text-xs leading-5 text-secondary-foreground">{liveValidation?.warnings[0] ?? "Mori prefers Baron or Support, not Dragon. This does not block submission."}</p></div></div></div> : null}
+              {(liveValidation?.warnings.length ?? 1) > 0 ? <div className="mt-3 rounded-xl border border-warning/25 bg-warning-soft p-4"><div className="flex items-start gap-2.5 text-warning"><AlertTriangle className="mt-0.5 shrink-0" size={18} /><div><p className="m-0 text-sm font-semibold">Role warnings</p><ul className="mt-1 mb-0 list-disc space-y-1 pl-4 text-xs leading-5 text-secondary-foreground">{(liveValidation?.warnings ?? ["Mori prefers Baron or Support, not Dragon."]).map((warning) => <li key={warning}>{warning} This does not block submission.</li>)}</ul></div></div></div> : null}
               <div className="mt-5 border-t border-border pt-4"><Kicker>FULL ROSTER TIERS</Kicker><div className="mt-3 flex flex-wrap gap-2">{tierEntries.filter(([, count]) => count > 0).map(([tier, count]) => <span className={cn("text-sm", tierMeta[tier].text)} key={tier}>{count} × {tier}</span>)}</div></div>
-              {!isSubmitted ? <div className="mt-5 border-t border-border pt-5">{preview ? <><Button className="hidden min-h-11 w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex" onClick={submitPreviewTeam} size="lg" type="button"><ShieldCheck size={17} /> Submit team</Button><p className="mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block">Submission locks participant editing.</p></> : <form action={submitAction} onSubmit={() => window.scrollTo({ top: 0 })}><input name="teamId" type="hidden" value={actualTeam?.id ?? ""} /><FormSubmitButton className="hidden w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex"><ShieldCheck size={17} /> Submit team</FormSubmitButton><p className="mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block">Submission locks participant editing.</p></form>}</div> : null}
+              {!isSubmitted && showCaptainControls ? <div className="mt-5 border-t border-border pt-5">{preview ? <><Button className="hidden min-h-11 w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex" onClick={submitPreviewTeam} size="lg" type="button"><ShieldCheck size={17} /> Submit team</Button><p className="mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block">Submission locks participant editing.</p></> : <form action={submitAction} onSubmit={() => window.scrollTo({ top: 0 })}><input name="teamId" type="hidden" value={actualTeam?.id ?? ""} /><FormSubmitButton className="hidden w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex"><ShieldCheck size={17} /> Submit team</FormSubmitButton><p className="mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block">Submission locks participant editing.</p></form>}</div> : null}
               {submitState.error ? <Alert aria-live="polite" className="mt-4" variant="destructive"><AlertDescription><span className="font-semibold">{submitState.error}</span>{submitState.blockingIssues?.map((issue) => <span className="mt-2 block text-xs text-secondary-foreground" key={issue}>{issue}</span>)}</AlertDescription></Alert> : null}
             </Card>
 
           </aside>
         </div>
-        {!isSubmitted ? <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur-xl desktop:hidden">{preview ? <Button className="mx-auto min-h-11 w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover" onClick={submitPreviewTeam} size="lg" type="button"><ShieldCheck size={17} /> Submit team</Button> : <form action={submitAction} onSubmit={() => window.scrollTo({ top: 0 })}><input name="teamId" type="hidden" value={actualTeam?.id ?? ""} /><FormSubmitButton className="mx-auto flex w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover"><ShieldCheck size={17} /> Submit team</FormSubmitButton></form>}</div> : null}
+        {!isSubmitted && showCaptainControls ? <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur-xl desktop:hidden">{preview ? <Button className="mx-auto min-h-11 w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover" onClick={submitPreviewTeam} size="lg" type="button"><ShieldCheck size={17} /> Submit team</Button> : <form action={submitAction} onSubmit={() => window.scrollTo({ top: 0 })}><input name="teamId" type="hidden" value={actualTeam?.id ?? ""} /><FormSubmitButton className="mx-auto flex w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover"><ShieldCheck size={17} /> Submit team</FormSubmitButton></form>}</div> : null}
       </div>
     </PageFrame>
   );
@@ -1686,33 +1876,48 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(currentReview.id);
   const [approvedTier, setApprovedTier] = useState<Tier>(currentReview.approvedTier ?? currentReview.selfAssessedTier);
+  const [approvedTierReviewId, setApprovedTierReviewId] = useState(currentReview.id);
   const [previewSaved, setPreviewSaved] = useState(false);
   const [approvedIds, setApprovedIds] = useState<string[]>([]);
   const [dismissSuccess, setDismissSuccess] = useState(false);
+  const [lastDecision, setLastDecision] = useState<{
+    id: string;
+    displayName: string;
+    riotName: string;
+    tier: Tier;
+  } | null>(null);
   const [state, formAction] = useActionState<TournamentActionState, FormData>(approveRegistrationTier, {});
-  const saved = (Boolean(state.success) || previewSaved) && !dismissSuccess;
-  const visibleQueue = queue.filter((item) => !approvedIds.includes(item.id));
+  const saved = (Boolean(state.success) && Boolean(lastDecision) || previewSaved) && !dismissSuccess;
+  const activeSelectedId = review ? currentReview.id : selectedId;
+  const activeApprovedTier = review && approvedTierReviewId !== currentReview.id
+    ? currentReview.approvedTier ?? currentReview.selfAssessedTier
+    : approvedTier;
+  const visibleQueue = review ? queue : queue.filter((item) => !approvedIds.includes(item.id));
   const filteredQueue = visibleQueue.filter((item) => `${item.displayName} ${item.riotName} ${item.riotTag} ${item.currentRank}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const selectedRecord = visibleQueue.find((item) => item.id === selectedId) ?? visibleQueue[0] ?? currentReview;
-  const approvedRecord = queue.find((item) => item.id === selectedId) ?? currentReview;
-  const displayTier = selectedRecord.id === selectedId ? approvedTier : selectedRecord.selfAssessedTier;
+  const selectedRecord = visibleQueue.find((item) => item.id === activeSelectedId) ?? visibleQueue[0] ?? currentReview;
+  const approvedRecord = lastDecision ?? queue.find((item) => item.id === activeSelectedId) ?? currentReview;
+  const displayTier = selectedRecord.id === activeSelectedId ? activeApprovedTier : selectedRecord.selfAssessedTier;
 
   function selectReview(id: string) {
     const next = queue.find((item) => item.id === id);
     if (!next) return;
     setSelectedId(id);
     setApprovedTier(next.selfAssessedTier);
+    setApprovedTierReviewId(currentReview.id);
     setPreviewSaved(false);
     setDismissSuccess(true);
+    setLastDecision(null);
   }
 
   function moveToNextReview() {
     const next = visibleQueue.find((item) => item.id !== approvedRecord.id);
     setApprovedIds((current) => current.includes(approvedRecord.id) ? current : [...current, approvedRecord.id]);
     setDismissSuccess(true);
+    setLastDecision(null);
     if (next) {
       setSelectedId(next.id);
       setApprovedTier(next.selfAssessedTier);
+      setApprovedTierReviewId(currentReview.id);
     }
   }
 
@@ -1734,7 +1939,7 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
             transition={{ duration: 0.22, ease: easeOutExpo }}
           >
             <Card className="border-success/30 bg-success-soft p-5" aria-live="polite">
-              <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 shrink-0 text-success" size={21} /><div><p className="m-0 text-sm font-semibold text-success">{approvedRecord.riotName} is approved as {approvedTier}</p><p className="mt-1 text-sm text-secondary-foreground">Any team containing {approvedRecord.riotName} will be revalidated.</p></div></div>{visibleQueue.length > 1 ? <Button className="min-h-10 border border-success/30 bg-background/30 text-foreground hover:bg-background/50" onClick={moveToNextReview} size="sm" type="button">Review next <ArrowRight size={15} /></Button> : null}</div>
+              <div className="flex flex-wrap items-center justify-between gap-4"><div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 shrink-0 text-success" size={21} /><div><p className="m-0 text-sm font-semibold text-success">{approvedRecord.riotName} is approved as {lastDecision?.tier ?? activeApprovedTier}</p><p className="mt-1 text-sm text-secondary-foreground">Any team containing {approvedRecord.riotName} will be revalidated.</p></div></div>{visibleQueue.length > 1 ? <Button className="min-h-10 border border-success/30 bg-background/30 text-foreground hover:bg-background/50" onClick={moveToNextReview} size="sm" type="button">Review next <ArrowRight size={15} /></Button> : null}</div>
             </Card>
           </motion.div>
         ) : null}
@@ -1758,7 +1963,7 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
                 {filteredQueue.map((item) => {
                   const itemClass = cn("flex w-full items-start gap-3 p-4 text-left transition-colors hover:bg-secondary/70 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-muted", selectedRecord.id === item.id && "bg-primary-soft");
                   const content = <><span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary font-display text-sm font-bold text-secondary-foreground">{item.displayName.slice(0, 1).toUpperCase()}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{item.riotName}#{item.riotTag}</strong><span className="mt-1 block text-xs text-muted-foreground">{item.currentRank} · self {item.selfAssessedTier}</span></span>{selectedRecord.id === item.id ? <ArrowRight className="mt-1 shrink-0 text-primary-muted" size={15} /> : null}</>;
-                  return review === undefined ? <button className={itemClass} key={item.id} onClick={() => selectReview(item.id)} type="button">{content}</button> : <Link className={itemClass} href={`/admin/tier-review?registration=${item.id}`} key={item.id}>{content}</Link>;
+                  return review === undefined ? <button className={itemClass} key={item.id} onClick={() => selectReview(item.id)} type="button">{content}</button> : <Link className={itemClass} href={`/admin/tier-review?registration=${item.id}`} key={item.id} onClick={() => { setDismissSuccess(true); setLastDecision(null); }}>{content}</Link>;
                 })}
                 {filteredQueue.length === 0 ? <p className="p-4 text-sm text-muted-foreground">No pending registrations match that search.</p> : null}
               </div>
@@ -1783,17 +1988,17 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
               <FieldDescription className="mt-2">Diamond maps to T3 by default.</FieldDescription>
               <RadioGroup
                 className="mt-4 grid gap-3 tablet:grid-cols-2"
-                onValueChange={(value) => { setApprovedTier(value as Tier); setPreviewSaved(false); }}
-                value={approvedTier}
+                onValueChange={(value) => { setApprovedTier(value as Tier); setApprovedTierReviewId(currentReview.id); setPreviewSaved(false); setLastDecision(null); setDismissSuccess(true); }}
+                value={activeApprovedTier}
               >
                 {(Object.keys(tierMeta) as Tier[]).map((tier) => (
-                  <label className={cn("flex min-h-18 cursor-pointer items-center gap-3 rounded-xl border p-4 has-[:focus-visible]:border-primary has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-primary/20", approvedTier === tier ? "border-primary bg-primary-soft" : "border-border bg-secondary hover:border-border-strong")} htmlFor={`approved-tier-${tier}`} key={tier}>
+                  <label className={cn("flex min-h-18 cursor-pointer items-center gap-3 rounded-xl border p-4 has-[:focus-visible]:border-primary has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-primary/20", activeApprovedTier === tier ? "border-primary bg-primary-soft" : "border-border bg-secondary hover:border-border-strong")} htmlFor={`approved-tier-${tier}`} key={tier}>
                     <RadioGroupItem className="sr-only" id={`approved-tier-${tier}`} value={tier} />
                     <TierBadge tier={tier} />
                     <span className="text-sm text-secondary-foreground">{tierMeta[tier].range}</span>
-                    <span className={cn("ml-auto grid size-5 place-items-center rounded-full border", approvedTier === tier ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
+                    <span className={cn("ml-auto grid size-5 place-items-center rounded-full border", activeApprovedTier === tier ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
                       <AnimatePresence initial={false} mode="wait">
-                        {approvedTier === tier ? (
+                        {activeApprovedTier === tier ? (
                           <motion.span
                             animate={{ opacity: 1, transform: "scale(1)" }}
                             aria-hidden="true"
@@ -1812,18 +2017,18 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
               </RadioGroup>
             </fieldset>
 
-            <form action={formAction} className="mt-7 flex flex-col gap-3 border-t border-border pt-6 tablet:flex-row tablet:items-center tablet:justify-between" onSubmit={() => setDismissSuccess(false)}>
+            <form action={formAction} className="mt-7 flex flex-col gap-3 border-t border-border pt-6 tablet:flex-row tablet:items-center tablet:justify-between" onSubmit={() => { setDismissSuccess(false); setLastDecision({ id: selectedRecord.id, displayName: selectedRecord.displayName, riotName: selectedRecord.riotName, tier: displayTier }); }}>
               <input name="registrationId" type="hidden" value={selectedRecord.id} />
               <input name="approvedTier" type="hidden" value={displayTier} />
               <p className="m-0 max-w-md text-xs leading-5 text-muted-foreground">Changing an approved tier revalidates every affected team. An invalid submitted team returns to draft.</p>
-              {review === undefined ? <Button className="min-h-11 shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover" onClick={(event) => { event.preventDefault(); setDismissSuccess(false); setPreviewSaved(true); }} size="lg" type="submit"><UserRoundCheck size={17} /> Approve {approvedTier}</Button> : <FormSubmitButton className="shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover"><UserRoundCheck size={17} /> Approve {approvedTier}</FormSubmitButton>}
+              {review === undefined ? <Button className="min-h-11 shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover" onClick={(event) => { event.preventDefault(); setDismissSuccess(false); setPreviewSaved(true); }} size="lg" type="submit"><UserRoundCheck size={17} /> Approve {activeApprovedTier}</Button> : <FormSubmitButton className="shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover"><UserRoundCheck size={17} /> Approve {activeApprovedTier}</FormSubmitButton>}
               {state.error ? <Alert aria-live="polite" className="basis-full" variant="destructive"><AlertDescription>{state.error}</AlertDescription></Alert> : null}
             </form>
           </Card>
           <div className="grid gap-5 tablet:grid-cols-2">
             <Card className="overflow-hidden">
               <div className="border-b border-border p-5"><Kicker>DEFAULT TIER MAP</Kicker><h2 className="mt-2 font-display text-xl font-bold">Rank reference</h2></div>
-              <div className="divide-y divide-border">{(Object.keys(tierMeta) as Tier[]).map((tier) => <div className={cn("flex items-center gap-3 p-4", approvedTier === tier && "bg-primary-soft")} key={tier}><TierBadge tier={tier} /><p className="m-0 text-sm text-secondary-foreground">{tierMeta[tier].range}</p></div>)}</div>
+              <div className="divide-y divide-border">{(Object.keys(tierMeta) as Tier[]).map((tier) => <div className={cn("flex items-center gap-3 p-4", activeApprovedTier === tier && "bg-primary-soft")} key={tier}><TierBadge tier={tier} /><p className="m-0 text-sm text-secondary-foreground">{tierMeta[tier].range}</p></div>)}</div>
             </Card>
             <Card className="p-5">
               <div className="flex items-center justify-between gap-3"><Kicker>DECISION GUIDE</Kicker><ShieldCheck className="text-primary-muted" size={18} /></div>
@@ -1857,11 +2062,24 @@ export function TournamentApp({
   participants,
   adminTeams,
   announcements,
+  incomingInvites,
 }: TournamentAppProps) {
   const previewRegistration = registration === undefined ? {
     approvedTier: "T2" as Tier,
     tierStatus: "approved" as const,
   } : registration;
+
+  if (view === "invite") {
+    return (
+      <InvitePreviewView
+        deadline={deadline}
+        deadlineRemaining={deadlineRemaining}
+        deadlineStatus={deadlineStatus}
+        region={region}
+        tournamentName={tournamentName}
+      />
+    );
+  }
 
   return (
     <MotionConfig reducedMotion="user">
@@ -1870,8 +2088,8 @@ export function TournamentApp({
         {view === "registration" ? <RegistrationView deadline={deadline} deadlineRemaining={deadlineRemaining} deadlineStatus={deadlineStatus} region={region} registration={registration} tournamentName={tournamentName} /> : null}
         {view === "dashboard" ? <DashboardView dashboard={dashboard} deadline={deadline} deadlineRemaining={deadlineRemaining} deadlineStatus={deadlineStatus} region={region} registration={registration} team={team} tournamentName={tournamentName} userName={userName} /> : null}
         {view === "teams" ? <BrowseTeamsView deadlineStatus={deadlineStatus} registration={registration} team={team} teams={teams} /> : null}
-        {view === "builder" ? <TeamRoomView currentRegistrationId={currentRegistrationId} deadlineStatus={deadlineStatus} participants={participants} registration={registration} team={team} /> : null}
-        {view === "submitted" ? <TeamRoomView currentRegistrationId={currentRegistrationId} deadlineStatus={deadlineStatus} initialSubmitted participants={participants} registration={registration} team={team} /> : null}
+        {view === "builder" ? <TeamRoomView currentRegistrationId={currentRegistrationId} deadlineStatus={deadlineStatus} incomingInvites={incomingInvites} participants={participants} registration={registration} team={team} /> : null}
+        {view === "submitted" ? <TeamRoomView currentRegistrationId={currentRegistrationId} deadlineStatus={deadlineStatus} incomingInvites={incomingInvites} initialSubmitted participants={participants} registration={registration} team={team} /> : null}
         {view === "admin" ? <OrganizerOverview announcements={announcements} deadline={deadline} deadlineRemaining={deadlineRemaining} deadlineStatus={deadlineStatus} overview={overview} region={region} tournamentName={tournamentName} /> : null}
         {view === "tier-review" ? <OrganizerTierReview review={tierReview} /> : null}
         {view === "admin-teams" ? <OrganizerTeamManager participants={participants ?? []} teams={adminTeams ?? []} /> : null}

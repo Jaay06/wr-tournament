@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -16,6 +16,7 @@ import { validateRoster } from "@/lib/tournament-rules";
 
 import type {
   TierReviewData,
+  TournamentIncomingInviteData,
   TournamentMemberData,
   TournamentParticipantOption,
   TournamentRegistrationData,
@@ -282,6 +283,7 @@ export async function getParticipantDirectory(): Promise<TournamentParticipantOp
       riotName: playerRegistrations.riotName,
       riotTag: playerRegistrations.riotTag,
       approvedTier: playerRegistrations.approvedTier,
+      teamId: teamMembers.teamId,
     })
     .from(playerRegistrations)
     .innerJoin(
@@ -289,9 +291,52 @@ export async function getParticipantDirectory(): Promise<TournamentParticipantOp
       eq(playerRegistrations.participantId, tournamentParticipants.id),
     )
     .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .leftJoin(teamMembers, eq(playerRegistrations.id, teamMembers.registrationId))
     .orderBy(asc(users.displayName));
 
   return rows;
+}
+
+export async function getPendingTeamInvitesForRegistration(
+  registrationId: string,
+): Promise<TournamentIncomingInviteData[]> {
+  const rows = await db
+    .select({
+      id: teamInvites.id,
+      teamId: teams.id,
+      teamName: teams.name,
+      captainName: users.displayName,
+      captainRiotName: playerRegistrations.riotName,
+      captainRiotTag: playerRegistrations.riotTag,
+    })
+    .from(teamInvites)
+    .innerJoin(teams, eq(teamInvites.teamId, teams.id))
+    .innerJoin(
+      playerRegistrations,
+      eq(teamInvites.invitedByRegistrationId, playerRegistrations.id),
+    )
+    .innerJoin(
+      tournamentParticipants,
+      eq(playerRegistrations.participantId, tournamentParticipants.id),
+    )
+    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .where(
+      and(
+        eq(teamInvites.invitedRegistrationId, registrationId),
+        eq(teamInvites.status, "pending"),
+        eq(teams.status, "draft"),
+      ),
+    )
+    .orderBy(asc(teamInvites.createdAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    teamId: row.teamId,
+    teamName: row.teamName,
+    captainName: row.captainName,
+    captainRiotId: `${row.captainRiotName}#${row.captainRiotTag}`,
+    status: "pending",
+  }));
 }
 
 export async function getTierReview(
@@ -429,7 +474,7 @@ export async function getAnnouncements(): Promise<TournamentAnnouncementData[]> 
 }
 
 export async function getOrganizerOverviewData(): Promise<OrganizerOverviewData> {
-  const [participantRows, registrationRows, pendingRows, teamRows] = await Promise.all([
+  const [participantRows, registrationRows, pendingRows, pendingCountRows, teamRows] = await Promise.all([
     db.select({ id: tournamentParticipants.id }).from(tournamentParticipants),
     db.select({ id: playerRegistrations.id }).from(playerRegistrations),
     db
@@ -452,6 +497,10 @@ export async function getOrganizerOverviewData(): Promise<OrganizerOverviewData>
       .where(eq(playerRegistrations.tierStatus, "pending"))
       .orderBy(asc(playerRegistrations.createdAt))
       .limit(6),
+    db
+      .select({ value: count() })
+      .from(playerRegistrations)
+      .where(eq(playerRegistrations.tierStatus, "pending")),
     db
       .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: users })
       .from(teams)
@@ -497,7 +546,7 @@ export async function getOrganizerOverviewData(): Promise<OrganizerOverviewData>
   return {
     joinedCount: participantRows.length,
     registeredCount: registrationRows.length,
-    pendingTierCount: pendingRows.length,
+    pendingTierCount: pendingCountRows[0]?.value ?? 0,
     teamCount: byTeam.size,
     draftTeamCount: [...byTeam.values()].filter(({ team }) => team.status === "draft").length,
     submittedTeamCount: [...byTeam.values()].filter(({ team }) => team.status === "submitted").length,

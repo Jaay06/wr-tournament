@@ -19,7 +19,11 @@ import { Card } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { RoleIcon } from "@/components/tournament/role-icon";
-import { validateRoster, starterRoles } from "@/lib/tournament-rules";
+import {
+  availableTournamentParticipants,
+  starterRoles,
+  validateRoster,
+} from "@/lib/tournament-rules";
 import type {
   TournamentMemberData,
   TournamentParticipantOption,
@@ -29,6 +33,17 @@ import type {
 } from "@/lib/tournament-types";
 import { cn } from "@/lib/utils";
 import { AnimatedButtonLabel } from "@/components/ui/animated-button-label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type LineupEntry = {
   registrationId: string;
@@ -87,6 +102,47 @@ function memberDisplay(member: TournamentMemberData) {
   return `${member.riotName}#${member.riotTag}`;
 }
 
+function RemoveMemberDialog({
+  member,
+  removeAction,
+  teamId,
+  teamName,
+}: {
+  member: TournamentMemberData;
+  removeAction: (formData: FormData) => void;
+  teamId: string;
+  teamName: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <AlertDialog onOpenChange={setOpen} open={open}>
+      <AlertDialogTrigger
+        aria-label={`Remove ${member.displayName}`}
+        render={<Button className="border border-border text-muted-foreground hover:border-danger/40 hover:bg-danger-soft hover:text-danger" size="icon-lg" />}
+      >
+        <Trash2 size={15} />
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remove {member.displayName} from {teamName}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            They will lose this roster spot. If the submitted roster becomes invalid, the team returns to draft.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Keep player</AlertDialogCancel>
+          <form action={removeAction} onSubmit={() => setOpen(false)}>
+            <input name="teamId" type="hidden" value={teamId} />
+            <input name="registrationId" type="hidden" value={member.registrationId} />
+            <AlertDialogAction type="submit" variant="destructive">Remove player</AlertDialogAction>
+          </form>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function TeamCard({
   participants,
   team,
@@ -134,12 +190,7 @@ function TeamCard({
     [lineupByRegistration, team.members],
   );
 
-  const availableParticipants = participants.filter(
-    (participant) =>
-      !team.members.some(
-        (member) => member.registrationId === participant.id,
-      ),
-  );
+  const availableParticipants = availableTournamentParticipants(participants);
   const tierTotals = team.members.reduce<Record<TournamentTier, number>>(
     (totals, member) => {
       if (member.approvedTier) {
@@ -176,18 +227,6 @@ function TeamCard({
   }
 
   const statusIsSubmitted = team.status === "submitted";
-  const actionMessage =
-    lineupState.error ||
-    addState.error ||
-    removeState.error ||
-    unlockState.error;
-  const actionSuccess =
-    lineupState.success ||
-    addState.success ||
-    removeState.success ||
-    unlockState.success;
-  const actionIssues = lineupState.blockingIssues ?? removeState.blockingIssues;
-
   return (
     <Card className="rounded-2xl border border-border bg-card gap-0 p-5 desktop:p-6" role="article">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
@@ -224,12 +263,16 @@ function TeamCard({
         </div>
 
         {statusIsSubmitted ? (
-          <form action={unlockAction}>
-            <input name="teamId" type="hidden" value={team.id} />
-            <SubmitButton className="border border-warning/30 bg-warning-soft text-warning hover:bg-warning/15">
-              <LockKeyhole size={16} /> Unlock team
-            </SubmitButton>
-          </form>
+          <div className="flex min-w-52 flex-col items-end gap-2">
+            <form action={unlockAction}>
+              <input name="teamId" type="hidden" value={team.id} />
+              <SubmitButton className="border border-warning/30 bg-warning-soft text-warning hover:bg-warning/15">
+                <LockKeyhole size={16} /> Unlock team
+              </SubmitButton>
+            </form>
+            {unlockState.error ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-danger">{unlockState.error}</p> : null}
+            {unlockState.success ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-success">{unlockState.success}</p> : null}
+          </div>
         ) : null}
       </div>
 
@@ -276,18 +319,12 @@ function TeamCard({
                     {entry?.lineupPosition === "starter" && entry.starterRole ? <span className="inline-flex items-center gap-1.5"><RoleIcon className="size-3.5" roleName={entry.starterRole} />{entry.starterRole}</span> : "Substitute"}
                   </span>
                   {!member.isCaptain ? (
-                    <form action={removeAction}>
-                      <input name="teamId" type="hidden" value={team.id} />
-                      <input name="registrationId" type="hidden" value={member.registrationId} />
-                      <Button
-                        aria-label={`Remove ${member.displayName}`}
-                        className="border border-border text-muted-foreground hover:border-danger/40 hover:bg-danger-soft hover:text-danger"
-                        size="icon-lg"
-                        type="submit"
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </form>
+                    <RemoveMemberDialog
+                      member={member}
+                      removeAction={removeAction}
+                      teamId={team.id}
+                      teamName={team.name}
+                    />
                   ) : (
                     <span className="size-9" aria-hidden="true" />
                   )}
@@ -295,6 +332,9 @@ function TeamCard({
               );
             })}
           </div>
+          {removeState.error ? <Alert aria-live="polite" className="mt-3" variant="destructive"><AlertDescription>{removeState.error}</AlertDescription></Alert> : null}
+          {removeState.success ? <Alert aria-live="polite" className="mt-3 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{removeState.success}</AlertDescription></Alert> : null}
+          {removeState.blockingIssues?.map((issue) => <p aria-live="polite" className="mt-2 mb-0 text-xs text-secondary-foreground" key={issue}>{issue}</p>)}
         </section>
 
         <section className="rounded-xl border border-border bg-secondary/45 p-4">
@@ -370,6 +410,8 @@ function TeamCard({
               <Check size={16} /> Save lineup
             </SubmitButton>
           </form>
+          {lineupState.error ? <Alert aria-live="polite" className="mt-3" variant="destructive"><AlertDescription>{lineupState.error}</AlertDescription></Alert> : null}
+          {lineupState.success ? <Alert aria-live="polite" className="mt-3 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{lineupState.success}</AlertDescription></Alert> : null}
 
           <div
             className={cn(
@@ -382,12 +424,12 @@ function TeamCard({
             <p className="m-0 font-semibold">
               {validation.valid ? "Roster passes submission rules." : "Roster needs repair."}
             </p>
-            {validation.blockingIssues.slice(0, 4).map((issue) => (
+            {validation.blockingIssues.map((issue) => (
               <p className="mt-1.5 mb-0 text-secondary-foreground" key={issue}>
                 {issue}
               </p>
             ))}
-            {validation.warnings.slice(0, 2).map((warning) => (
+            {validation.warnings.map((warning) => (
               <p className="mt-1.5 mb-0 text-secondary-foreground" key={warning}>
                 Note: {warning}
               </p>
@@ -397,47 +439,36 @@ function TeamCard({
       </div>
 
       <div className="mt-5 grid gap-4 border-t border-border pt-5 desktop:grid-cols-[minmax(0,1fr)_auto] desktop:items-end">
-        <form action={addAction} className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
-          <input name="teamId" type="hidden" value={team.id} />
-          <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Add registered player
-            <NativeSelect className="w-full" defaultValue="" name="registrationId" required>
-              <NativeSelectOption disabled value="">
-                {availableParticipants.length > 0 ? "Choose a player" : "No unassigned players"}
-              </NativeSelectOption>
-              {availableParticipants.map((participant) => (
-                <NativeSelectOption key={participant.id} value={participant.id}>
-                  {participant.displayName} · {participant.riotName}#{participant.riotTag}
+        <div>
+          <form action={addAction} className="flex flex-col gap-2 tablet:flex-row tablet:items-end">
+            <input name="teamId" type="hidden" value={team.id} />
+            <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Add registered player
+              <NativeSelect className="w-full" defaultValue="" name="registrationId" required>
+                <NativeSelectOption disabled value="">
+                  {availableParticipants.length > 0 ? "Choose a player" : "No unassigned players"}
                 </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-          <SubmitButton className="border border-border bg-secondary text-foreground hover:border-border-strong">
-            Add substitute
-          </SubmitButton>
-        </form>
+                {availableParticipants.map((participant) => (
+                  <NativeSelectOption key={participant.id} value={participant.id}>
+                    {participant.displayName} · {participant.riotName}#{participant.riotTag}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </label>
+            <SubmitButton className="border border-border bg-secondary text-foreground hover:border-border-strong">
+              Add substitute
+            </SubmitButton>
+          </form>
+          {addState.error ? <Alert aria-live="polite" className="mt-3" variant="destructive"><AlertDescription>{addState.error}</AlertDescription></Alert> : null}
+          {addState.success ? <Alert aria-live="polite" className="mt-3 border-success/30 bg-success-soft text-success"><AlertDescription className="text-success">{addState.success}</AlertDescription></Alert> : null}
+          {addState.blockingIssues?.map((issue) => <p aria-live="polite" className="mt-2 mb-0 text-xs text-secondary-foreground" key={issue}>{issue}</p>)}
+        </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <ShieldCheck size={15} />
-          Organizer changes are audited through captain notifications.
+          Affected players and captains receive a named organizer notification.
         </div>
       </div>
-
-      {actionMessage ? (
-        <Alert aria-live="polite" className="mt-4" variant="destructive">
-          <AlertDescription>{actionMessage}</AlertDescription>
-        </Alert>
-      ) : null}
-      {actionSuccess ? (
-        <Alert aria-live="polite" className="mt-4 border-success/30 bg-success-soft text-success">
-          <AlertDescription className="text-success">{actionSuccess}</AlertDescription>
-        </Alert>
-      ) : null}
-      {actionIssues?.map((issue) => (
-        <p aria-live="polite" className="mt-2 text-xs text-secondary-foreground" key={issue}>
-          {issue}
-        </p>
-      ))}
     </Card>
   );
 }

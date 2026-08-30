@@ -64,6 +64,15 @@ export type TournamentTeamData = {
   }>;
 };
 
+export type TournamentIncomingInviteData = {
+  id: string;
+  teamId: string;
+  teamName: string;
+  captainName: string;
+  captainRiotId: string;
+  status: "pending";
+};
+
 export type TournamentTeamSummary = {
   id: string;
   name: string;
@@ -79,6 +88,7 @@ export type TournamentParticipantOption = {
   riotName: string;
   riotTag: string;
   approvedTier: TournamentTier | null;
+  teamId: string | null;
 };
 
 export type TierReviewData = {

@@ -459,7 +459,10 @@ export async function requestToJoinTeam(
   }
 
   revalidateTournamentPages();
-  return { success: "Join request sent to the captain." };
+  return {
+    success: "Join request sent to the captain.",
+    teamId: parsedTeamId.data,
+  };
 }
 
 export async function respondToJoinRequest(
@@ -1350,6 +1353,18 @@ export async function approveRegistrationTier(
     return { code: "FORBIDDEN", error: "Only the organizer can approve tiers." };
   }
 
+  const [organizerParticipant] = await db
+    .select({ id: tournamentParticipants.id })
+    .from(tournamentParticipants)
+    .where(eq(tournamentParticipants.userId, session.user.id))
+    .limit(1);
+  if (!organizerParticipant) {
+    return {
+      code: "TOURNAMENT_ACCESS_REQUIRED",
+      error: "Join this tournament before reviewing tiers.",
+    };
+  }
+
   const registrationId = formString(formData, "registrationId");
   const approvedTier = tierSchema.safeParse(formString(formData, "approvedTier"));
   if (!registrationId || !approvedTier.success) {
@@ -1463,7 +1478,9 @@ export async function approveRegistrationTier(
   }
 
   revalidateTournamentPages();
-  return { success: `Tier approved as ${approvedTier.data}.` };
+  return {
+    success: `Tier approved as ${approvedTier.data}.`,
+  };
 }
 
 class TournamentActionError extends Error {

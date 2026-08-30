@@ -1,5 +1,6 @@
 import type {
   TournamentMemberData,
+  TournamentParticipantOption,
   TournamentRole,
   TournamentTier,
 } from "./tournament-types";
@@ -18,6 +19,37 @@ export type RosterValidation = {
   warnings: string[];
   tierCounts: Record<TournamentTier, number>;
 };
+
+export function shouldReopenSubmittedTeam(
+  teamStatus: "draft" | "submitted",
+  validation: Pick<RosterValidation, "valid">,
+) {
+  return teamStatus === "submitted" && !validation.valid;
+}
+
+export function roleMatchesPreferences(
+  assignedRole: TournamentRole,
+  primaryRole: TournamentRole,
+  secondaryRole: TournamentRole,
+) {
+  return assignedRole === primaryRole || assignedRole === secondaryRole;
+}
+
+export function availableTournamentParticipants(
+  participants: TournamentParticipantOption[],
+  memberRegistrationIds: Iterable<string> = [],
+  pendingInviteRegistrationIds: Iterable<string> = [],
+) {
+  const members = new Set(memberRegistrationIds);
+  const pendingInvites = new Set(pendingInviteRegistrationIds);
+
+  return participants.filter(
+    (participant) =>
+      participant.teamId === null &&
+      !members.has(participant.id) &&
+      !pendingInvites.has(participant.id),
+  );
+}
 
 export function validateRoster(
   members: Pick<
@@ -72,8 +104,11 @@ export function validateRoster(
     assignedRoles.add(member.starterRole);
 
     if (
-      member.primaryRole !== member.starterRole &&
-      member.secondaryRole !== member.starterRole
+      !roleMatchesPreferences(
+        member.starterRole,
+        member.primaryRole,
+        member.secondaryRole,
+      )
     ) {
       warnings.push(
         `${member.displayName} prefers ${member.primaryRole} or ${member.secondaryRole}, not ${member.starterRole}.`,

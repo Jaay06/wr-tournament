@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
 import {
   getParticipantDirectory,
+  getPendingTeamInvitesForRegistration,
   getRegistrationForParticipant,
   getTeamForRegistration,
 } from "@/lib/tournament-data";
@@ -46,9 +47,12 @@ export default async function TeamBuilderPage() {
   const deadlineState = formatDeadlineState(settings.registrationDeadline);
 
   const registration = await getRegistrationForParticipant(participant.id);
-  const [team, participants] = await Promise.all([
+  const [team, participants, incomingInvites] = await Promise.all([
     registration ? getTeamForRegistration(registration.id) : Promise.resolve(null),
     getParticipantDirectory(),
+    registration
+      ? getPendingTeamInvitesForRegistration(registration.id)
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -61,7 +65,9 @@ export default async function TeamBuilderPage() {
       tournamentName={settings.name}
       userName={session.user.name ?? "player"}
       currentRegistrationId={registration?.id}
+      incomingInvites={incomingInvites}
       participants={participants}
+      registration={registration}
       team={team}
       view="builder"
     />

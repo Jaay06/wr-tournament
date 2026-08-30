@@ -25,6 +25,10 @@ export default async function AdminPage() {
     redirect("/tournament");
   }
 
+  if (!session.user.hasJoinedTournament) {
+    redirect("/invite");
+  }
+
   const [settings] = await db
     .select({
       name: tournamentSettings.name,
@@ -83,7 +87,7 @@ export default async function AdminPage() {
               </p>
               <h2 className="mt-2 mb-0 font-display text-xl font-bold">Issue a code</h2>
               <p className="mt-2 mb-5 text-sm leading-relaxed text-secondary-foreground">
-                Generate a new 4-digit code whenever you need one. The previous code stops working immediately.
+                Generate a new private code whenever you need one. The previous code stops working immediately.
               </p>
               <InviteCodeForm />
             </Card>

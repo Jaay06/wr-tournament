@@ -2,6 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useActionState } from "react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import {
@@ -22,6 +23,16 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function SaveButton() {
   const { pending } = useFormStatus();
@@ -179,12 +190,29 @@ export function InviteCodeForm() {
     generateTournamentInvite,
     {},
   );
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
-      <form action={formAction}>
-        <GenerateButton />
-      </form>
+      <AlertDialog onOpenChange={setConfirmOpen} open={confirmOpen}>
+        <AlertDialogTrigger render={<Button className="min-h-11 self-start rounded-md border border-border bg-secondary px-3.5 py-2.5 text-sm font-bold text-foreground hover:border-border-strong hover:bg-secondary/80" size="lg" variant="secondary" />}>
+          Generate new code
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace the current invite code?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Any link or code already shared will stop working immediately. Existing participants keep their access.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep current code</AlertDialogCancel>
+            <form action={formAction} onSubmit={() => setConfirmOpen(false)}>
+              <GenerateButton />
+            </form>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {state.error ? (
         <Alert aria-live="polite" className="rounded-md border-danger/30 bg-danger/10 text-danger" variant="destructive">

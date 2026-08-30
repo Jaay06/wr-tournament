@@ -3,10 +3,12 @@ import type { Provider } from 'next-auth/providers';
 import Credentials from 'next-auth/providers/credentials';
 import Discord from 'next-auth/providers/discord';
 import { eq } from 'drizzle-orm';
+import { cookies } from 'next/headers';
 
 import { db } from '@/db';
 import { tournamentParticipants, users } from '@/db/schema';
 import { verifyPassword } from '@/lib/password';
+import { callbackPathFromAuthCookie } from '@/lib/redirect';
 import { signInSchema } from '@/lib/validation';
 
 const discordClientId = process.env.DISCORD_CLIENT_ID;
@@ -154,7 +156,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .limit(1);
 
         if (existingEmailUser) {
-          return '/signin?error=AccountLinkRequired';
+          const cookieStore = await cookies();
+          const callbackCookie =
+            cookieStore.get('__Secure-authjs.callback-url')?.value ??
+            cookieStore.get('authjs.callback-url')?.value;
+          const callbackUrl = callbackPathFromAuthCookie(callbackCookie);
+
+          return `/signin?error=AccountLinkRequired&callbackUrl=${encodeURIComponent(callbackUrl)}`;
         }
       }
 

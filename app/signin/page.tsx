@@ -8,6 +8,7 @@ import { CredentialsForm } from "./credentials-form";
 import { EntryShell } from "@/components/auth/entry-shell";
 import { DiscordSignInButton } from "@/components/auth/discord-signin-button";
 import { firstSearchParam, safeCallbackUrl } from "@/lib/redirect";
+import { getInviteIntentStatus } from "@/lib/invite-intent";
 
 type SignInSearchParams = Promise<{
   callbackUrl?: string | string[];
@@ -25,20 +26,30 @@ export default async function SignInPage({
   const error = firstSearchParam(params.error);
   const created = firstSearchParam(params.created) === "1";
   const registerUrl = `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-  const invitePending = callbackUrl.startsWith("/invite");
+  const inviteStatus = await getInviteIntentStatus(callbackUrl);
+  const inviteRecognized = inviteStatus === "recognized";
 
   return (
     <EntryShell
-      description={invitePending ? "Your private invite is ready. Sign in and we will take you straight back to the code." : "Sign in first. If the organizer invited you, you will enter the private tournament room next."}
+      description={inviteRecognized ? "Your private invite is ready. Sign in and we will take you straight back to the code." : "Sign in first. If the organizer invited you, you will enter the private tournament room next."}
       eyebrow="PRIVATE ACCESS"
-      title={invitePending ? "Your invite is ready." : "Get back in the room."}
+      title={inviteRecognized ? "Your invite is ready." : "Get back in the room."}
     >
       <div className="flex flex-col gap-5">
-        {invitePending ? (
+        {inviteRecognized ? (
           <Card className="rounded-2xl border-primary/25 bg-primary-soft p-4" role="status">
             <p className="m-0 font-mono text-2xs font-semibold tracking-[0.12em] text-primary-muted">INVITE RECOGNIZED</p>
             <p className="mt-2 mb-0 text-sm leading-5 text-secondary-foreground">The invite code will stay attached while you sign in or create an account.</p>
           </Card>
+        ) : null}
+        {inviteStatus === "invalid" || inviteStatus === "closed" ? (
+          <Alert className="rounded-md border-warning/30 bg-warning/10 text-warning" role="status">
+            <AlertDescription className="text-warning">
+              {inviteStatus === "closed"
+                ? "The organizer has paused new entries. You can still sign in to an existing tournament account."
+                : "That invite could not be verified. Sign in to enter a current code or ask the organizer for a new link."}
+            </AlertDescription>
+          </Alert>
         ) : null}
         <div>
           <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">

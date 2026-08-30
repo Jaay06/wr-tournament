@@ -22,6 +22,10 @@ export default async function AdminTeamsPage() {
     redirect("/tournament");
   }
 
+  if (!session.user.hasJoinedTournament) {
+    redirect("/invite");
+  }
+
   const [settings, teams, participants] = await Promise.all([
     db
       .select({

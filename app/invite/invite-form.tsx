@@ -3,18 +3,12 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { REGEXP_ONLY_DIGITS } from "input-otp";
-
 import { joinTournament, type InviteState } from "@/app/invite/actions";
 import { AnimatedButtonLabel } from "@/components/ui/animated-button-label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
+import { Input } from "@/components/ui/input";
 
 const initialState: InviteState = {};
 
@@ -42,34 +36,22 @@ export function InviteForm({ initialCode = "" }: { initialCode?: string }) {
     <form action={formAction} className="flex flex-col gap-4">
       <Field>
         <FieldLabel className="text-sm font-semibold" htmlFor="code">
-          4-digit invite code
+          Invite code
         </FieldLabel>
         <FieldDescription className="text-xs">
-          Enter the code from the organizer.
+          Paste the private code from the organizer.
         </FieldDescription>
-        <InputOTP
-          aria-label="4-digit invite code"
+        <Input
+          aria-label="Invite code"
           autoComplete="one-time-code"
-          className="font-mono text-base tracking-widest"
-          containerClassName="w-full"
+          className="min-h-12 rounded-xl bg-background font-mono text-base tracking-[0.12em] uppercase"
           defaultValue={initialCode}
           id="code"
-          inputMode="numeric"
-          maxLength={4}
+          maxLength={32}
           name="code"
-          pattern={REGEXP_ONLY_DIGITS}
+          spellCheck={false}
           required
-        >
-          <InputOTPGroup className="w-full">
-            {Array.from({ length: 4 }, (_, index) => (
-              <InputOTPSlot
-                className="size-12 flex-1 bg-background text-base"
-                index={index}
-                key={index}
-              />
-            ))}
-          </InputOTPGroup>
-        </InputOTP>
+        />
       </Field>
 
       {state.error ? (
