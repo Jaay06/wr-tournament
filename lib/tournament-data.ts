@@ -248,6 +248,32 @@ export async function getTeamDirectory(): Promise<TournamentTeamSummary[]> {
   });
 }
 
+export async function getAllTeamDetails(): Promise<TournamentTeamData[]> {
+  const rows = await db
+    .select({
+      teamId: teams.id,
+      registrationId: teamMembers.registrationId,
+    })
+    .from(teams)
+    .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
+    .orderBy(asc(teams.createdAt), asc(teamMembers.joinedAt));
+
+  const firstMemberByTeam = new Map<string, string>();
+  for (const row of rows) {
+    if (!firstMemberByTeam.has(row.teamId)) {
+      firstMemberByTeam.set(row.teamId, row.registrationId);
+    }
+  }
+
+  const details = await Promise.all(
+    [...firstMemberByTeam.values()].map((registrationId) =>
+      getTeamForRegistration(registrationId),
+    ),
+  );
+
+  return details.filter((team): team is TournamentTeamData => Boolean(team));
+}
+
 export async function getParticipantDirectory(): Promise<TournamentParticipantOption[]> {
   const rows = await db
     .select({
@@ -310,6 +336,16 @@ export async function getTierReview(
     joinedAt: row.joinedAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     pendingCount: pendingRows.length,
+    pendingReviews: pendingRows.map(({ registration, displayName }) => ({
+      id: registration.id,
+      displayName,
+      riotName: registration.riotName,
+      riotTag: registration.riotTag,
+      currentRank: registration.currentRank,
+      selfAssessedTier: registration.selfAssessedTier,
+      primaryRole: registration.primaryRole,
+      secondaryRole: registration.secondaryRole,
+    })),
   };
 }
 

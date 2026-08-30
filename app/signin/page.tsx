@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { discordEnabled } from "@/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { FieldSeparator } from "@/components/ui/field";
+import { Card } from "@/components/ui/card";
 import { CredentialsForm } from "./credentials-form";
 import { EntryShell } from "@/components/auth/entry-shell";
 import { DiscordSignInButton } from "@/components/auth/discord-signin-button";
@@ -22,14 +25,21 @@ export default async function SignInPage({
   const error = firstSearchParam(params.error);
   const created = firstSearchParam(params.created) === "1";
   const registerUrl = `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  const invitePending = callbackUrl.startsWith("/invite");
 
   return (
     <EntryShell
-      description="Sign in first. If the organizer invited you, you will enter the private tournament room next."
+      description={invitePending ? "Your private invite is ready. Sign in and we will take you straight back to the code." : "Sign in first. If the organizer invited you, you will enter the private tournament room next."}
       eyebrow="PRIVATE ACCESS"
-      title="Get back in the room."
+      title={invitePending ? "Your invite is ready." : "Get back in the room."}
     >
       <div className="flex flex-col gap-5">
+        {invitePending ? (
+          <Card className="rounded-2xl border-primary/25 bg-primary-soft p-4" role="status">
+            <p className="m-0 font-mono text-2xs font-semibold tracking-[0.12em] text-primary-muted">INVITE RECOGNIZED</p>
+            <p className="mt-2 mb-0 text-sm leading-5 text-secondary-foreground">The invite code will stay attached while you sign in or create an account.</p>
+          </Card>
+        ) : null}
         <div>
           <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
             SIGN IN
@@ -40,16 +50,33 @@ export default async function SignInPage({
         </div>
 
         {created ? (
-          <p className="m-0 rounded-md border border-success/30 bg-success/10 px-3.5 py-3 text-sm text-success">
-            Account created. Sign in to continue.
-          </p>
+          <Alert aria-live="polite" className="rounded-md border-success/30 bg-success/10 text-success">
+            <AlertDescription className="text-success">Account created. Sign in to continue.</AlertDescription>
+          </Alert>
         ) : null}
 
         {error === "AccountLinkRequired" ? (
-          <p className="m-0 rounded-md border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
-            That Discord email already belongs to an email account. Sign in with your email and password for now.
-          </p>
+          <Alert aria-live="polite" className="rounded-md border-warning/30 bg-warning/10 text-warning">
+            <AlertDescription className="text-warning">
+              That Discord email already belongs to an email account. Sign in with your email and password for now.
+            </AlertDescription>
+          </Alert>
         ) : null}
+
+        {discordEnabled ? (
+          <div className="flex flex-col gap-3">
+            <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">RECOMMENDED</p>
+            <DiscordSignInButton callbackUrl={callbackUrl} />
+          </div>
+        ) : (
+          <Alert className="rounded-md border-border bg-secondary text-muted-foreground">
+            <AlertDescription className="text-muted-foreground">
+              Discord sign-in will appear after the organizer adds the Discord OAuth keys.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <FieldSeparator className="my-0 text-2xs font-mono tracking-widest">OR</FieldSeparator>
 
         <div className="flex flex-col gap-3">
           <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
@@ -60,18 +87,6 @@ export default async function SignInPage({
             <CredentialsForm callbackUrl={callbackUrl} />
           </div>
         </div>
-
-        <div className="flex items-center gap-3 text-2xs font-mono tracking-widest text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
-          OR
-        </div>
-
-        {discordEnabled ? (
-          <DiscordSignInButton callbackUrl={callbackUrl} />
-        ) : (
-          <p className="m-0 rounded-md border border-border bg-secondary px-3.5 py-3 text-sm text-muted-foreground">
-            Discord sign-in will appear after the organizer adds the Discord OAuth keys.
-          </p>
-        )}
 
         <p className="m-0 text-center text-sm text-muted-foreground">
           New to Rift Clash?{" "}

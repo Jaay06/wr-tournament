@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { EntryShell } from "@/components/auth/entry-shell";
+import { Card } from "@/components/ui/card";
 import { firstSearchParam, safeCallbackUrl } from "@/lib/redirect";
 
 import { RegisterForm } from "./register-form";
@@ -17,14 +18,21 @@ export default async function RegisterPage({
   const params = await searchParams;
   const callbackUrl = safeCallbackUrl(firstSearchParam(params.callbackUrl));
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  const invitePending = callbackUrl.startsWith("/invite");
 
   return (
     <EntryShell
-      description="Make an account first. You will still need the private invite from the organizer before you can see the tournament."
+      description={invitePending ? "Create your account and we will take you back to the private invite without making you enter the code twice." : "Make an account first. You will still need the private invite from the organizer before you can see the tournament."}
       eyebrow="NEW PLAYER"
-      title="Pull up a chair."
+      title={invitePending ? "Keep your invite." : "Pull up a chair."}
     >
       <div className="flex flex-col gap-5">
+        {invitePending ? (
+          <Card className="rounded-2xl border-primary/25 bg-primary-soft p-4" role="status">
+            <p className="m-0 font-mono text-2xs font-semibold tracking-[0.12em] text-primary-muted">INVITE RECOGNIZED</p>
+            <p className="mt-2 mb-0 text-sm leading-5 text-secondary-foreground">Your invite intent is saved. Finish account setup, then we will return you to the code.</p>
+          </Card>
+        ) : null}
         <div>
           <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
             CREATE ACCOUNT

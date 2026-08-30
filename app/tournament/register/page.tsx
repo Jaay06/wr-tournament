@@ -6,7 +6,7 @@ import { TournamentApp } from "@/components/tournament/tournament-app";
 import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
 import { getRegistrationForParticipant } from "@/lib/tournament-data";
-import { formatDeadline } from "@/lib/tournament";
+import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
 
 export default async function PlayerRegistrationPage() {
   const session = await auth();
@@ -39,11 +39,15 @@ export default async function PlayerRegistrationPage() {
     redirect("/invite");
   }
 
+  const deadlineState = formatDeadlineState(settings.registrationDeadline);
+
   const registration = await getRegistrationForParticipant(participant.id);
 
   return (
     <TournamentApp
       deadline={formatDeadline(settings.registrationDeadline)}
+      deadlineRemaining={deadlineState.compactLabel}
+      deadlineStatus={deadlineState.status}
       region={settings.region}
       showSignOut
       tournamentName={settings.name}

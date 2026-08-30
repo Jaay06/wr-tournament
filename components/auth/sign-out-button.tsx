@@ -1,4 +1,5 @@
 import { signOut } from "@/auth";
+import { Button } from "@/components/ui/button";
 
 export function SignOutButton() {
   async function signOutAction() {
@@ -9,12 +10,9 @@ export function SignOutButton() {
 
   return (
     <form action={signOutAction}>
-      <button
-        className="inline-flex min-h-9 items-center justify-center rounded-full border border-border bg-secondary px-3.5 py-2 text-sm font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted"
-        type="submit"
-      >
+      <Button className="min-h-11 rounded-full border border-border bg-secondary px-3.5 py-2 text-sm font-semibold text-foreground hover:border-border-strong hover:bg-secondary/80" size="lg" type="submit">
         Sign out
-      </button>
+      </Button>
     </form>
   );
 }

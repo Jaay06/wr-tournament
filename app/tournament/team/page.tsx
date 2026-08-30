@@ -10,7 +10,7 @@ import {
   getRegistrationForParticipant,
   getTeamForRegistration,
 } from "@/lib/tournament-data";
-import { formatDeadline } from "@/lib/tournament";
+import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
 
 export default async function TeamBuilderPage() {
   const session = await auth();
@@ -43,6 +43,8 @@ export default async function TeamBuilderPage() {
     redirect("/invite");
   }
 
+  const deadlineState = formatDeadlineState(settings.registrationDeadline);
+
   const registration = await getRegistrationForParticipant(participant.id);
   const [team, participants] = await Promise.all([
     registration ? getTeamForRegistration(registration.id) : Promise.resolve(null),
@@ -52,6 +54,8 @@ export default async function TeamBuilderPage() {
   return (
     <TournamentApp
       deadline={formatDeadline(settings.registrationDeadline)}
+      deadlineRemaining={deadlineState.compactLabel}
+      deadlineStatus={deadlineState.status}
       region={settings.region}
       showSignOut
       tournamentName={settings.name}

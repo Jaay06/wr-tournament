@@ -1,15 +1,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+
 export function EntryShell({
   eyebrow,
   title,
   description,
+  badgeLabel = "PRIVATE INVITE",
   children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
+  badgeLabel?: string;
   children: ReactNode;
 }) {
   return (
@@ -27,13 +32,13 @@ export function EntryShell({
               RIFT CLASH
             </strong>
             <small className="font-mono text-3xs leading-4 tracking-[0.14em] text-muted-foreground max-phone:hidden">
-              PRIVATE TOURNAMENT
+              PRIVATE WILD RIFT
             </small>
           </span>
         </Link>
-        <span className="rounded-full border border-primary/25 bg-primary-soft px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-primary-muted">
-          FRIENDS ONLY
-        </span>
+        <Badge className="h-auto rounded-full border-primary/25 bg-primary-soft px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-primary-muted">
+          {badgeLabel}
+        </Badge>
       </header>
 
       <main className="mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_430px] items-center gap-16 py-14 max-desktop:grid-cols-[minmax(0,1fr)_390px] max-desktop:gap-9 max-tablet:grid-cols-1 max-tablet:gap-8 max-tablet:py-9">
@@ -53,9 +58,9 @@ export function EntryShell({
           </div>
         </section>
 
-        <section className="rounded-card border border-border bg-card p-5 shadow-2xl shadow-black/25 tablet:p-6">
+        <Card className="rounded-card border border-border bg-card p-5 shadow-2xl shadow-black/25 tablet:p-6">
           {children}
-        </section>
+        </Card>
       </main>
     </div>
   );

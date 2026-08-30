@@ -10,18 +10,33 @@ import {
   type SettingsState,
   updateTournamentSettings,
 } from "./actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AnimatedButtonLabel } from "@/components/ui/animated-button-label";
+import { Button } from "@/components/ui/button";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 function SaveButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary px-4 py-3 text-base font-bold text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted disabled:cursor-not-allowed disabled:opacity-60"
+    <Button
+      className="min-h-12 rounded-md bg-primary px-4 py-3 text-base font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
+      size="lg"
       type="submit"
     >
-      {pending ? "Saving settings..." : "Save settings"}
-    </button>
+      <AnimatedButtonLabel stateKey={pending ? "pending" : "ready"}>
+        {pending ? "Saving settings..." : "Save settings"}
+      </AnimatedButtonLabel>
+    </Button>
   );
 }
 
@@ -29,13 +44,17 @@ function GenerateButton() {
   const { pending } = useFormStatus();
 
   return (
-    <button
-      className="inline-flex min-h-11 items-center justify-center rounded-md border border-border bg-secondary px-3.5 py-2.5 text-sm font-bold text-foreground transition-colors hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted disabled:cursor-not-allowed disabled:opacity-60"
+    <Button
+      className="min-h-11 rounded-md border border-border bg-secondary px-3.5 py-2.5 text-sm font-bold text-foreground hover:border-border-strong hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-60"
       disabled={pending}
+      size="lg"
       type="submit"
+      variant="secondary"
     >
-      {pending ? "Generating..." : "Generate new code"}
-    </button>
+      <AnimatedButtonLabel stateKey={pending ? "pending" : "ready"}>
+        {pending ? "Generating..." : "Generate new code"}
+      </AnimatedButtonLabel>
+    </Button>
   );
 }
 
@@ -75,76 +94,79 @@ export function SettingsForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5" onSubmit={handleSubmit}>
-      <label className="flex flex-col gap-2 text-sm font-semibold" htmlFor="name">
-        Tournament name
-        <input
-          className="min-h-12 rounded-md border border-border bg-background px-3.5 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20"
-          defaultValue={name}
-          id="name"
-          name="name"
-          required
-          type="text"
-        />
-      </label>
+      <FieldGroup className="gap-5">
+        <Field>
+          <FieldLabel className="text-sm font-semibold" htmlFor="name">
+            Tournament name
+          </FieldLabel>
+          <Input
+            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
+            defaultValue={name}
+            id="name"
+            name="name"
+            required
+            type="text"
+          />
+        </Field>
 
-      <label className="flex flex-col gap-2 text-sm font-semibold" htmlFor="region">
-        Wild Rift region
-        <input
-          className="min-h-12 rounded-md border border-border bg-background px-3.5 text-base text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20"
-          defaultValue={region}
-          id="region"
-          name="region"
-          required
-          type="text"
-        />
-      </label>
+        <Field>
+          <FieldLabel className="text-sm font-semibold" htmlFor="region">
+            Wild Rift region
+          </FieldLabel>
+          <Input
+            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
+            defaultValue={region}
+            id="region"
+            name="region"
+            required
+            type="text"
+          />
+        </Field>
 
-      <div className="flex flex-col gap-2">
-        <label className="flex flex-col gap-2 text-sm font-semibold" htmlFor="deadlineLocal">
-          Registration deadline <span className="font-normal text-muted-foreground">UTC</span>
-          <input
-            className="min-h-12 rounded-md border border-border bg-background px-3.5 text-base text-foreground outline-none focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/20"
+        <Field>
+          <FieldLabel className="text-sm font-semibold" htmlFor="deadlineLocal">
+            Registration deadline <span className="font-normal text-muted-foreground">UTC</span>
+          </FieldLabel>
+          <Input
+            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
             defaultValue={registrationDeadline}
             id="deadlineLocal"
             name="deadlineLocal"
             type="datetime-local"
           />
-        </label>
-        <input
-          defaultValue={registrationDeadline ? `${registrationDeadline}:00.000Z` : ""}
-          name="registrationDeadline"
-          type="hidden"
-        />
-        <p className="m-0 text-xs leading-5 text-muted-foreground">
-          Leave this blank to keep registration open. You can extend or clear it later.
-        </p>
-      </div>
+          <FieldDescription className="text-xs">
+            Leave this blank to keep registration open. You can extend or clear it later.
+          </FieldDescription>
+        </Field>
+      </FieldGroup>
+      <input
+        defaultValue={registrationDeadline ? `${registrationDeadline}:00.000Z` : ""}
+        name="registrationDeadline"
+        type="hidden"
+      />
 
-      <label className="flex items-start gap-3 rounded-md border border-border bg-secondary px-3.5 py-3 text-sm text-foreground">
-        <input
-          className="mt-0.5 size-4 accent-primary"
-          defaultChecked={inviteEnabled}
-          name="inviteEnabled"
-          type="checkbox"
-        />
-        <span>
-          <strong className="block font-semibold">Accept new friends</strong>
-          <small className="mt-1 block text-xs leading-5 text-muted-foreground">
+      <Field className="rounded-md border border-border bg-secondary px-3.5 py-3 text-foreground" orientation="horizontal">
+        <Switch defaultChecked={inviteEnabled} id="inviteEnabled" name="inviteEnabled" />
+        <FieldContent>
+          <FieldLabel className="font-semibold" htmlFor="inviteEnabled">
+            Accept new friends
+          </FieldLabel>
+          <FieldDescription className="text-xs">
             Existing participants keep access when this is turned off.
-          </small>
-        </span>
-      </label>
+          </FieldDescription>
+        </FieldContent>
+      </Field>
 
       {state.error ? (
-        <p aria-live="polite" className="m-0 rounded-md border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
-          {state.error}
-        </p>
+        <Alert aria-live="polite" className="rounded-md border-danger/30 bg-danger/10 text-danger" variant="destructive">
+          <AlertDescription className="text-danger">{state.error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {state.success ? (
-        <p aria-live="polite" className="m-0 rounded-md border border-success/30 bg-success/10 px-3.5 py-3 text-sm text-success">
-          {state.success}
-        </p>
+        <Alert aria-live="polite" className="rounded-md border-success/30 bg-success/10 text-success">
+          <AlertDescription className="text-success">{state.success}</AlertDescription>
+        </Alert>
       ) : null}
 
       <SaveButton />
@@ -165,13 +187,13 @@ export function InviteCodeForm() {
       </form>
 
       {state.error ? (
-        <p aria-live="polite" className="m-0 rounded-md border border-danger/30 bg-danger/10 px-3.5 py-3 text-sm text-danger">
-          {state.error}
-        </p>
+        <Alert aria-live="polite" className="rounded-md border-danger/30 bg-danger/10 text-danger" variant="destructive">
+          <AlertDescription className="text-danger">{state.error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {state.code ? (
-        <div className="rounded-md border border-primary/30 bg-primary/10 px-3.5 py-3">
+        <Alert aria-live="polite" className="rounded-md border-primary/30 bg-primary/10 text-foreground">
           <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-primary-muted">
             SHARE THIS CODE
           </p>
@@ -181,7 +203,7 @@ export function InviteCodeForm() {
           <p className="mt-2 mb-0 text-xs leading-5 text-secondary-foreground">
             Copy it now. It will not be shown again, and generating another code invalidates this one.
           </p>
-        </div>
+        </Alert>
       ) : null}
     </div>
   );

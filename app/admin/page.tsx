@@ -3,11 +3,13 @@ import { eq } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { TournamentApp } from "@/components/tournament/tournament-app";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
 import { db } from "@/db";
 import { tournamentSettings } from "@/db/schema";
 import { getOrganizerOverviewData } from "@/lib/tournament-data";
 import { getAnnouncements } from "@/lib/tournament-data";
-import { formatDeadline, toDateTimeLocalValue } from "@/lib/tournament";
+import { formatDeadline, formatDeadlineState, toDateTimeLocalValue } from "@/lib/tournament";
 
 import { InviteCodeForm, SettingsForm } from "./settings-form";
 import { AnnouncementManager } from "./announcement-form";
@@ -36,13 +38,17 @@ export default async function AdminPage() {
 
   const overview = await getOrganizerOverviewData();
   const announcements = await getAnnouncements();
+  const deadlineState = formatDeadlineState(settings?.registrationDeadline);
 
   return (
     <div className="min-h-svh bg-background text-foreground">
       <TournamentApp
         deadline={formatDeadline(settings?.registrationDeadline)}
+        deadlineRemaining={deadlineState.compactLabel}
+        deadlineStatus={deadlineState.status}
         region={settings?.region}
         showSignOut
+        announcements={announcements}
         overview={overview}
         tournamentName={settings?.name}
         userName={session.user.name ?? "organizer"}
@@ -51,12 +57,12 @@ export default async function AdminPage() {
 
       <section className="mx-auto w-full max-w-page px-5 pb-12 desktop:px-12" id="settings-form">
         {!settings ? (
-          <div className="rounded-2xl border border-warning/30 bg-warning/10 p-5 text-sm text-warning">
-            Run <code className="font-mono">pnpm db:setup</code> before editing the tournament.
-          </div>
+          <Alert className="border-warning/30 bg-warning/10 text-warning">
+            <AlertDescription>Run <code className="font-mono">pnpm db:setup</code> before editing the tournament.</AlertDescription>
+          </Alert>
         ) : (
           <div className="grid gap-4 desktop:grid-cols-2">
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <Card className="rounded-2xl border border-border bg-card gap-0 p-5" role="region">
               <div className="mb-6">
                 <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
                   TOURNAMENT SETTINGS
@@ -69,18 +75,18 @@ export default async function AdminPage() {
                 region={settings.region}
                 registrationDeadline={toDateTimeLocalValue(settings.registrationDeadline)}
               />
-            </section>
+            </Card>
 
-            <section className="rounded-2xl border border-border bg-card p-5">
+            <Card className="rounded-2xl border border-border bg-card gap-0 p-5" role="region">
               <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
                 PRIVATE INVITE
               </p>
               <h2 className="mt-2 mb-0 font-display text-xl font-bold">Issue a code</h2>
               <p className="mt-2 mb-5 text-sm leading-relaxed text-secondary-foreground">
-                Generate a new random code whenever you need one. The previous code stops working immediately.
+                Generate a new 4-digit code whenever you need one. The previous code stops working immediately.
               </p>
               <InviteCodeForm />
-            </section>
+            </Card>
           </div>
         )}
       </section>

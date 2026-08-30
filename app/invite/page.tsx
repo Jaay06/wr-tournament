@@ -4,10 +4,13 @@ import { eq } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { EntryShell } from "@/components/auth/entry-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
 import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
 import { firstSearchParam } from "@/lib/redirect";
-import { formatDeadline } from "@/lib/tournament";
+import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
+import { getRegistrationForParticipant } from "@/lib/tournament-data";
 
 import { InviteForm } from "./invite-form";
 
@@ -16,10 +19,15 @@ export default async function InvitePage({
 }: {
   searchParams: Promise<{ code?: string | string[] }>;
 }) {
+  const params = await searchParams;
+  const initialCode = firstSearchParam(params.code) ?? "";
   const session = await auth();
 
   if (!session?.user?.id) {
-    redirect("/signin?callbackUrl=%2Finvite");
+    const inviteCallback = initialCode
+      ? `/invite?code=${encodeURIComponent(initialCode)}`
+      : "/invite";
+    redirect(`/signin?callbackUrl=${encodeURIComponent(inviteCallback)}`);
   }
 
   const [participant] = await db
@@ -29,7 +37,8 @@ export default async function InvitePage({
     .limit(1);
 
   if (participant) {
-    redirect("/tournament");
+    const registration = await getRegistrationForParticipant(participant.id);
+    redirect(registration ? "/tournament" : "/tournament/register");
   }
 
   const [settings] = await db
@@ -42,9 +51,7 @@ export default async function InvitePage({
     .from(tournamentSettings)
     .where(eq(tournamentSettings.id, 1))
     .limit(1);
-
-  const params = await searchParams;
-  const initialCode = firstSearchParam(params.code) ?? "";
+  const deadlineState = formatDeadlineState(settings?.registrationDeadline);
 
   return (
     <EntryShell
@@ -55,36 +62,39 @@ export default async function InvitePage({
       <div className="flex flex-col gap-5">
         {settings ? (
           <div className="grid grid-cols-2 gap-3 max-phone:grid-cols-1">
-            <div className="rounded-md border border-border bg-secondary px-3.5 py-3">
+            <Card className="rounded-md border border-border bg-secondary gap-0 px-3.5 py-3" size="sm">
               <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
                 REGION
               </p>
               <p className="mt-1 mb-0 text-sm font-semibold text-foreground">{settings.region}</p>
-            </div>
-            <div className="rounded-md border border-border bg-secondary px-3.5 py-3">
+            </Card>
+            <Card className="rounded-md border border-border bg-secondary gap-0 px-3.5 py-3" size="sm">
               <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
                 REGISTRATION CLOSES
               </p>
               <p className="mt-1 mb-0 text-sm font-semibold text-foreground">
                 {formatDeadline(settings.registrationDeadline)}
               </p>
+              <p className="mt-1 mb-0 font-mono text-2xs font-semibold tracking-[0.08em] text-warning">
+                {deadlineState.compactLabel}
+              </p>
               {!settings.registrationDeadline ? (
                 <p className="mt-1 mb-0 text-xs leading-5 text-muted-foreground">
                   The organizer has not set a closing time.
                 </p>
               ) : null}
-            </div>
+            </Card>
           </div>
         ) : null}
 
         {!settings ? (
-          <p className="m-0 rounded-md border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
-            The organizer still needs to run the tournament setup command before friends can join.
-          </p>
+          <Alert className="border-warning/30 bg-warning/10 text-warning">
+            <AlertDescription>The organizer still needs to run the tournament setup command before friends can join.</AlertDescription>
+          </Alert>
         ) : !settings.inviteEnabled ? (
-          <p className="m-0 rounded-md border border-warning/30 bg-warning/10 px-3.5 py-3 text-sm text-warning">
-            The organizer has closed the invite. Existing participants can still use the tournament.
-          </p>
+          <Alert className="border-warning/30 bg-warning/10 text-warning">
+            <AlertDescription>The organizer has closed the invite. Existing participants can still use the tournament.</AlertDescription>
+          </Alert>
         ) : (
           <InviteForm initialCode={initialCode} />
         )}

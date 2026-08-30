@@ -95,6 +95,16 @@ export type TierReviewData = {
   joinedAt: string;
   updatedAt: string;
   pendingCount: number;
+  pendingReviews?: Array<{
+    id: string;
+    displayName: string;
+    riotName: string;
+    riotTag: string;
+    currentRank: string;
+    selfAssessedTier: TournamentTier;
+    primaryRole: TournamentRole;
+    secondaryRole: TournamentRole;
+  }>;
 };
 
 export type TournamentAnnouncementData = {
