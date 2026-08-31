@@ -14,6 +14,17 @@ export function safeCallbackUrl(value: unknown, fallback = "/invite") {
   return value;
 }
 
+export function postAuthRedirectPath(value: unknown) {
+  const callbackUrl = safeCallbackUrl(value);
+  const pathname = new URL(callbackUrl, "http://auth.local").pathname;
+
+  if (pathname === "/signin" || pathname === "/register") {
+    return "/invite";
+  }
+
+  return callbackUrl;
+}
+
 export function callbackPathFromAuthCookie(
   value: unknown,
   fallback = "/invite",

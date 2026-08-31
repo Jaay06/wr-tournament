@@ -11,6 +11,7 @@ import {
 import {
   callbackPathFromAuthCookie,
   inviteCodeFromCallbackUrl,
+  postAuthRedirectPath,
 } from "./redirect";
 import { inviteCodeSchema } from "./validation";
 
@@ -124,4 +125,11 @@ test("invite intent parsing only accepts the invite route", () => {
     "ABCDEF0123456789ABCDEF0123456789",
   );
   assert.equal(inviteCodeFromCallbackUrl("/tournament?code=secret"), null);
+});
+
+test("signed-in auth pages return to a safe application route", () => {
+  assert.equal(postAuthRedirectPath("/tournament/team"), "/tournament/team");
+  assert.equal(postAuthRedirectPath("/signin?callbackUrl=/signin"), "/invite");
+  assert.equal(postAuthRedirectPath("/register"), "/invite");
+  assert.equal(postAuthRedirectPath("https://example.com"), "/invite");
 });
