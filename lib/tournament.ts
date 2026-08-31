@@ -1,7 +1,7 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
 
 export function generateInviteCode() {
-  return randomBytes(16).toString('hex').toUpperCase();
+  return randomInt(1000, 10_000).toString();
 }
 
 export function hashInviteCode(code: string) {

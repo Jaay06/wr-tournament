@@ -52,9 +52,11 @@ test("formatDeadlineState reports a passed deadline", () => {
 test("generated invite codes keep the private invite boundary", () => {
   const code = generateInviteCode();
 
-  assert.match(code, /^[A-F0-9]{32}$/);
+  assert.match(code, /^[0-9]{4}$/);
+  assert.equal(code.length, 4);
   assert.equal(inviteCodeSchema.safeParse({ code }).success, true);
-  assert.equal(inviteCodeSchema.safeParse({ code: "1234" }).success, false);
+  assert.equal(inviteCodeSchema.safeParse({ code: "12345" }).success, false);
+  assert.equal(inviteCodeSchema.safeParse({ code: "AB12" }).success, false);
 });
 
 test("a valid submitted team stays submitted after an organizer repair", () => {

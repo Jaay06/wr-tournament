@@ -12,7 +12,7 @@ export const registerSchema = z.object({
 });
 
 export const inviteCodeSchema = z.object({
-  code: z.string().trim().regex(/^[A-F0-9]{32}$/i),
+  code: z.string().trim().regex(/^[0-9]{4}$/),
 });
 
 export const organizerSettingsSchema = z.object({

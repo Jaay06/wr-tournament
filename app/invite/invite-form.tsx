@@ -47,8 +47,10 @@ export function InviteForm({ initialCode = "" }: { initialCode?: string }) {
           className="min-h-12 rounded-xl bg-background font-mono text-base tracking-[0.12em] uppercase"
           defaultValue={initialCode}
           id="code"
-          maxLength={32}
+          inputMode="numeric"
+          maxLength={4}
           name="code"
+          pattern="[0-9]{4}"
           spellCheck={false}
           required
         />
