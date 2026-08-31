@@ -177,13 +177,11 @@ export default function Home() {
               </p>
 
               <div className='mt-6.5 max-phone:mt-5.5'>
-                <h1
-                  className='m-0 font-display text-[clamp(64px,7vw,96px)] font-extrabold leading-[0.84] tracking-[-0.055em] text-primary max-tablet:text-[clamp(58px,18vw,82px)]'
-                  id='hero-title'
-                >
-                  RIFT
-                  <br />
-                  CLASH
+                <h1 className='m-0' id='hero-title'>
+                  <RiftClashLogo
+                    className='block h-auto w-[min(100%,22rem)] max-tablet:w-[min(100%,20rem)] max-phone:w-[min(100%,18rem)]'
+                  />
+                  <span className='sr-only'>Rift Clash</span>
                 </h1>
                 <p className='mt-7 max-w-copy text-lg leading-[1.6] text-secondary-foreground max-phone:mt-5.5 max-phone:text-base max-phone:leading-normal'>
                   A simple place for friends to register, settle tiers, form

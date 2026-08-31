@@ -45,7 +45,10 @@ import {
 } from '@/app/tournament/actions';
 import { OrganizerTeamManager } from '@/app/admin/teams/team-manager';
 import { EntryShell } from '@/components/auth/entry-shell';
-import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
+import {
+  RiftClashLogo,
+  RiftClashMark,
+} from '@/components/brand/rift-clash-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AnimatedButtonLabel } from '@/components/ui/animated-button-label';
 import { Avatar as ShadcnAvatar, AvatarFallback } from '@/components/ui/avatar';
@@ -324,9 +327,7 @@ function DashboardBrand({ href }: { href: string }) {
       className='flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted desktop:w-[178px]'
       href={href}
     >
-      <span className='grid size-10 shrink-0 place-items-center rounded-[10px] bg-primary font-mono text-xs font-bold tracking-[-0.08em] text-primary-foreground'>
-        WR
-      </span>
+      <RiftClashMark className='size-10 shrink-0' />
       <span className='flex min-w-0 flex-col leading-none'>
         <span className='font-display text-[15px] font-bold tracking-[0.02em] text-foreground'>
           RIFT CLASH
