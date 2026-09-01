@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { auth } from '@/auth';
 import { MarketingFooter } from '@/components/marketing/marketing-footer';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -42,9 +43,12 @@ const teamRules = [
 ] as const;
 
 const submissionRules = [
+  'A player can belong to only one team.',
+  'The player who creates a team becomes its captain and manages the lineup.',
   'Every player on the roster needs an organizer-approved tier.',
   'Starter slots are Baron, Jungle, Mid, Dragon, and Support.',
   'Role preference mismatches show a warning but do not block submission.',
+  'Submit before the registration deadline. Submitted teams stay locked unless the organizer unlocks them.',
 ] as const;
 
 const tierBadgeTones = {
@@ -53,10 +57,12 @@ const tierBadgeTones = {
   t2: 'border-tier-t2/20 bg-tier-t2/10 text-tier-t2',
 } as const;
 
-export default function RulesPage() {
+export default async function RulesPage() {
+  const entry = tournamentEntryFor(await auth());
+
   return (
     <div className='min-h-svh overflow-hidden bg-background text-foreground'>
-      <MarketingHeader activePage='rules' />
+      <MarketingHeader activePage='rules' entry={entry} />
 
       <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
         <div className='max-w-3xl'>
@@ -154,12 +160,12 @@ export default function RulesPage() {
         </section>
 
         <p className='mt-8 text-sm text-muted-foreground'>
-          Need to register first?{' '}
+          Ready to continue?{' '}
           <Link
             className='font-semibold text-primary-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-            href='/signin?callbackUrl=%2Finvite'
+            href={entry.href}
           >
-            Enter the tournament
+            {entry.label}
           </Link>
           .
         </p>
