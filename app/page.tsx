@@ -42,7 +42,7 @@ export default async function Home() {
 
   return (
     <div
-      className='min-h-svh overflow-hidden bg-background text-foreground'
+      className='min-h-full overflow-hidden bg-background text-foreground'
       id='top'
     >
       <MarketingHeader activePage='overview' entry={entry} />
@@ -64,9 +64,7 @@ export default async function Home() {
 
               <div className='mt-6.5 max-phone:mt-5.5'>
                 <h1 className='m-0' id='hero-title'>
-                  <RiftClashLogo
-                    className='block h-auto w-[min(100%,22rem)] max-tablet:w-[min(100%,20rem)] max-phone:w-[min(100%,18rem)]'
-                  />
+                  <RiftClashLogo className='block h-auto w-[min(100%,22rem)] max-tablet:w-[min(100%,20rem)] max-phone:w-[min(100%,18rem)]' />
                   <span className='sr-only'>Rift Clash</span>
                 </h1>
                 <p className='mt-7 max-w-copy text-lg leading-[1.6] text-secondary-foreground max-phone:mt-5.5 max-phone:text-base max-phone:leading-normal'>
@@ -174,10 +172,7 @@ export default async function Home() {
             </Card>
           </MotionReveal>
         </section>
-
       </main>
-
-      <MarketingFooter />
     </div>
   );
 }

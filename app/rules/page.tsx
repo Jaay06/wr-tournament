@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { auth } from '@/auth';
-import { MarketingFooter } from '@/components/marketing/marketing-footer';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
 import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Check } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'Rules',
@@ -79,7 +80,7 @@ export default async function RulesPage() {
         </div>
 
         <section
-          className='mt-10 max-w-3xl overflow-hidden rounded-2xl border border-border bg-card ring-0'
+          className='mt-10 overflow-hidden rounded-2xl border border-border bg-card ring-0'
           aria-labelledby='team-rules-title'
         >
           <div className='flex items-center gap-2.5 border-b border-border bg-linear-to-r from-secondary to-card px-5 py-4'>
@@ -124,7 +125,7 @@ export default async function RulesPage() {
                   className='ml-auto grid size-5.5 shrink-0 place-items-center rounded-full bg-success/15 text-success'
                   aria-label='Rule enforced'
                 >
-                  <CheckIcon />
+                  <Check size={10} />
                 </span>
               </li>
             ))}
@@ -132,7 +133,10 @@ export default async function RulesPage() {
 
           <div className='flex items-center justify-between gap-3 bg-background px-5 py-3 text-2xs text-muted-foreground max-phone:items-start max-phone:flex-col'>
             <span className='inline-flex items-center gap-1.5 font-mono text-secondary-foreground'>
-              <i className='size-1.5 rounded-full bg-success' aria-hidden='true' />
+              <i
+                className='size-1.5 rounded-full bg-success'
+                aria-hidden='true'
+              />
               ROSTER VALIDATION
             </span>
             <span>Role coverage warns, but does not block.</span>
@@ -140,7 +144,7 @@ export default async function RulesPage() {
         </section>
 
         <section
-          className='mt-6 max-w-3xl rounded-2xl border border-border bg-card p-5'
+          className='mt-6 rounded-2xl border border-border bg-card p-5'
           aria-labelledby='submission-rules-title'
         >
           <h2
@@ -152,7 +156,7 @@ export default async function RulesPage() {
           <ul className='mt-4 grid gap-3 text-sm leading-6 text-secondary-foreground'>
             {submissionRules.map((rule) => (
               <li className='flex gap-2.5' key={rule}>
-                <CheckIcon />
+                <Check size={20} />
                 <span>{rule}</span>
               </li>
             ))}
@@ -161,38 +165,34 @@ export default async function RulesPage() {
 
         <p className='mt-8 text-sm text-muted-foreground'>
           Ready to continue?{' '}
-          <Link
-            className='font-semibold text-primary-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-            href={entry.href}
-          >
-            {entry.label}
-          </Link>
-          .
+          <Button variant={'link'}>
+            <Link className='font-semibold ' href={entry.href}>
+              {entry.label}
+            </Link>
+          </Button>
         </p>
       </main>
-
-      <MarketingFooter />
     </div>
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg
-      aria-hidden='true'
-      className='mt-1 size-3.5 shrink-0'
-      viewBox='0 0 12 12'
-      width='12'
-      height='12'
-    >
-      <path
-        d='m3 6 2 2 4-4'
-        fill='none'
-        stroke='currentColor'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth='1.4'
-      />
-    </svg>
-  );
-}
+// function CheckIcon() {
+//   return (
+//     <svg
+//       aria-hidden='true'
+//       className='mt-1 size-3.5 shrink-0'
+//       viewBox='0 0 12 12'
+//       width='12'
+//       height='12'
+//     >
+//       <path
+//         d='m3 6 2 2 4-4'
+//         fill='none'
+//         stroke='currentColor'
+//         strokeLinecap='round'
+//         strokeLinejoin='round'
+//         strokeWidth='1.4'
+//       />
+//     </svg>
+//   );
+// }

@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { MarketingFooter } from '@/components/marketing/marketing-footer';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { tiers } from '@/lib/marketing-content';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Tiers',
@@ -39,7 +39,7 @@ const tierBadgeTones: Record<TierTone, string> = {
 
 export default function TiersPage() {
   return (
-    <div className='min-h-svh overflow-hidden bg-background text-foreground'>
+    <div className=' overflow-hidden bg-background text-foreground'>
       <MarketingHeader activePage='tiers' />
 
       <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
@@ -56,10 +56,7 @@ export default function TiersPage() {
           </p>
         </div>
 
-        <section
-          className='mt-10 max-w-4xl'
-          aria-labelledby='tier-system-title'
-        >
+        <section className='mt-10 w-full' aria-labelledby='tier-system-title'>
           <div className='mb-4 flex items-end justify-between gap-5 max-phone:items-start max-phone:flex-col max-phone:gap-2'>
             <h2
               className='m-0 font-display text-xl font-bold leading-7'
@@ -72,7 +69,7 @@ export default function TiersPage() {
             </span>
           </div>
 
-          <div className='grid grid-cols-2 gap-3.5 max-tablet:grid-cols-1'>
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-3.5 max-tablet:grid-cols-1'>
             {tiers.map((tier) => (
               <Card
                 className={cn(
@@ -103,28 +100,23 @@ export default function TiersPage() {
         </section>
 
         <section
-          className='mt-6 max-w-4xl rounded-2xl border border-border bg-card p-5'
+          className='mt-6 w-full rounded-2xl border border-border bg-card p-5'
           aria-labelledby='tier-review-title'
         >
           <h2 className='font-display text-lg font-bold' id='tier-review-title'>
             How approval affects teams
           </h2>
-          <p className='mt-3 max-w-3xl text-sm leading-6 text-secondary-foreground'>
+          <p className='mt-3 text-sm leading-6 text-secondary-foreground'>
             You can join a draft team while your tier is pending, but every
             player needs an approved tier before the captain can submit the
             roster. T1 and T2 limits are checked across starters and
             substitutes.
           </p>
-          <Link
-            className='mt-4 inline-flex font-semibold text-primary-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-            href='/rules'
-          >
-            Read the team rules
-          </Link>
+          <Button variant={'link'} className='mt-4'>
+            <Link href='/rules'>Read the team rules</Link>
+          </Button>
         </section>
       </main>
-
-      <MarketingFooter />
     </div>
   );
 }
