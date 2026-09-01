@@ -77,6 +77,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { RoleIcon } from '@/components/tournament/role-icon';
 import {
   availableTournamentParticipants,
+  reconcileLineupAssignments,
   roleMatchesPreferences,
   validateRoster,
 } from '@/lib/tournament-rules';
@@ -2772,12 +2773,16 @@ function LineupEditor({
     (member) =>
       member.registrationId === currentRegistrationId && member.isCaptain,
   );
-  const [assignments, setAssignments] = useState(
+  const [draftAssignments, setDraftAssignments] = useState(
     team.members.map((member) => ({
       registrationId: member.registrationId,
       lineupPosition: member.lineupPosition,
       starterRole: member.starterRole,
     })),
+  );
+  const assignments = reconcileLineupAssignments(
+    draftAssignments,
+    team.members,
   );
   const [state, formAction] = useActionState<TournamentActionState, FormData>(
     updateTeamLineup,
@@ -2845,8 +2850,8 @@ function LineupEditor({
                     const lineupPosition = event.target.value as
                       | 'starter'
                       | 'substitute';
-                    setAssignments((current) =>
-                      current.map((entry) =>
+                    setDraftAssignments(
+                      assignments.map((entry) =>
                         entry.registrationId === member.registrationId
                           ? {
                               ...entry,
@@ -2877,8 +2882,8 @@ function LineupEditor({
                   size='sm'
                   value={assignment.starterRole ?? ''}
                   onChange={(event) =>
-                    setAssignments((current) =>
-                      current.map((entry) =>
+                    setDraftAssignments(
+                      assignments.map((entry) =>
                         entry.registrationId === member.registrationId
                           ? {
                               ...entry,

@@ -20,6 +20,33 @@ export type RosterValidation = {
   tierCounts: Record<TournamentTier, number>;
 };
 
+export type LineupAssignment = Pick<
+  TournamentMemberData,
+  "registrationId" | "lineupPosition" | "starterRole"
+>;
+
+export function reconcileLineupAssignments(
+  current: LineupAssignment[],
+  members: LineupAssignment[],
+): LineupAssignment[] {
+  const currentByRegistrationId = new Map(
+    current.map((assignment) => [assignment.registrationId, assignment]),
+  );
+  const next = members.map(
+    (member) =>
+      currentByRegistrationId.get(member.registrationId) ?? {
+        registrationId: member.registrationId,
+        lineupPosition: member.lineupPosition,
+        starterRole: member.starterRole,
+      },
+  );
+
+  return next.length === current.length &&
+    next.every((assignment, index) => assignment === current[index])
+    ? current
+    : next;
+}
+
 export function shouldReopenSubmittedTeam(
   teamStatus: "draft" | "submitted",
   validation: Pick<RosterValidation, "valid">,

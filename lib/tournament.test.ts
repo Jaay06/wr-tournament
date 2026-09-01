@@ -4,6 +4,7 @@ import test from "node:test";
 import { generateInviteCode, formatDeadlineState } from "./tournament";
 import {
   availableTournamentParticipants,
+  reconcileLineupAssignments,
   roleMatchesPreferences,
   shouldReopenSubmittedTeam,
   validateRoster,
@@ -102,6 +103,48 @@ test("invite choices exclude assigned players and already-pending recipients", (
     ),
     ["free"],
   );
+});
+
+test("lineup drafts add new members without discarding existing edits", () => {
+  const assignments = reconcileLineupAssignments(
+    [
+      {
+        registrationId: "captain",
+        lineupPosition: "substitute" as const,
+        starterRole: null,
+      },
+      {
+        registrationId: "departed",
+        lineupPosition: "starter" as const,
+        starterRole: "Mid" as const,
+      },
+    ],
+    [
+      {
+        registrationId: "captain",
+        lineupPosition: "starter" as const,
+        starterRole: "Baron" as const,
+      },
+      {
+        registrationId: "new-member",
+        lineupPosition: "substitute" as const,
+        starterRole: null,
+      },
+    ],
+  );
+
+  assert.deepEqual(assignments, [
+    {
+      registrationId: "captain",
+      lineupPosition: "substitute",
+      starterRole: null,
+    },
+    {
+      registrationId: "new-member",
+      lineupPosition: "substitute",
+      starterRole: null,
+    },
+  ]);
 });
 
 test("Discord account-link recovery preserves the invite callback path", () => {
