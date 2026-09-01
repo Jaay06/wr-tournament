@@ -25,6 +25,17 @@ export type LineupAssignment = Pick<
   "registrationId" | "lineupPosition" | "starterRole"
 >;
 
+export function participantTeamExitMode({
+  isCaptain,
+  memberCount,
+}: {
+  isCaptain: boolean;
+  memberCount: number;
+}): "leave" | "delete" | "transfer" {
+  if (!isCaptain) return "leave";
+  return memberCount === 1 ? "delete" : "transfer";
+}
+
 export function reconcileLineupAssignments(
   current: LineupAssignment[],
   members: LineupAssignment[],

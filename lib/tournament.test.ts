@@ -4,6 +4,7 @@ import test from "node:test";
 import { generateInviteCode, formatDeadlineState } from "./tournament";
 import {
   availableTournamentParticipants,
+  participantTeamExitMode,
   reconcileLineupAssignments,
   roleMatchesPreferences,
   shouldReopenSubmittedTeam,
@@ -145,6 +146,21 @@ test("lineup drafts add new members without discarding existing edits", () => {
       starterRole: null,
     },
   ]);
+});
+
+test("team exit controls follow captain ownership rules", () => {
+  assert.equal(
+    participantTeamExitMode({ isCaptain: false, memberCount: 4 }),
+    "leave",
+  );
+  assert.equal(
+    participantTeamExitMode({ isCaptain: true, memberCount: 1 }),
+    "delete",
+  );
+  assert.equal(
+    participantTeamExitMode({ isCaptain: true, memberCount: 4 }),
+    "transfer",
+  );
 });
 
 test("Discord account-link recovery preserves the invite callback path", () => {

@@ -5,6 +5,7 @@ import { TournamentApp, type TournamentView } from "@/components/tournament/tour
 const views: Record<string, TournamentView> = {
   invite: "invite",
   registration: "registration",
+  profile: "profile",
   dashboard: "dashboard",
   builder: "builder",
   submitted: "submitted",

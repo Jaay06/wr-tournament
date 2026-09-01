@@ -16,6 +16,7 @@ import {
   Clock3,
   Crown,
   LockKeyhole,
+  LogOut,
   Menu,
   MessageSquareText,
   Plus,
@@ -24,6 +25,7 @@ import {
   Settings,
   ShieldCheck,
   Swords,
+  Trash2,
   UserRoundCheck,
   Users,
   X,
@@ -32,7 +34,9 @@ import {
 import {
   approveRegistrationTier,
   createTeam,
+  deleteTeam,
   inviteParticipant,
+  leaveTeam,
   markAllNotificationsRead,
   renameTeam,
   requestToJoinTeam,
@@ -40,6 +44,7 @@ import {
   respondToTeamInvite,
   savePlayerRegistration,
   submitTeam,
+  transferTeamCaptaincy,
   updateTeamLineup,
   type TournamentActionState,
 } from '@/app/tournament/actions';
@@ -50,6 +55,17 @@ import {
   RiftClashMark,
 } from '@/components/brand/rift-clash-logo';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { AnimatedButtonLabel } from '@/components/ui/animated-button-label';
 import { Avatar as ShadcnAvatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +93,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { RoleIcon } from '@/components/tournament/role-icon';
 import {
   availableTournamentParticipants,
+  participantTeamExitMode,
   reconcileLineupAssignments,
   roleMatchesPreferences,
   validateRoster,
@@ -98,6 +115,7 @@ import type {
 export type TournamentView =
   | 'invite'
   | 'registration'
+  | 'profile'
   | 'dashboard'
   | 'teams'
   | 'builder'
@@ -396,6 +414,7 @@ function AppHeader({
     view === 'admin' || view === 'tier-review' || view === 'admin-teams';
   const participantItems = [
     ['dashboard', 'Overview', '/tournament'],
+    ['profile', 'Profile', '/tournament/profile'],
     ['builder', 'My team', '/tournament/team'],
     ['teams', 'Browse teams', '/tournament/teams'],
     ['announcements', 'Announcements', '/tournament#announcements'],
@@ -409,11 +428,13 @@ function AppHeader({
   ] as const;
   const items = organizer ? organizerItems : participantItems;
   const activeKey =
-    view === 'submitted'
-      ? 'builder'
-      : view === 'admin-teams'
-        ? 'teams-admin'
-        : view;
+    view === 'registration'
+      ? 'profile'
+      : view === 'submitted'
+        ? 'builder'
+        : view === 'admin-teams'
+          ? 'teams-admin'
+          : view;
   const participantTierLabel = approvedTier
     ? `${approvedTier} APPROVED`
     : tierStatus === 'pending'
@@ -960,14 +981,33 @@ function RegistrationView({
             transition={{ duration: 0.22, ease: easeOutExpo }}
           >
             <Card className='p-6 text-center desktop:p-10' aria-live='polite'>
-              <span className='mx-auto grid size-14 place-items-center rounded-2xl bg-warning-soft text-warning'>
-                <Clock3 size={26} />
+              <span
+                className={cn(
+                  'mx-auto grid size-14 place-items-center rounded-2xl',
+                  summary?.tierStatus === 'approved'
+                    ? 'bg-success-soft text-success'
+                    : 'bg-warning-soft text-warning',
+                )}
+              >
+                {summary?.tierStatus === 'approved' ? (
+                  <CheckCircle2 size={26} />
+                ) : (
+                  <Clock3 size={26} />
+                )}
               </span>
               <div className='mt-4'>
-                <StatusPill tone='warning'>PENDING REVIEW</StatusPill>
+                <StatusPill
+                  tone={
+                    summary?.tierStatus === 'approved' ? 'success' : 'warning'
+                  }
+                >
+                  {summary?.tierStatus === 'approved'
+                    ? `${summary.approvedTier} APPROVED`
+                    : 'PENDING REVIEW'}
+                </StatusPill>
               </div>
               <h1 className='mt-5 font-display text-3xl font-bold tracking-[-0.035em]'>
-                Registration sent
+                {initial ? 'Profile updated' : 'Registration sent'}
               </h1>
               <p className='mx-auto mt-3 max-w-copy text-base leading-6 text-secondary-foreground'>
                 {summary?.tierStatus === 'approved'
@@ -1009,7 +1049,7 @@ function RegistrationView({
                     size='lg'
                     type='button'
                   >
-                    Edit registration
+                    Edit profile
                   </Button>
                 ) : null}
               </div>
@@ -1026,8 +1066,8 @@ function RegistrationView({
         <div className='flex flex-wrap items-end justify-between gap-5'>
           <SectionHeading
             detail={`${tournamentName} · ${region}. The organizer confirms the tier used for team limits.`}
-            eyebrow='PLAYER REGISTRATION'
-            title='Create your player profile'
+            eyebrow={initial ? 'PLAYER PROFILE' : 'PLAYER REGISTRATION'}
+            title={initial ? 'Your player profile' : 'Create your player profile'}
           />
           <div className='flex flex-wrap gap-2'>
             <StatusPill tone={initial?.approvedTier ? 'success' : 'warning'}>
@@ -1163,14 +1203,22 @@ function RegistrationView({
                   </Field>
                   <Field>
                     <FieldLabel htmlFor='riotTag'>Riot tag</FieldLabel>
-                    <Input
-                      className='min-h-12 rounded-xl px-3.5 text-base'
-                      defaultValue={initial?.riotTag ?? ''}
-                      id='riotTag'
-                      name='riotTag'
-                      placeholder='EUW'
-                      required
-                    />
+                    <div className='relative'>
+                      <span
+                        aria-hidden='true'
+                        className='pointer-events-none absolute inset-y-0 left-3.5 flex items-center text-base font-semibold text-muted-foreground'
+                      >
+                        #
+                      </span>
+                      <Input
+                        className='min-h-12 rounded-xl pr-3.5 pl-7 text-base'
+                        defaultValue={initial?.riotTag ?? ''}
+                        id='riotTag'
+                        name='riotTag'
+                        placeholder='EUW'
+                        required
+                      />
+                    </div>
                   </Field>
                   <Field className='tablet:col-span-2'>
                     <FieldLabel htmlFor='currentRank'>Current rank</FieldLabel>
@@ -1323,7 +1371,8 @@ function RegistrationView({
                     closes. Changes reopen organizer review.
                   </p>
                   <FormSubmitButton className='shrink-0 bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover'>
-                    Send for review <ArrowRight size={16} />
+                    {initial ? 'Save profile' : 'Send for review'}{' '}
+                    <ArrowRight size={16} />
                   </FormSubmitButton>
                 </div>
                 {state.error ? (
@@ -2928,6 +2977,184 @@ function LineupEditor({
   );
 }
 
+function TeamMembershipControls({
+  team,
+  currentRegistrationId,
+  deadlineStatus,
+}: {
+  team: TournamentTeamData;
+  currentRegistrationId?: string;
+  deadlineStatus?: 'open' | 'upcoming' | 'passed';
+}) {
+  const currentMember = team.members.find(
+    (member) => member.registrationId === currentRegistrationId,
+  );
+  const [leaveState, leaveAction] = useActionState<
+    TournamentActionState,
+    FormData
+  >(leaveTeam, {});
+  const [deleteState, deleteAction] = useActionState<
+    TournamentActionState,
+    FormData
+  >(deleteTeam, {});
+  const [transferState, transferAction] = useActionState<
+    TournamentActionState,
+    FormData
+  >(transferTeamCaptaincy, {});
+
+  if (!currentMember) return null;
+
+  const exitMode = participantTeamExitMode({
+    isCaptain: currentMember.isCaptain,
+    memberCount: team.members.length,
+  });
+  const locked = team.status !== 'draft' || deadlineStatus === 'passed';
+  const teammates = team.members.filter(
+    (member) => member.registrationId !== currentMember.registrationId,
+  );
+  const actionError =
+    leaveState.error ?? deleteState.error ?? transferState.error;
+
+  return (
+    <Card className='p-5'>
+      <Kicker>TEAM MEMBERSHIP</Kicker>
+      <h2 className='mt-2 font-display text-lg font-bold'>Your team spot</h2>
+      {locked ? (
+        <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
+          {deadlineStatus === 'passed'
+            ? 'Membership changes closed with registration.'
+            : 'Ask the organizer to unlock this submitted team before changing membership.'}
+        </p>
+      ) : exitMode === 'transfer' ? (
+        <>
+          <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
+            Choose a new captain first. You can leave after the transfer.
+          </p>
+          <form action={transferAction} className='mt-4 flex flex-col gap-3'>
+            <input name='teamId' type='hidden' value={team.id} />
+            <Field>
+              <FieldLabel htmlFor='nextCaptainRegistrationId'>
+                New captain
+              </FieldLabel>
+              <NativeSelect
+                className='w-full'
+                defaultValue=''
+                id='nextCaptainRegistrationId'
+                name='registrationId'
+                required
+              >
+                <NativeSelectOption disabled value=''>
+                  Choose a teammate
+                </NativeSelectOption>
+                {teammates.map((member) => (
+                  <NativeSelectOption
+                    key={member.registrationId}
+                    value={member.registrationId}
+                  >
+                    {member.displayName} · {member.riotName}#{member.riotTag}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </Field>
+            <FormSubmitButton className='w-full border border-border bg-secondary text-foreground hover:border-border-strong'>
+              <Crown size={16} /> Transfer captaincy
+            </FormSubmitButton>
+          </form>
+        </>
+      ) : exitMode === 'delete' ? (
+        <>
+          <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
+            You are the only member. Deleting the team keeps your player
+            profile and lets you create or join another team.
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  className='mt-4 w-full border border-danger/35 bg-danger-soft text-danger hover:bg-danger/15'
+                  size='lg'
+                />
+              }
+            >
+              <Trash2 size={16} /> Delete team
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {team.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes the team and its pending invitations and
+                  requests. Your player profile stays active.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep team</AlertDialogCancel>
+                <form action={deleteAction}>
+                  <input name='teamId' type='hidden' value={team.id} />
+                  <AlertDialogAction type='submit' variant='destructive'>
+                    Delete team
+                  </AlertDialogAction>
+                </form>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      ) : (
+        <>
+          <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
+            Leaving releases your roster spot. You will need a new invitation
+            or join request to return.
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  className='mt-4 w-full border border-danger/35 bg-danger-soft text-danger hover:bg-danger/15'
+                  size='lg'
+                />
+              }
+            >
+              <LogOut size={16} /> Leave team
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave {team.name}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You will lose this roster spot. Your player profile and
+                  tournament access will stay active.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Stay on team</AlertDialogCancel>
+                <form action={leaveAction}>
+                  <input name='teamId' type='hidden' value={team.id} />
+                  <AlertDialogAction type='submit' variant='destructive'>
+                    Leave team
+                  </AlertDialogAction>
+                </form>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
+      {actionError ? (
+        <Alert aria-live='polite' className='mt-4' variant='destructive'>
+          <AlertDescription>{actionError}</AlertDescription>
+        </Alert>
+      ) : null}
+      {transferState.success ? (
+        <Alert
+          aria-live='polite'
+          className='mt-4 border-success/30 bg-success-soft text-success'
+        >
+          <AlertDescription className='text-success'>
+            {transferState.success} You can now leave the team.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </Card>
+  );
+}
+
 function TeamRoomView(props: {
   initialSubmitted?: boolean;
   team?: TournamentTeamData | null;
@@ -3705,6 +3932,13 @@ function TeamRoomContent({
                 </Alert>
               ) : null}
             </Card>
+            {actualTeam ? (
+              <TeamMembershipControls
+                currentRegistrationId={currentRegistrationId}
+                deadlineStatus={deadlineStatus}
+                team={actualTeam}
+              />
+            ) : null}
           </aside>
         </div>
         {!isSubmitted && showCaptainControls ? (
@@ -4710,7 +4944,7 @@ export function TournamentApp({
           userName={userName}
           view={view}
         />
-        {view === 'registration' ? (
+        {view === 'registration' || view === 'profile' ? (
           <RegistrationView
             deadline={deadline}
             deadlineRemaining={deadlineRemaining}
