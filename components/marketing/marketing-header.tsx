@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArrowRight, Menu, X } from 'lucide-react';
 
 import { auth } from '@/auth';
 import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
@@ -35,7 +36,7 @@ export async function MarketingHeader({
 
   return (
     <header className='border-b border-border bg-background/92'>
-      <div className='mx-auto flex min-h-18.25 w-full max-w-page items-center gap-9 px-12 py-4.5 max-tablet:min-h-16 max-tablet:px-5 max-tablet:py-3.5'>
+      <div className='mx-auto flex min-h-18.25 w-full max-w-page items-center gap-9 px-12 py-3.5 max-tablet:min-h-16 max-tablet:gap-3 max-tablet:px-5 max-phone:px-4'>
         <Link
           className='flex shrink-0 items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
           href='/#top'
@@ -54,7 +55,7 @@ export async function MarketingHeader({
             return (
               <Link
                 className={cn(
-                  'text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted',
+                  'inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted',
                   isActive &&
                     'border-b-2 border-primary pb-1.25 font-semibold text-foreground',
                 )}
@@ -68,32 +69,74 @@ export async function MarketingHeader({
           })}
         </nav>
 
-        <Link
-          className={cn(
-            buttonVariants({ size: 'sm' }),
-            'ml-auto min-h-9 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs',
-          )}
-          href={resolvedEntry.href}
-        >
-          {resolvedEntry.label}
-          <ArrowIcon />
-        </Link>
+        {activePage !== 'overview' ? (
+          <Link
+            className={cn(
+              buttonVariants({ size: 'sm' }),
+              'ml-auto min-h-11 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs max-phone:hidden',
+            )}
+            href={resolvedEntry.href}
+          >
+            {resolvedEntry.label}
+            <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
+          </Link>
+        ) : (
+          <span className='ml-auto max-desktop:hidden' />
+        )}
+
+        <details className='group relative hidden max-desktop:block max-phone:ml-auto'>
+          <summary
+            className='grid size-11 cursor-pointer list-none place-items-center rounded-xl border border-border bg-secondary text-foreground transition-colors hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted [&::-webkit-details-marker]:hidden'
+            aria-label='Public navigation'
+          >
+            <Menu
+              aria-hidden='true'
+              className='group-open:hidden'
+              size={20}
+              strokeWidth={1.8}
+            />
+            <X
+              aria-hidden='true'
+              className='hidden group-open:block'
+              size={20}
+              strokeWidth={1.8}
+            />
+          </summary>
+          <div className='absolute right-0 top-[calc(100%+0.65rem)] z-50 w-[min(20rem,calc(100vw-2rem))] rounded-card border border-border bg-card p-2 shadow-2xl shadow-background/60'>
+            <nav className='flex flex-col gap-1' aria-label='Mobile public navigation'>
+              {navItems.map((item) => {
+                const isActive = item.page === activePage;
+
+                return (
+                  <Link
+                    className={cn(
+                      'flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary-muted',
+                      isActive && 'bg-primary-soft text-primary-muted',
+                    )}
+                    href={item.href}
+                    aria-current={isActive ? 'page' : undefined}
+                    key={item.label}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+              {activePage !== 'overview' ? (
+                <Link
+                  className={cn(
+                    buttonVariants({ size: 'lg' }),
+                    'mt-1 min-h-11 rounded-xl bg-primary px-4 text-sm font-bold text-primary-foreground hover:bg-primary-hover phone:hidden',
+                  )}
+                  href={resolvedEntry.href}
+                >
+                  {resolvedEntry.label}
+                  <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
+                </Link>
+              ) : null}
+            </nav>
+          </div>
+        </details>
       </div>
     </header>
-  );
-}
-
-function ArrowIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 16 16' width='16' height='16'>
-      <path
-        d='M5 8h6m0 0L8 5m3 3-3 3'
-        fill='none'
-        stroke='currentColor'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth='1.6'
-      />
-    </svg>
   );
 }

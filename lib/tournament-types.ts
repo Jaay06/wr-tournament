@@ -36,12 +36,15 @@ export type TournamentMemberData = {
   starterRole: TournamentRole | null;
 };
 
-export type TournamentTeamData = {
+export type TournamentTeamDetailData = {
   id: string;
   name: string;
   status: "draft" | "submitted";
   submittedAt: string | null;
   members: TournamentMemberData[];
+};
+
+export type TournamentTeamData = TournamentTeamDetailData & {
   joinRequests: Array<{
     id: string;
     registrationId: string;
@@ -89,6 +92,24 @@ export type TournamentParticipantOption = {
   riotTag: string;
   approvedTier: TournamentTier | null;
   teamId: string | null;
+};
+
+export type TournamentPlayerProfileData = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  riotName: string;
+  riotTag: string;
+  currentRank: string;
+  approvedTier: TournamentTier | null;
+  tierStatus: "pending" | "approved";
+  primaryRole: TournamentRole;
+  secondaryRole: TournamentRole;
+  team: {
+    id: string;
+    name: string;
+    status: "draft" | "submitted";
+  } | null;
 };
 
 export type TierReviewData = {

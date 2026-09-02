@@ -1,12 +1,10 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 import { auth } from '@/auth';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
 import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -62,7 +60,7 @@ export default async function RulesPage() {
   const entry = tournamentEntryFor(await auth());
 
   return (
-    <div className='min-h-svh overflow-hidden bg-background text-foreground'>
+    <div className='min-h-[100dvh] overflow-hidden bg-background text-foreground'>
       <MarketingHeader activePage='rules' entry={entry} />
 
       <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
@@ -162,37 +160,7 @@ export default async function RulesPage() {
             ))}
           </ul>
         </section>
-
-        <p className='mt-8 text-sm text-muted-foreground'>
-          Ready to continue?{' '}
-          <Button variant={'link'}>
-            <Link className='font-semibold ' href={entry.href}>
-              {entry.label}
-            </Link>
-          </Button>
-        </p>
       </main>
     </div>
   );
 }
-
-// function CheckIcon() {
-//   return (
-//     <svg
-//       aria-hidden='true'
-//       className='mt-1 size-3.5 shrink-0'
-//       viewBox='0 0 12 12'
-//       width='12'
-//       height='12'
-//     >
-//       <path
-//         d='m3 6 2 2 4-4'
-//         fill='none'
-//         stroke='currentColor'
-//         strokeLinecap='round'
-//         strokeLinejoin='round'
-//         strokeWidth='1.4'
-//       />
-//     </svg>
-//   );
-// }

@@ -45,7 +45,7 @@ export default async function AdminPage() {
   const deadlineState = formatDeadlineState(settings?.registrationDeadline);
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
+    <div className="min-h-[100dvh] bg-background text-foreground">
       <TournamentApp
         deadline={formatDeadline(settings?.registrationDeadline)}
         deadlineRemaining={deadlineState.compactLabel}

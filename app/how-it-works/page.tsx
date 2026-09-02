@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Card } from '@/components/ui/card';
 import { howItWorksSteps } from '@/lib/marketing-content';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'How it works',
@@ -22,7 +20,7 @@ export const metadata: Metadata = {
 
 export default function HowItWorksPage() {
   return (
-    <div className='overflow-hidden bg-background text-foreground'>
+    <div className='min-h-[100dvh] overflow-hidden bg-background text-foreground'>
       <MarketingHeader activePage='how-it-works' />
 
       <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
@@ -88,14 +86,6 @@ export default function HowItWorksPage() {
           <p className=' text-sm leading-6 text-secondary-foreground'>
             Sign in, then use the private invite link or code shared by the
             organizer. Tournament data stays private to people who have joined.
-            <Button variant={'link'} className={'mt-2 underline'}>
-              <Link
-                className='font-semibold '
-                href='/signin?callbackUrl=%2Finvite'
-              >
-                Enter the tournament
-              </Link>
-            </Button>
           </p>
         </section>
       </main>

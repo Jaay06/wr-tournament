@@ -2,7 +2,14 @@
 
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
-import { AnimatePresence, MotionConfig, motion } from 'motion/react';
+import {
+  AnimatePresence,
+  LayoutGroup,
+  MotionConfig,
+  motion,
+  useDragControls,
+  useReducedMotion,
+} from 'motion/react';
 import type { FormEvent, HTMLAttributes, ReactNode } from 'react';
 import { useActionState } from 'react';
 import { useMemo, useState } from 'react';
@@ -15,6 +22,7 @@ import {
   CheckCircle2,
   Clock3,
   Crown,
+  GripVertical,
   LockKeyhole,
   LogOut,
   Menu,
@@ -92,10 +100,17 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { RoleIcon } from '@/components/tournament/role-icon';
 import {
+  PlayerDetailsView,
+  PlayerDirectoryView,
+} from '@/components/tournament/player-directory';
+import {
+  arrangeLineupAssignments,
   availableTournamentParticipants,
   participantTeamExitMode,
   reconcileLineupAssignments,
   roleMatchesPreferences,
+  type LineupAssignment,
+  type LineupDropTarget,
   validateRoster,
 } from '@/lib/tournament-rules';
 import { cn } from '@/lib/utils';
@@ -106,8 +121,10 @@ import type {
   TournamentIncomingInviteData,
   TournamentMemberData,
   TournamentParticipantOption,
+  TournamentPlayerProfileData,
   TournamentRegistrationData,
   TournamentTeamData,
+  TournamentTeamDetailData,
   TournamentTeamSummary,
   OrganizerOverviewData,
 } from '@/lib/tournament-types';
@@ -118,6 +135,9 @@ export type TournamentView =
   | 'profile'
   | 'dashboard'
   | 'teams'
+  | 'team-details'
+  | 'players'
+  | 'player-details'
   | 'builder'
   | 'submitted'
   | 'admin'
@@ -140,6 +160,9 @@ export type TournamentAppProps = {
   registration?: TournamentRegistrationData | null;
   teams?: TournamentTeamSummary[];
   team?: TournamentTeamData | null;
+  teamDetails?: TournamentTeamDetailData | null;
+  players?: TournamentPlayerProfileData[];
+  playerProfile?: TournamentPlayerProfileData | null;
   tierReview?: TierReviewData | null;
   currentRegistrationId?: string;
   dashboard?: TournamentDashboardData;
@@ -293,6 +316,63 @@ const rosterPlayers: Player[] = [
 
 const starterSlots = ['Baron', 'Jungle', 'Mid', 'Dragon', 'Support'] as const;
 
+function lineupDropTargetAtPoint(point: { x: number; y: number }) {
+  const elements = document.elementsFromPoint(
+    point.x - window.scrollX,
+    point.y - window.scrollY,
+  );
+
+  for (const element of elements) {
+    const target = element.closest<HTMLElement>('[data-lineup-drop-kind]');
+    if (!target) continue;
+
+    const kind = target.dataset.lineupDropKind;
+    if (kind === 'starter') {
+      const role = target.dataset.lineupRole as Role | undefined;
+      if (role && starterSlots.includes(role)) {
+        return { kind, role } satisfies LineupDropTarget;
+      }
+    }
+    if (kind === 'substitute') {
+      return { kind } satisfies LineupDropTarget;
+    }
+    if (kind === 'player' && target.dataset.registrationId) {
+      return {
+        kind,
+        registrationId: target.dataset.registrationId,
+      } satisfies LineupDropTarget;
+    }
+  }
+
+  return null;
+}
+
+const previewTeamDetails: TournamentTeamDetailData = {
+  id: 'preview-team',
+  name: 'Night Sentinels',
+  status: 'draft',
+  submittedAt: null,
+  members: rosterPlayers.map((player, index) => {
+    const [riotName, riotTag] = player.riotId.split('#');
+    return {
+      id: `preview-member-${index}`,
+      registrationId: `preview-registration-${index}`,
+      displayName: player.name,
+      avatarUrl: null,
+      riotName,
+      riotTag,
+      currentRank: player.rank,
+      approvedTier: player.tier,
+      tierStatus: 'approved',
+      primaryRole: player.primaryRole,
+      secondaryRole: player.secondaryRole,
+      isCaptain: Boolean(player.isCaptain),
+      lineupPosition: index < starterSlots.length ? 'starter' : 'substitute',
+      starterRole: index < starterSlots.length ? starterSlots[index] : null,
+    };
+  }),
+};
+
 const teamCards = [
   {
     name: 'Night Sentinels',
@@ -430,6 +510,8 @@ function AppHeader({
   const activeKey =
     view === 'registration'
       ? 'profile'
+      : view === 'team-details' || view === 'players' || view === 'player-details'
+        ? 'teams'
       : view === 'submitted'
         ? 'builder'
         : view === 'admin-teams'
@@ -456,7 +538,7 @@ function AppHeader({
         className={cn(
           'mx-auto flex w-full max-w-page items-center gap-8',
           revisedShell
-            ? 'min-h-[88px] px-5 pt-5 desktop:px-7 desktop:pt-7'
+            ? 'min-h-20 px-4 py-4 phone:px-5 desktop:min-h-19 desktop:px-7'
             : 'min-h-18 px-5 py-3 desktop:px-12',
         )}
       >
@@ -519,7 +601,7 @@ function AppHeader({
         <Button
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-          className='ml-auto rounded-xl border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden'
+          className='ml-auto size-11 rounded-xl border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden'
           onClick={() => setMenuOpen((open) => !open)}
           size='icon-lg'
           type='button'
@@ -1521,7 +1603,7 @@ function DashboardStarterCard({
       ) : (
         <div className='mt-2 flex flex-col items-center text-center'>
           <span className='grid size-12 place-items-center rounded-full border border-border-strong bg-card font-display text-lg font-bold text-muted-foreground'>
-            —
+            <Plus aria-hidden='true' size={18} />
           </span>
           <p className='mt-2 text-sm font-semibold text-muted-foreground'>
             Empty slot
@@ -1949,7 +2031,7 @@ function RevisedDashboardView({
                   Announcements
                 </h2>
                 <a
-                  className='text-base font-bold text-primary-muted hover:text-primary'
+                  className='inline-flex min-h-11 items-center rounded-lg text-base font-bold text-primary-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted'
                   href='#announcements'
                 >
                   View all
@@ -1990,7 +2072,7 @@ function RevisedDashboardView({
                 </h2>
                 {dashboard !== undefined && unreadCount > 0 ? (
                   <form action={markAllAction}>
-                    <FormSubmitButton className='h-7 min-h-7 rounded-full bg-secondary px-2.5 py-1 text-[10px] text-secondary-foreground hover:bg-secondary/80'>
+                    <FormSubmitButton className='min-h-11 rounded-full bg-secondary px-3 py-2 text-[11px] text-secondary-foreground hover:bg-secondary/80'>
                       Mark read
                     </FormSubmitButton>
                   </form>
@@ -2217,16 +2299,26 @@ function BrowseTeamsView({
             eyebrow='BROWSE TEAMS'
             title='Find a draft with room'
           />
-          <ButtonLink
-            href={
-              preview || registration
-                ? '/tournament/team'
-                : '/tournament/register'
-            }
-          >
-            <Plus size={16} />{' '}
-            {preview || registration ? 'Create a team' : 'Complete profile'}
-          </ButtonLink>
+          <div className='grid w-full gap-2 phone:flex phone:w-auto phone:flex-wrap'>
+            <ButtonLink
+              className='w-full phone:w-auto'
+              href='/tournament/players'
+              variant='secondary'
+            >
+              <Users size={16} /> Browse players
+            </ButtonLink>
+            <ButtonLink
+              className='w-full phone:w-auto'
+              href={
+                preview || registration
+                  ? '/tournament/team'
+                  : '/tournament/register'
+              }
+            >
+              <Plus size={16} />{' '}
+              {preview || registration ? 'Create a team' : 'Complete profile'}
+            </ButtonLink>
+          </div>
         </div>
 
         <Card className='p-4'>
@@ -2346,7 +2438,14 @@ function BrowseTeamsView({
                 className='flex min-h-full flex-col overflow-hidden'
                 key={team.id}
               >
-                <div className='p-5'>
+                <Link
+                  className='group block rounded-t-card p-5 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-primary-muted'
+                  href={
+                    preview
+                      ? '/ui-preview?screen=team-details'
+                      : `/tournament/teams/${team.id}`
+                  }
+                >
                   <div className='flex items-start justify-between gap-3'>
                     <span
                       className='grid size-11 place-items-center rounded-xl bg-primary-soft font-display text-lg font-bold text-primary-muted'
@@ -2409,7 +2508,14 @@ function BrowseTeamsView({
                       ))}
                     </div>
                   </div>
-                </div>
+                  <span className='mt-5 inline-flex items-center gap-2 text-sm font-bold text-primary-muted'>
+                    View team
+                    <ArrowRight
+                      className='transition-transform group-hover:translate-x-0.5'
+                      size={16}
+                    />
+                  </span>
+                </Link>
 
                 <div className='mt-auto border-t border-border bg-secondary/55 p-4'>
                   {team.eligible && canRequest ? (
@@ -2521,6 +2627,287 @@ function BrowseTeamsView({
           <Alert aria-live='polite' variant='destructive'>
             <AlertDescription>{requestState.error}</AlertDescription>
           </Alert>
+        ) : null}
+      </div>
+    </PageFrame>
+  );
+}
+
+function TeamDetailPlayerCard({
+  member,
+  role,
+  slotLabel,
+}: {
+  member: TournamentMemberData;
+  role?: Role;
+  slotLabel?: string;
+}) {
+  const player = playerFromMember(member);
+
+  return (
+    <Card className='flex min-h-full flex-col p-4'>
+      <div className='flex items-center justify-between gap-3'>
+        {role ? <RoleLabel role={role} /> : <Kicker>{slotLabel}</Kicker>}
+        {member.isCaptain ? (
+          <Badge className='h-auto rounded-full border border-warning/25 bg-warning-soft px-2 py-1 font-mono text-2xs font-semibold tracking-[0.08em] text-warning'>
+            <Crown size={12} /> CAPTAIN
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className='mt-5 flex min-w-0 items-center gap-3'>
+        <Avatar player={player} size='size-11' />
+        <div className='min-w-0'>
+          <p className='m-0 truncate font-display text-base font-bold'>
+            {member.displayName}
+          </p>
+          <p className='mt-1 mb-0 truncate font-mono text-xs text-muted-foreground'>
+            {member.riotName}#{member.riotTag}
+          </p>
+        </div>
+      </div>
+
+      <div className='mt-5 border-t border-border pt-4'>
+        <Kicker>CURRENT RANK</Kicker>
+        <p className='mt-2 mb-0 text-sm font-semibold'>{member.currentRank}</p>
+      </div>
+
+      <div className='mt-4 flex flex-wrap items-center gap-2'>
+        {member.approvedTier ? (
+          <>
+            <TierBadge tier={member.approvedTier} />
+            <span className='text-xs text-muted-foreground'>Approved tier</span>
+          </>
+        ) : (
+          <StatusPill tone='warning'>TIER PENDING</StatusPill>
+        )}
+      </div>
+
+      <div className='mt-auto pt-5'>
+        <Kicker>ROLE PREFERENCES</Kicker>
+        <RolePreference
+          className='mt-2 text-xs text-secondary-foreground'
+          primaryRole={member.primaryRole}
+          secondaryRole={member.secondaryRole}
+        />
+        <span className='mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary-muted'>
+          View player <ArrowRight size={15} />
+        </span>
+      </div>
+    </Card>
+  );
+}
+
+function EmptyTeamSlot({ role, label }: { role?: Role; label?: string }) {
+  return (
+    <Card className='flex min-h-52 flex-col border-dashed bg-secondary/35 p-4'>
+      {role ? <RoleLabel role={role} /> : <Kicker>{label}</Kicker>}
+      <div className='my-auto py-8 text-center'>
+        <span
+          aria-hidden='true'
+          className='mx-auto grid size-10 place-items-center rounded-full border border-dashed border-border-strong text-muted-foreground'
+        >
+          <Plus size={16} />
+        </span>
+        <p className='mt-3 mb-0 text-sm font-semibold text-muted-foreground'>
+          Empty slot
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function TeamDetailsView({
+  teamDetails,
+}: {
+  teamDetails?: TournamentTeamDetailData | null;
+}) {
+  const team = teamDetails ?? previewTeamDetails;
+  const captain = team.members.find((member) => member.isCaptain);
+  const starters = starterSlots.map((role) => ({
+    role,
+    member: team.members.find(
+      (candidate) =>
+        candidate.lineupPosition === 'starter' &&
+        candidate.starterRole === role,
+    ),
+  }));
+  const substitutes = team.members.filter(
+    (member) => member.lineupPosition === 'substitute',
+  );
+  const displayedMemberIds = new Set([
+    ...starters.flatMap(({ member }) => (member ? [member.id] : [])),
+    ...substitutes.map((member) => member.id),
+  ]);
+  const unassignedMembers = team.members.filter(
+    (member) => !displayedMemberIds.has(member.id),
+  );
+  const tierCounts: Record<Tier, number> = { T1: 0, T2: 0, T3: 0, T4: 0 };
+
+  for (const member of team.members) {
+    if (member.approvedTier) {
+      tierCounts[member.approvedTier] += 1;
+    }
+  }
+
+  return (
+    <PageFrame>
+      <div className='flex flex-col gap-6'>
+        <Link
+          className='-mx-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm font-bold text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
+          href='/tournament/teams'
+        >
+          <ArrowLeft size={16} /> Back to teams
+        </Link>
+
+        <div className='flex flex-wrap items-end justify-between gap-5'>
+          <SectionHeading
+            detail={`${captain?.displayName ?? 'No captain'} is captain · ${team.members.length} of 7 members`}
+            eyebrow='TEAM PROFILE'
+            title={team.name}
+          />
+          <StatusPill tone={team.status === 'submitted' ? 'success' : 'primary'}>
+            {team.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}
+          </StatusPill>
+        </div>
+
+        <Card className='overflow-hidden'>
+          <div className='grid tablet:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]'>
+            <div className='p-5 tablet:p-6'>
+              <Kicker>ROSTER STATUS</Kicker>
+              <div className='mt-4 grid grid-cols-3 gap-4'>
+                <div>
+                  <p className='m-0 font-display text-2xl font-bold'>
+                    {team.members.length}/7
+                  </p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Members</p>
+                </div>
+                <div>
+                  <p className='m-0 font-display text-2xl font-bold'>
+                    {starters.filter(({ member }) => Boolean(member)).length}/5
+                  </p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Starters</p>
+                </div>
+                <div>
+                  <p className='m-0 font-display text-2xl font-bold'>
+                    {substitutes.length}/2
+                  </p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Substitutes</p>
+                </div>
+              </div>
+            </div>
+            <div className='border-t border-border bg-secondary/55 p-5 tablet:border-t-0 tablet:border-l tablet:p-6'>
+              <Kicker>APPROVED TIERS</Kicker>
+              <div className='mt-4 flex flex-wrap gap-2'>
+                {(Object.keys(tierCounts) as Tier[]).map((tier) => (
+                  <Badge
+                    className={cn(
+                      'h-auto rounded-lg border px-2.5 py-1.5 text-xs',
+                      tierMeta[tier].border,
+                      tierMeta[tier].soft,
+                      tierMeta[tier].text,
+                    )}
+                    key={tier}
+                  >
+                    <strong>{tierCounts[tier]}</strong> {tier}
+                  </Badge>
+                ))}
+              </div>
+              <p className='mt-4 mb-0 text-xs leading-5 text-muted-foreground'>
+                Pending tiers are not included in these totals.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <section aria-labelledby='starting-lineup-heading'>
+          <div className='mb-4'>
+            <Kicker>FORMATION</Kicker>
+            <h2
+              className='mt-2 font-display text-2xl font-bold'
+              id='starting-lineup-heading'
+            >
+              Starting lineup
+            </h2>
+          </div>
+          <div className='grid gap-3 tablet:grid-cols-2 desktop:grid-cols-5'>
+            {starters.map(({ role, member }) =>
+              member ? (
+                <Link
+                  className='group block min-h-full rounded-card focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted'
+                  href={`/tournament/players/${member.registrationId}`}
+                  key={role}
+                >
+                  <TeamDetailPlayerCard member={member} role={role} />
+                </Link>
+              ) : (
+                <EmptyTeamSlot key={role} role={role} />
+              ),
+            )}
+          </div>
+        </section>
+
+        <section aria-labelledby='substitutes-heading'>
+          <div className='mb-4'>
+            <Kicker>BENCH</Kicker>
+            <h2
+              className='mt-2 font-display text-2xl font-bold'
+              id='substitutes-heading'
+            >
+              Substitutes
+            </h2>
+          </div>
+          <div className='grid gap-3 tablet:grid-cols-2'>
+            {[0, 1].map((index) => {
+              const member = substitutes[index];
+              return member ? (
+                <Link
+                  className='group block min-h-full rounded-card focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted'
+                  href={`/tournament/players/${member.registrationId}`}
+                  key={member.id}
+                >
+                  <TeamDetailPlayerCard
+                    member={member}
+                    slotLabel={`SUBSTITUTE ${index + 1}`}
+                  />
+                </Link>
+              ) : (
+                <EmptyTeamSlot
+                  key={`empty-substitute-${index}`}
+                  label={`SUBSTITUTE ${index + 1}`}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {unassignedMembers.length > 0 ? (
+          <section aria-labelledby='unassigned-heading'>
+            <Alert variant='destructive'>
+              <AlertDescription>
+                {unassignedMembers.length}{' '}
+                {unassignedMembers.length === 1 ? 'member has' : 'members have'}{' '}
+                no valid lineup slot. The captain can fix this in My team.
+              </AlertDescription>
+            </Alert>
+            <h2 className='sr-only' id='unassigned-heading'>
+              Unassigned members
+            </h2>
+            <div className='mt-3 grid gap-3 tablet:grid-cols-2'>
+              {unassignedMembers.map((member, index) => (
+                <Link
+                  className='group block min-h-full rounded-card focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted'
+                  href={`/tournament/players/${member.registrationId}`}
+                  key={member.id}
+                >
+                  <TeamDetailPlayerCard
+                    member={member}
+                    slotLabel={`UNASSIGNED ${index + 1}`}
+                  />
+                </Link>
+              ))}
+            </div>
+          </section>
         ) : null}
       </div>
     </PageFrame>
@@ -2809,6 +3196,184 @@ function RegistrationRequiredTeamView() {
   );
 }
 
+function LineupPlayerCard({
+  assignment,
+  assignments,
+  member,
+  members,
+  onArrange,
+  onDragStateChange,
+}: {
+  assignment: LineupAssignment;
+  assignments: LineupAssignment[];
+  member: TournamentMemberData;
+  members: TournamentMemberData[];
+  onArrange: (registrationId: string, target: LineupDropTarget) => void;
+  onDragStateChange: (registrationId: string, active: boolean) => void;
+}) {
+  const player = playerFromMember(member);
+  const dragControls = useDragControls();
+  const shouldReduceMotion = useReducedMotion();
+  const [isDragging, setIsDragging] = useState(false);
+  const substitutes = assignments.filter(
+    (entry) => entry.lineupPosition === 'substitute',
+  );
+
+  return (
+    <motion.div
+      className={cn(
+        'relative border border-border bg-card p-3 shadow-sm',
+        isDragging && 'border-primary/55 shadow-xl',
+      )}
+      drag={shouldReduceMotion ? false : true}
+      dragControls={dragControls}
+      dragElastic={0.06}
+      dragListener={false}
+      dragMomentum={false}
+      dragSnapToOrigin
+      layout={!shouldReduceMotion}
+      layoutId={
+        shouldReduceMotion
+          ? undefined
+          : `lineup-player-${assignment.registrationId}`
+      }
+      onDragEnd={(_, info) => {
+        setIsDragging(false);
+        onDragStateChange(assignment.registrationId, false);
+        const target = lineupDropTargetAtPoint(info.point);
+        if (target) onArrange(assignment.registrationId, target);
+      }}
+      onDragStart={() => {
+        setIsDragging(true);
+        onDragStateChange(assignment.registrationId, true);
+      }}
+      style={{
+        borderRadius: 12,
+        pointerEvents: isDragging ? 'none' : 'auto',
+        zIndex: isDragging ? 30 : 1,
+      }}
+      transition={{ layout: { type: 'spring', duration: 0.24, bounce: 0 } }}
+      whileDrag={{ scale: 1.02 }}
+    >
+      <div
+        className={cn(
+          'flex items-start gap-2.5',
+          assignment.lineupPosition === 'starter' && 'desktop:block',
+        )}
+      >
+        <Avatar player={player} size='size-9' />
+        <div
+          className={cn(
+            'min-w-0 flex-1',
+            assignment.lineupPosition === 'starter' && 'desktop:mt-2',
+          )}
+        >
+          <p
+            className='m-0 truncate text-sm font-semibold'
+            title={player.name}
+          >
+            {player.name}
+          </p>
+          <div className='mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-muted-foreground'>
+            <span>{player.tier}</span>
+            <span aria-hidden='true'>·</span>
+            <RolePreference
+              primaryRole={player.primaryRole}
+              secondaryRole={player.secondaryRole}
+            />
+          </div>
+        </div>
+        {!shouldReduceMotion ? (
+          <div
+            aria-hidden='true'
+            className={cn(
+              '-m-2 flex size-11 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground active:cursor-grabbing',
+              assignment.lineupPosition === 'starter' &&
+                'desktop:absolute desktop:right-1 desktop:top-1 desktop:m-0',
+            )}
+            onPointerDown={(event) => dragControls.start(event)}
+            title={`Drag ${player.name}`}
+          >
+            <GripVertical size={18} />
+          </div>
+        ) : null}
+      </div>
+      <label className='mt-3 block'>
+        <span className='sr-only'>Move or swap {player.name}</span>
+        <NativeSelect
+          aria-label={`Move or swap ${player.name}`}
+          className='w-full'
+          value=''
+          onChange={(event) => {
+            const [kind, value] = event.target.value.split(':');
+            if (kind === 'starter' && value) {
+              onArrange(assignment.registrationId, {
+                kind: 'starter',
+                role: value as Role,
+              });
+            } else if (kind === 'substitute') {
+              onArrange(assignment.registrationId, { kind: 'substitute' });
+            } else if (kind === 'player' && value) {
+              onArrange(assignment.registrationId, {
+                kind: 'player',
+                registrationId: value,
+              });
+            }
+          }}
+        >
+          <NativeSelectOption value=''>Reassign…</NativeSelectOption>
+          {starterSlots.map((role) => {
+            const occupant = assignments.find(
+              (entry) =>
+                entry.lineupPosition === 'starter' &&
+                entry.starterRole === role,
+            );
+            const occupantName = members.find(
+              (candidate) =>
+                candidate.registrationId === occupant?.registrationId,
+            )?.displayName;
+            const current = occupant?.registrationId === assignment.registrationId;
+            return (
+              <NativeSelectOption
+                disabled={current}
+                key={role}
+                value={`starter:${role}`}
+              >
+                {current
+                  ? `Current: ${role}`
+                  : occupantName
+                    ? `Swap with ${occupantName} · ${role}`
+                    : `Move to ${role}`}
+              </NativeSelectOption>
+            );
+          })}
+          {assignment.lineupPosition === 'starter' && substitutes.length < 2 ? (
+            <NativeSelectOption value='substitute:'>
+              Move to substitute
+            </NativeSelectOption>
+          ) : null}
+          {assignment.lineupPosition === 'starter' && substitutes.length === 2
+            ? substitutes.map((substitute) => {
+                const substituteName = members.find(
+                  (candidate) =>
+                    candidate.registrationId === substitute.registrationId,
+                )?.displayName;
+                return (
+                  <NativeSelectOption
+                    key={substitute.registrationId}
+                    value={`player:${substitute.registrationId}`}
+                  >
+                    Swap with {substituteName ?? 'substitute'}
+                  </NativeSelectOption>
+                );
+              })
+            : null}
+        </NativeSelect>
+      </label>
+    </motion.div>
+  );
+}
+
 function LineupEditor({
   team,
   currentRegistrationId,
@@ -2833,14 +3398,72 @@ function LineupEditor({
     draftAssignments,
     team.members,
   );
+  const [activeRegistrationId, setActiveRegistrationId] = useState<
+    string | null
+  >(null);
+  const [moveMessage, setMoveMessage] = useState('');
+  const shouldReduceMotion = useReducedMotion();
   const [state, formAction] = useActionState<TournamentActionState, FormData>(
     updateTeamLineup,
     {},
+  );
+  const substitutes = assignments.filter(
+    (assignment) => assignment.lineupPosition === 'substitute',
   );
 
   if (!captain || team.status !== 'draft' || deadlineStatus === 'passed') {
     return null;
   }
+
+  const arrange = (registrationId: string, target: LineupDropTarget) => {
+    const next = arrangeLineupAssignments(assignments, registrationId, target);
+    if (next === assignments) return;
+    setDraftAssignments(next);
+    const playerName = team.members.find(
+      (member) => member.registrationId === registrationId,
+    )?.displayName;
+    const targetName =
+      target.kind === 'player'
+        ? team.members.find(
+            (member) => member.registrationId === target.registrationId,
+          )?.displayName
+        : null;
+    setMoveMessage(
+      target.kind === 'starter'
+        ? `${playerName ?? 'Player'} moved to ${target.role}. Save to keep this arrangement.`
+        : target.kind === 'player'
+          ? `${playerName ?? 'Player'} swapped with ${targetName ?? 'the selected player'}. Save to keep this arrangement.`
+          : `${playerName ?? 'Player'} moved to substitute. Save to keep this arrangement.`,
+    );
+  };
+
+  const playerCard = (
+    assignment: LineupAssignment,
+  ) => {
+    const member = team.members.find(
+      (candidate) => candidate.registrationId === assignment.registrationId,
+    );
+    if (!member) return null;
+
+    return (
+      <div
+        data-lineup-drop-kind='player'
+        data-registration-id={assignment.registrationId}
+        key={assignment.registrationId}
+      >
+        <LineupPlayerCard
+          assignment={assignment}
+          assignments={assignments}
+          member={member}
+          members={team.members}
+          onArrange={arrange}
+          onDragStateChange={(registrationId, active) =>
+            setActiveRegistrationId(active ? registrationId : null)
+          }
+        />
+      </div>
+    );
+  };
 
   return (
     <Card className='p-5 desktop:p-6'>
@@ -2850,110 +3473,111 @@ function LineupEditor({
           <h2 className='mt-2 font-display text-xl font-bold'>
             Arrange the lineup
           </h2>
+          <p className='mt-2 max-w-2xl text-sm leading-6 text-muted-foreground'>
+            {shouldReduceMotion
+              ? 'Use each player menu to move or swap them.'
+              : 'Drag a player by the grip, or use their menu to move and swap them.'}
+          </p>
         </div>
         <span className='text-xs text-muted-foreground'>
           Changes save to the draft
         </span>
       </div>
-      <form action={formAction} className='mt-5 flex flex-col gap-3'>
+      <form action={formAction} className='mt-5 flex flex-col gap-5'>
         <input name='teamId' type='hidden' value={team.id} />
         <input
           name='lineup'
           type='hidden'
           value={JSON.stringify(assignments)}
         />
-        {team.members.map((member) => {
-          const assignment = assignments.find(
-            (entry) => entry.registrationId === member.registrationId,
-          );
-          if (!assignment) return null;
-          const player = playerFromMember(member);
-          return (
-            <div
-              className='grid gap-3 rounded-xl border border-border bg-secondary p-3 tablet:grid-cols-[minmax(0,1fr)_150px_150px] tablet:items-center'
-              key={member.registrationId}
-            >
-              <div className='flex items-center gap-3'>
-                <Avatar player={player} size='size-9' />
-                <div className='min-w-0'>
-                  <p className='m-0 truncate text-sm font-semibold'>
-                    {player.name}
-                  </p>
-                  <div className='mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted-foreground'>
-                    {player.tier ? <span>{player.tier}</span> : null}
-                    {player.tier ? <span aria-hidden='true'>·</span> : null}
-                    <RolePreference
-                      primaryRole={player.primaryRole}
-                      secondaryRole={player.secondaryRole}
-                    />
-                  </div>
-                </div>
-              </div>
-              <label className='flex flex-col gap-1 text-2xs font-semibold text-muted-foreground'>
-                POSITION
-                <NativeSelect
-                  className='w-full'
-                  size='sm'
-                  value={assignment.lineupPosition}
-                  onChange={(event) => {
-                    const lineupPosition = event.target.value as
-                      | 'starter'
-                      | 'substitute';
-                    setDraftAssignments(
-                      assignments.map((entry) =>
-                        entry.registrationId === member.registrationId
-                          ? {
-                              ...entry,
-                              lineupPosition,
-                              starterRole:
-                                lineupPosition === 'starter'
-                                  ? (entry.starterRole ?? 'Baron')
-                                  : null,
-                            }
-                          : entry,
-                      ),
-                    );
-                  }}
-                >
-                  <NativeSelectOption value='starter'>
-                    Starter
-                  </NativeSelectOption>
-                  <NativeSelectOption value='substitute'>
-                    Substitute
-                  </NativeSelectOption>
-                </NativeSelect>
-              </label>
-              <label className='flex flex-col gap-1 text-2xs font-semibold text-muted-foreground'>
-                STARTER ROLE
-                <NativeSelect
-                  className='w-full'
-                  disabled={assignment.lineupPosition !== 'starter'}
-                  size='sm'
-                  value={assignment.starterRole ?? ''}
-                  onChange={(event) =>
-                    setDraftAssignments(
-                      assignments.map((entry) =>
-                        entry.registrationId === member.registrationId
-                          ? {
-                              ...entry,
-                              starterRole: event.target.value as Role,
-                            }
-                          : entry,
-                      ),
-                    )
-                  }
-                >
-                  <NativeSelectOption value=''>Choose role</NativeSelectOption>
-                  {starterSlots.map((role) => (
-                    <NativeSelectOption key={role} value={role}>
-                      {role}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
-              </label>
+        <LayoutGroup id={`lineup-${team.id}`}>
+          <section aria-labelledby='starter-slots-heading'>
+            <div className='mb-3 flex items-center justify-between gap-3'>
+              <h3
+                className='font-display text-sm font-bold uppercase tracking-wide'
+                id='starter-slots-heading'
+              >
+                Starter slots
+              </h3>
+              <span className='text-xs text-muted-foreground'>
+                {assignments.filter((entry) => entry.lineupPosition === 'starter').length}
+                /5 assigned
+              </span>
             </div>
-          );
-        })}
+            <div className='grid gap-3 tablet:grid-cols-2 desktop:grid-cols-5'>
+              {starterSlots.map((role) => {
+                const assignment = assignments.find(
+                  (entry) =>
+                    entry.lineupPosition === 'starter' &&
+                    entry.starterRole === role,
+                );
+                return (
+                  <div
+                    className={cn(
+                      'min-w-0 rounded-xl border border-border bg-secondary/55 p-2.5 transition-colors',
+                      activeRegistrationId && 'border-primary/45 bg-primary/5',
+                    )}
+                    data-lineup-drop-kind='starter'
+                    data-lineup-role={role}
+                    key={role}
+                  >
+                    <div className='mb-2 flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wide text-secondary-foreground'>
+                      <RoleIcon className='size-4' roleName={role} />
+                      {role}
+                    </div>
+                    {assignment ? (
+                      playerCard(assignment)
+                    ) : (
+                      <div className='flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border px-3 text-center text-xs text-muted-foreground'>
+                        Drop a player here
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section aria-labelledby='substitute-slots-heading'>
+            <div className='mb-3 flex items-center justify-between gap-3'>
+              <h3
+                className='font-display text-sm font-bold uppercase tracking-wide'
+                id='substitute-slots-heading'
+              >
+                Substitutes
+              </h3>
+              <span className='text-xs text-muted-foreground'>
+                {substitutes.length}/2 assigned
+              </span>
+            </div>
+            <div
+              className={cn(
+                'grid gap-3 rounded-xl border border-border bg-secondary/35 p-3 tablet:grid-cols-2',
+                activeRegistrationId && 'border-primary/45 bg-primary/5',
+              )}
+              data-lineup-drop-kind='substitute'
+            >
+              {substitutes.map(playerCard)}
+              {Array.from({ length: 2 - substitutes.length }, (_, index) => (
+                <div
+                  className='flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border px-3 text-center text-xs text-muted-foreground'
+                  data-lineup-drop-kind='substitute'
+                  key={`open-substitute-${index}`}
+                >
+                  Open substitute slot
+                </div>
+              ))}
+            </div>
+            {activeRegistrationId && substitutes.length === 2 ? (
+              <p className='mt-2 text-xs text-muted-foreground'>
+                The bench is full. Drop onto a substitute to swap players.
+              </p>
+            ) : null}
+          </section>
+        </LayoutGroup>
+        <p aria-live='polite' className='sr-only'>
+          {moveMessage}
+        </p>
         {state.error ? (
           <Alert aria-live='polite' variant='destructive'>
             <AlertDescription>{state.error}</AlertDescription>
@@ -3280,7 +3904,13 @@ function TeamRoomContent({
   }
 
   return (
-    <PageFrame className={!isSubmitted ? 'pb-24 desktop:pb-10' : undefined}>
+    <PageFrame
+      className={
+        !isSubmitted
+          ? 'pb-[calc(6rem+env(safe-area-inset-bottom))] desktop:pb-10'
+          : undefined
+      }
+    >
       <div className='flex flex-col gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-5'>
           <SectionHeading
@@ -3942,7 +4572,7 @@ function TeamRoomContent({
           </aside>
         </div>
         {!isSubmitted && showCaptainControls ? (
-          <div className='fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur-xl desktop:hidden'>
+          <div className='fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl desktop:hidden'>
             {preview ? (
               <Button
                 className='mx-auto min-h-11 w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover'
@@ -4901,6 +5531,9 @@ export function TournamentApp({
   registration,
   teams,
   team,
+  teamDetails,
+  players,
+  playerProfile,
   tierReview,
   currentRegistrationId,
   dashboard,
@@ -4933,7 +5566,7 @@ export function TournamentApp({
 
   return (
     <MotionConfig reducedMotion='user'>
-      <div className='min-h-svh bg-background text-foreground'>
+      <div className='min-h-[100dvh] bg-background text-foreground'>
         <AppHeader
           approvedTier={previewRegistration?.approvedTier}
           deadlineRemaining={deadlineRemaining}
@@ -4973,6 +5606,21 @@ export function TournamentApp({
             registration={registration}
             team={team}
             teams={teams}
+          />
+        ) : null}
+        {view === 'team-details' ? (
+          <TeamDetailsView teamDetails={teamDetails} />
+        ) : null}
+        {view === 'players' ? (
+          <PlayerDirectoryView
+            currentRegistrationId={currentRegistrationId}
+            players={players}
+          />
+        ) : null}
+        {view === 'player-details' ? (
+          <PlayerDetailsView
+            currentRegistrationId={currentRegistrationId}
+            playerProfile={playerProfile}
           />
         ) : null}
         {view === 'builder' ? (

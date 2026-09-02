@@ -6,14 +6,14 @@
 
 :root {
   --background: oklch(0.1529 0.0289 268.9);
-  --foreground: oklch(1 0 0);
+  --foreground: oklch(0.976 0.007 270);
   --card: oklch(0.2135 0.041 268.2);
-  --card-foreground: oklch(1 0 0);
+  --card-foreground: var(--foreground);
   --popover: oklch(0.2135 0.041 268.2);
-  --popover-foreground: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
   --primary: oklch(0.5692 0.2645 293.7);
   --primary-hover: oklch(0.635 0.235 294);
-  --primary-foreground: oklch(1 0 0);
+  --primary-foreground: var(--foreground);
   --primary-muted: oklch(0.8306 0.0957 296.4);
   --primary-soft: oklch(0.2456 0.0845 294);
   --role-icon: oklch(0.759 0.126 74);
@@ -48,7 +48,7 @@
   --sidebar: var(--card);
   --sidebar-foreground: var(--foreground);
   --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-primary-foreground: var(--foreground);
   --sidebar-accent: var(--secondary);
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: var(--border);

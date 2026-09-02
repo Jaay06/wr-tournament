@@ -58,9 +58,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang='en'
-      className={`relative h-screen ${interTight.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans`}
+      className={`relative min-h-[100dvh] ${interTight.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans`}
     >
-      <body className='flex min-h-screen flex-col'>
+      <body className='flex min-h-[100dvh] flex-col'>
         <main className='flex-1'>{children}</main>
         <MarketingFooter />
       </body>

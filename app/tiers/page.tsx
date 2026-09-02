@@ -3,10 +3,10 @@ import Link from 'next/link';
 
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { tiers } from '@/lib/marketing-content';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 export const metadata: Metadata = {
   title: 'Tiers',
@@ -39,7 +39,7 @@ const tierBadgeTones: Record<TierTone, string> = {
 
 export default function TiersPage() {
   return (
-    <div className=' overflow-hidden bg-background text-foreground'>
+    <div className='min-h-[100dvh] overflow-hidden bg-background text-foreground'>
       <MarketingHeader activePage='tiers' />
 
       <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
@@ -112,9 +112,15 @@ export default function TiersPage() {
             roster. T1 and T2 limits are checked across starters and
             substitutes.
           </p>
-          <Button variant={'link'} className='mt-4'>
-            <Link href='/rules'>Read the team rules</Link>
-          </Button>
+          <Link
+            className={cn(
+              buttonVariants({ variant: 'link' }),
+              'mt-4 min-h-11 px-0 font-semibold text-primary-muted',
+            )}
+            href='/rules'
+          >
+            Read the team rules
+          </Link>
         </section>
       </main>
     </div>

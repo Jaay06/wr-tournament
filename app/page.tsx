@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
+import { ArrowRight } from 'lucide-react';
 import { auth } from '@/auth';
 import { MotionReveal } from '@/components/marketing/motion-reveal';
-import { MarketingFooter } from '@/components/marketing/marketing-footer';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { accessSteps } from '@/lib/marketing-content';
 import { tournamentEntryFor } from '@/lib/tournament-entry';
@@ -22,27 +22,12 @@ export const metadata: Metadata = {
   },
 };
 
-function ArrowIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 16 16' width='16' height='16'>
-      <path
-        d='M5 8h6m0 0L8 5m3 3-3 3'
-        fill='none'
-        stroke='currentColor'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth='1.6'
-      />
-    </svg>
-  );
-}
-
 export default async function Home() {
   const entry = tournamentEntryFor(await auth());
 
   return (
     <div
-      className='min-h-full overflow-hidden bg-background text-foreground'
+      className='min-h-[100dvh] overflow-hidden bg-background text-foreground'
       id='top'
     >
       <MarketingHeader activePage='overview' entry={entry} />
@@ -82,7 +67,7 @@ export default async function Home() {
                   href={entry.href}
                 >
                   {entry.label}
-                  <ArrowIcon />
+                  <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
                 </Link>
                 <Link
                   className={cn(
@@ -157,17 +142,8 @@ export default async function Home() {
                 ))}
               </ol>
 
-              <div className='flex items-center gap-3 border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground max-phone:flex-col max-phone:items-start'>
+              <div className='border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground'>
                 <span>{entry.status}</span>
-                <Button variant={'link'}>
-                  <Link
-                    className='ml-auto inline-flex items-center gap-1.25 whitespace-nowrap font-semibold text-primary-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:ml-0'
-                    href={entry.href}
-                  >
-                    {entry.label}
-                    <ArrowIcon />
-                  </Link>
-                </Button>
               </div>
             </Card>
           </MotionReveal>

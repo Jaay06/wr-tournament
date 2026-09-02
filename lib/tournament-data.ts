@@ -19,8 +19,10 @@ import type {
   TournamentIncomingInviteData,
   TournamentMemberData,
   TournamentParticipantOption,
+  TournamentPlayerProfileData,
   TournamentRegistrationData,
   TournamentTeamData,
+  TournamentTeamDetailData,
   TournamentTeamSummary,
   OrganizerOverviewData,
   TournamentAnnouncementData,
@@ -91,10 +93,75 @@ export async function getTeamForRegistration(
     return null;
   }
 
+  const team = await getTeamDetails(membership.teamId);
+
+  if (!team) {
+    return null;
+  }
+
+  const [requestRows, inviteRows] = await Promise.all([
+    db
+      .select({
+        id: teamJoinRequests.id,
+        registrationId: teamJoinRequests.registrationId,
+        status: teamJoinRequests.status,
+        displayName: users.displayName,
+        riotName: playerRegistrations.riotName,
+        riotTag: playerRegistrations.riotTag,
+        approvedTier: playerRegistrations.approvedTier,
+        primaryRole: playerRegistrations.primaryRole,
+        secondaryRole: playerRegistrations.secondaryRole,
+      })
+      .from(teamJoinRequests)
+      .innerJoin(
+        playerRegistrations,
+        eq(teamJoinRequests.registrationId, playerRegistrations.id),
+      )
+      .innerJoin(
+        tournamentParticipants,
+        eq(playerRegistrations.participantId, tournamentParticipants.id),
+      )
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(eq(teamJoinRequests.teamId, team.id))
+      .orderBy(asc(teamJoinRequests.createdAt)),
+    db
+      .select({
+        id: teamInvites.id,
+        invitedRegistrationId: teamInvites.invitedRegistrationId,
+        status: teamInvites.status,
+        displayName: users.displayName,
+        riotName: playerRegistrations.riotName,
+        riotTag: playerRegistrations.riotTag,
+        approvedTier: playerRegistrations.approvedTier,
+      })
+      .from(teamInvites)
+      .innerJoin(
+        playerRegistrations,
+        eq(teamInvites.invitedRegistrationId, playerRegistrations.id),
+      )
+      .innerJoin(
+        tournamentParticipants,
+        eq(playerRegistrations.participantId, tournamentParticipants.id),
+      )
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(eq(teamInvites.teamId, team.id))
+      .orderBy(asc(teamInvites.createdAt)),
+  ]);
+
+  return {
+    ...team,
+    joinRequests: requestRows,
+    invites: inviteRows,
+  };
+}
+
+export async function getTeamDetails(
+  teamId: string,
+): Promise<TournamentTeamDetailData | null> {
   const [team] = await db
     .select()
     .from(teams)
-    .where(eq(teams.id, membership.teamId))
+    .where(eq(teams.id, teamId))
     .limit(1);
 
   if (!team) {
@@ -116,62 +183,12 @@ export async function getTeamForRegistration(
     .where(eq(teamMembers.teamId, team.id))
     .orderBy(asc(teamMembers.joinedAt));
 
-  const requestRows = await db
-    .select({
-      id: teamJoinRequests.id,
-      registrationId: teamJoinRequests.registrationId,
-      status: teamJoinRequests.status,
-      displayName: users.displayName,
-      riotName: playerRegistrations.riotName,
-      riotTag: playerRegistrations.riotTag,
-      approvedTier: playerRegistrations.approvedTier,
-      primaryRole: playerRegistrations.primaryRole,
-      secondaryRole: playerRegistrations.secondaryRole,
-    })
-    .from(teamJoinRequests)
-    .innerJoin(
-      playerRegistrations,
-      eq(teamJoinRequests.registrationId, playerRegistrations.id),
-    )
-    .innerJoin(
-      tournamentParticipants,
-      eq(playerRegistrations.participantId, tournamentParticipants.id),
-    )
-    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-    .where(eq(teamJoinRequests.teamId, team.id))
-    .orderBy(asc(teamJoinRequests.createdAt));
-
-  const inviteRows = await db
-    .select({
-      id: teamInvites.id,
-      invitedRegistrationId: teamInvites.invitedRegistrationId,
-      status: teamInvites.status,
-      displayName: users.displayName,
-      riotName: playerRegistrations.riotName,
-      riotTag: playerRegistrations.riotTag,
-      approvedTier: playerRegistrations.approvedTier,
-    })
-    .from(teamInvites)
-    .innerJoin(
-      playerRegistrations,
-      eq(teamInvites.invitedRegistrationId, playerRegistrations.id),
-    )
-    .innerJoin(
-      tournamentParticipants,
-      eq(playerRegistrations.participantId, tournamentParticipants.id),
-    )
-    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-    .where(eq(teamInvites.teamId, team.id))
-    .orderBy(asc(teamInvites.createdAt));
-
   return {
     id: team.id,
     name: team.name,
     status: team.status,
     submittedAt: team.submittedAt?.toISOString() ?? null,
     members: memberRows.map(toMemberData),
-    joinRequests: requestRows,
-    invites: inviteRows,
   };
 }
 
@@ -295,6 +312,83 @@ export async function getParticipantDirectory(): Promise<TournamentParticipantOp
     .orderBy(asc(users.displayName));
 
   return rows;
+}
+
+function toPlayerProfileData(row: {
+  registration: typeof playerRegistrations.$inferSelect;
+  user: typeof users.$inferSelect;
+  team: typeof teams.$inferSelect | null;
+}): TournamentPlayerProfileData {
+  return {
+    id: row.registration.id,
+    displayName: row.user.displayName,
+    avatarUrl: row.user.avatarUrl,
+    riotName: row.registration.riotName,
+    riotTag: row.registration.riotTag,
+    currentRank: row.registration.currentRank,
+    approvedTier: row.registration.approvedTier,
+    tierStatus: row.registration.tierStatus,
+    primaryRole: row.registration.primaryRole,
+    secondaryRole: row.registration.secondaryRole,
+    team: row.team
+      ? {
+          id: row.team.id,
+          name: row.team.name,
+          status: row.team.status,
+        }
+      : null,
+  };
+}
+
+export async function getPlayerDirectory(): Promise<
+  TournamentPlayerProfileData[]
+> {
+  const rows = await db
+    .select({
+      registration: playerRegistrations,
+      user: users,
+      team: teams,
+    })
+    .from(playerRegistrations)
+    .innerJoin(
+      tournamentParticipants,
+      eq(playerRegistrations.participantId, tournamentParticipants.id),
+    )
+    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .leftJoin(
+      teamMembers,
+      eq(playerRegistrations.id, teamMembers.registrationId),
+    )
+    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+    .orderBy(asc(users.displayName));
+
+  return rows.map(toPlayerProfileData);
+}
+
+export async function getPlayerProfile(
+  registrationId: string,
+): Promise<TournamentPlayerProfileData | null> {
+  const [row] = await db
+    .select({
+      registration: playerRegistrations,
+      user: users,
+      team: teams,
+    })
+    .from(playerRegistrations)
+    .innerJoin(
+      tournamentParticipants,
+      eq(playerRegistrations.participantId, tournamentParticipants.id),
+    )
+    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .leftJoin(
+      teamMembers,
+      eq(playerRegistrations.id, teamMembers.registrationId),
+    )
+    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(eq(playerRegistrations.id, registrationId))
+    .limit(1);
+
+  return row ? toPlayerProfileData(row) : null;
 }
 
 export async function getPendingTeamInvitesForRegistration(
