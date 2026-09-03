@@ -1,15 +1,29 @@
 import { z } from "zod";
 
+export const emailSchema = z.string().trim().toLowerCase().email().max(320);
+export const passwordSchema = z.string().min(8).max(128);
+
 export const signInSchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(320),
+  email: emailSchema,
   password: z.string().min(1).max(128),
 });
 
 export const registerSchema = z.object({
   displayName: z.string().trim().min(2).max(60),
-  email: z.string().trim().toLowerCase().email().max(320),
-  password: z.string().min(8).max(128),
+  email: emailSchema,
+  password: passwordSchema,
 });
+
+export const passwordResetSchema = z
+  .object({
+    token: z.string().trim().regex(/^[0-9a-f]{64}$/i),
+    password: passwordSchema,
+    confirmPassword: passwordSchema,
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
 export const inviteCodeSchema = z.object({
   code: z.string().trim().regex(/^[0-9]{4}$/),

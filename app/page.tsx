@@ -7,6 +7,7 @@ import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { accessSteps } from '@/lib/marketing-content';
 import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
@@ -23,7 +24,9 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const entry = tournamentEntryFor(await auth());
+  const session = await auth();
+  const entry = tournamentEntryFor(session);
+  const showInviteCodeEntry = !session?.user?.hasJoinedTournament;
 
   return (
     <div
@@ -141,6 +144,53 @@ export default async function Home() {
                   </li>
                 ))}
               </ol>
+
+              {showInviteCodeEntry ? (
+                <form
+                  action='/invite'
+                  className='flex items-end gap-3.5 border-t border-border bg-background/45 px-5.5 py-5 max-phone:flex-col max-phone:items-stretch'
+                  method='get'
+                >
+                  <div className='min-w-0 flex-1'>
+                    <label
+                      className='block text-sm font-semibold text-foreground'
+                      htmlFor='landing-invite-code'
+                    >
+                      Have an invite code?
+                    </label>
+                    <p
+                      className='mt-1 text-xs leading-4.5 text-muted-foreground'
+                      id='landing-invite-code-help'
+                    >
+                      Enter the 4-digit code from the organizer.
+                    </p>
+                    <Input
+                      aria-describedby='landing-invite-code-help'
+                      aria-label='Invite code'
+                      autoComplete='one-time-code'
+                      className='mt-3 min-h-12 rounded-md border-border bg-card px-3.5 font-mono text-base tracking-[0.12em] uppercase'
+                      id='landing-invite-code'
+                      inputMode='numeric'
+                      maxLength={4}
+                      name='code'
+                      pattern='[0-9]{4}'
+                      placeholder='1234'
+                      required
+                      spellCheck={false}
+                    />
+                  </div>
+                  <button
+                    className={cn(
+                      buttonVariants({ size: 'lg' }),
+                      'min-h-12 rounded-md bg-primary px-4.5 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
+                    )}
+                    type='submit'
+                  >
+                    Use code
+                    <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
+                  </button>
+                </form>
+              ) : null}
 
               <div className='border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground'>
                 <span>{entry.status}</span>
