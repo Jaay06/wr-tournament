@@ -57,6 +57,7 @@ function isUniqueViolation(error: unknown) {
 function revalidateTournamentPages() {
   revalidatePath("/tournament");
   revalidatePath("/tournament/register");
+  revalidatePath("/tournament/profile");
   revalidatePath("/tournament/team");
   revalidatePath("/tournament/teams");
   revalidatePath("/admin");
@@ -960,6 +961,243 @@ export async function renameTeam(
   return { success: "Team renamed." };
 }
 
+export async function transferTeamCaptaincy(
+  _previousState: TournamentActionState,
+  formData: FormData,
+): Promise<TournamentActionState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { code: "UNAUTHENTICATED", error: "Sign in before transferring captaincy." };
+  }
+
+  const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
+  const registrationId = teamIdSchema.safeParse(
+    formString(formData, "registrationId"),
+  );
+  if (!teamId.success || !registrationId.success) {
+    return { code: "VALIDATION_ERROR", error: "Choose a current team member." };
+  }
+
+  try {
+    const nextCaptainName = await db.transaction(async (tx) => {
+      const [settings] = await tx
+        .select({ registrationDeadline: tournamentSettings.registrationDeadline })
+        .from(tournamentSettings)
+        .where(eq(tournamentSettings.id, 1))
+        .limit(1);
+      if (!settings || deadlinePassed(settings.registrationDeadline)) {
+        throw new TournamentActionError(
+          "DEADLINE_PASSED",
+          "Team changes are closed because the deadline has passed.",
+        );
+      }
+
+      const [team] = await tx
+        .select({ id: teams.id, name: teams.name, status: teams.status })
+        .from(teams)
+        .where(eq(teams.id, teamId.data))
+        .for("update")
+        .limit(1);
+      if (!team) {
+        throw new TournamentActionError("NOT_FOUND", "That team no longer exists.");
+      }
+      if (team.status !== "draft") {
+        throw new TournamentActionError(
+          "CONFLICT",
+          "Ask the organizer to unlock the submitted team first.",
+        );
+      }
+
+      const [captain] = await tx
+        .select({
+          memberId: teamMembers.id,
+          registrationId: teamMembers.registrationId,
+        })
+        .from(teamMembers)
+        .innerJoin(
+          playerRegistrations,
+          eq(teamMembers.registrationId, playerRegistrations.id),
+        )
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .where(
+          and(
+            eq(teamMembers.teamId, team.id),
+            eq(teamMembers.isCaptain, true),
+            eq(tournamentParticipants.userId, session.user.id),
+          ),
+        )
+        .limit(1);
+      if (!captain) {
+        throw new TournamentActionError(
+          "NOT_TEAM_CAPTAIN",
+          "Only the current captain can transfer captaincy.",
+        );
+      }
+      if (captain.registrationId === registrationId.data) {
+        throw new TournamentActionError(
+          "VALIDATION_ERROR",
+          "Choose another team member as captain.",
+        );
+      }
+
+      const [nextCaptain] = await tx
+        .select({
+          memberId: teamMembers.id,
+          userId: tournamentParticipants.userId,
+          displayName: users.displayName,
+        })
+        .from(teamMembers)
+        .innerJoin(
+          playerRegistrations,
+          eq(teamMembers.registrationId, playerRegistrations.id),
+        )
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(teamMembers.teamId, team.id),
+            eq(teamMembers.registrationId, registrationId.data),
+          ),
+        )
+        .limit(1);
+      if (!nextCaptain) {
+        throw new TournamentActionError(
+          "NOT_FOUND",
+          "That player is no longer on this team.",
+        );
+      }
+
+      await tx
+        .update(teamMembers)
+        .set({ isCaptain: false })
+        .where(eq(teamMembers.id, captain.memberId));
+      await tx
+        .update(teamMembers)
+        .set({ isCaptain: true })
+        .where(eq(teamMembers.id, nextCaptain.memberId));
+      await tx
+        .update(teams)
+        .set({ updatedAt: new Date() })
+        .where(eq(teams.id, team.id));
+      await tx.insert(notifications).values({
+        userId: nextCaptain.userId,
+        type: "captaincy_transferred",
+        message: `You are now the captain of ${team.name}.`,
+      });
+
+      return nextCaptain.displayName;
+    });
+
+    revalidateTournamentPages();
+    return { success: `Captaincy transferred to ${nextCaptainName}.` };
+  } catch (error) {
+    if (error instanceof TournamentActionError) {
+      return { code: error.code, error: error.message };
+    }
+    throw error;
+  }
+}
+
+export async function deleteTeam(
+  _previousState: TournamentActionState,
+  formData: FormData,
+): Promise<TournamentActionState> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { code: "UNAUTHENTICATED", error: "Sign in before deleting a team." };
+  }
+
+  const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
+  if (!teamId.success) {
+    return { code: "VALIDATION_ERROR", error: "The team could not be found." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      const [settings] = await tx
+        .select({ registrationDeadline: tournamentSettings.registrationDeadline })
+        .from(tournamentSettings)
+        .where(eq(tournamentSettings.id, 1))
+        .limit(1);
+      if (!settings || deadlinePassed(settings.registrationDeadline)) {
+        throw new TournamentActionError(
+          "DEADLINE_PASSED",
+          "Team changes are closed because the deadline has passed.",
+        );
+      }
+
+      const [team] = await tx
+        .select({ id: teams.id, status: teams.status })
+        .from(teams)
+        .where(eq(teams.id, teamId.data))
+        .for("update")
+        .limit(1);
+      if (!team) {
+        throw new TournamentActionError("NOT_FOUND", "That team no longer exists.");
+      }
+      if (team.status !== "draft") {
+        throw new TournamentActionError(
+          "CONFLICT",
+          "Ask the organizer to unlock the submitted team first.",
+        );
+      }
+
+      const [captain] = await tx
+        .select({ memberId: teamMembers.id })
+        .from(teamMembers)
+        .innerJoin(
+          playerRegistrations,
+          eq(teamMembers.registrationId, playerRegistrations.id),
+        )
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .where(
+          and(
+            eq(teamMembers.teamId, team.id),
+            eq(teamMembers.isCaptain, true),
+            eq(tournamentParticipants.userId, session.user.id),
+          ),
+        )
+        .limit(1);
+      if (!captain) {
+        throw new TournamentActionError(
+          "NOT_TEAM_CAPTAIN",
+          "Only the team captain can delete this team.",
+        );
+      }
+
+      const members = await tx
+        .select({ id: teamMembers.id })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, team.id));
+      if (members.length !== 1) {
+        throw new TournamentActionError(
+          "CONFLICT",
+          "Transfer captaincy and leave instead. Teams with other members cannot be deleted.",
+        );
+      }
+
+      await tx.delete(teams).where(eq(teams.id, team.id));
+    });
+
+    revalidateTournamentPages();
+    return { success: "Team deleted." };
+  } catch (error) {
+    if (error instanceof TournamentActionError) {
+      return { code: error.code, error: error.message };
+    }
+    throw error;
+  }
+}
+
 export async function leaveTeam(
   _previousState: TournamentActionState,
   formData: FormData,
@@ -983,12 +1221,19 @@ export async function leaveTeam(
       if (!settings || deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
+      const [team] = await tx
+        .select({ id: teams.id, status: teams.status })
+        .from(teams)
+        .where(eq(teams.id, teamId.data))
+        .for("update")
+        .limit(1);
+      if (!team) {
+        throw new TournamentActionError("NOT_FOUND", "That team no longer exists.");
+      }
       const [membership] = await tx
         .select({
           memberId: teamMembers.id,
-          registrationId: teamMembers.registrationId,
           isCaptain: teamMembers.isCaptain,
-          teamStatus: teams.status,
         })
         .from(teamMembers)
         .innerJoin(teams, eq(teamMembers.teamId, teams.id))
@@ -1007,26 +1252,24 @@ export async function leaveTeam(
       if (!membership) {
         throw new TournamentActionError("FORBIDDEN", "You are not a member of this team.");
       }
-      const members = await tx
-        .select({ id: teamMembers.id })
-        .from(teamMembers)
-        .where(eq(teamMembers.teamId, teamId.data));
-      if (membership.isCaptain && members.length > 1) {
-        throw new TournamentActionError("CONFLICT", "Transfer captaincy before leaving while other members remain.");
+      if (team.status !== "draft") {
+        throw new TournamentActionError(
+          "CONFLICT",
+          "Ask the organizer to unlock the submitted team first.",
+        );
       }
-
       if (membership.isCaptain) {
-        await tx.delete(teams).where(eq(teams.id, teamId.data));
-        return;
+        throw new TournamentActionError(
+          "CONFLICT",
+          "Transfer captaincy before leaving, or delete the team if you are its only member.",
+        );
       }
 
       await tx.delete(teamMembers).where(eq(teamMembers.id, membership.memberId));
-      if (membership.teamStatus === "submitted") {
-        await tx
-          .update(teams)
-          .set({ status: "draft", submittedAt: null, updatedAt: new Date() })
-          .where(eq(teams.id, teamId.data));
-      }
+      await tx
+        .update(teams)
+        .set({ updatedAt: new Date() })
+        .where(eq(teams.id, teamId.data));
     });
   } catch (error) {
     if (error instanceof TournamentActionError) {

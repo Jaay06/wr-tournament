@@ -1,9 +1,15 @@
 import type { Metadata } from 'next';
+import { ArrowRight } from 'lucide-react';
+import { auth } from '@/auth';
 import { MotionReveal } from '@/components/marketing/motion-reveal';
+import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
 import { Badge } from '@/components/ui/badge';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { accessSteps } from '@/lib/marketing-content';
+import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -17,149 +23,17 @@ export const metadata: Metadata = {
   },
 };
 
-const tiers = [
-  {
-    tier: 'T1',
-    range: 'Sovereign to Challenger',
-    detail: 'Organizer-approved. Maximum one across the full roster.',
-    tone: 'gold',
-  },
-  {
-    tier: 'T2',
-    range: 'Grandmaster to Master',
-    detail: 'High-ranked core. Maximum two across the full roster.',
-    tone: 'silver',
-  },
-  {
-    tier: 'T3',
-    range: 'Diamond',
-    detail: 'No tier cap. Build around the roles your team needs.',
-    tone: 'bronze',
-  },
-  {
-    tier: 'T4',
-    range: 'Emerald and below',
-    detail: 'No tier cap. Every submitted player still needs approval.',
-    tone: 'grey',
-  },
-] as const;
+export default async function Home() {
+  const session = await auth();
+  const entry = tournamentEntryFor(session);
+  const showInviteCodeEntry = !session?.user?.hasJoinedTournament;
 
-const accessSteps = [
-  ['01', 'Sign in', 'Use Discord or your email and password.'],
-  ['02', 'Enter the invite', 'Use the private code from the organizer.'],
-  ['03', 'Register', 'Add your Riot ID, tier, and preferred roles.'],
-] as const;
-
-const teamRules = [
-  ['5-7', 'Five starters', 'Add up to two substitutes.'],
-  ['T1', 'Maximum one T1', 'The cap covers starters and substitutes.'],
-  ['T2', 'Maximum two T2', 'T3 and T4 have no roster cap.'],
-] as const;
-
-type TierTone = (typeof tiers)[number]['tone'];
-
-const tierCardTones: Record<TierTone, string> = {
-  gold: 'border-l-tier-t1',
-  silver: 'border-l-tier-t2',
-  bronze: 'border-l-tier-t3',
-  grey: 'border-l-tier-t4',
-};
-
-const tierBadgeTones: Record<TierTone, string> = {
-  gold: 'bg-tier-t1/10 text-tier-t1',
-  silver: 'bg-tier-t2/10 text-tier-t2',
-  bronze: 'bg-tier-t3/10 text-tier-t3',
-  grey: 'bg-tier-t4/10 text-tier-t4',
-};
-
-function ArrowIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 16 16' width='16' height='16'>
-      <path
-        d='M5 8h6m0 0L8 5m3 3-3 3'
-        fill='none'
-        stroke='currentColor'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth='1.6'
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg aria-hidden='true' viewBox='0 0 12 12' width='12' height='12'>
-      <path
-        d='m3 6 2 2 4-4'
-        fill='none'
-        stroke='currentColor'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        strokeWidth='1.4'
-      />
-    </svg>
-  );
-}
-
-export default function Home() {
   return (
     <div
-      className='min-h-svh overflow-hidden bg-background text-foreground'
+      className='min-h-[100dvh] overflow-hidden bg-background text-foreground'
       id='top'
     >
-      <header className='border-b border-border bg-background/92'>
-        <div className='mx-auto flex min-h-18.25 w-full max-w-page items-center gap-9 px-12 py-4.5 max-tablet:min-h-16 max-tablet:px-5 max-tablet:py-3.5'>
-          <a
-            className='flex shrink-0 items-center gap-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-            href='#top'
-            aria-label='Rift Clash home'
-          >
-            <RiftClashLogo className='h-12 w-auto max-phone:h-10' />
-          </a>
-
-          <nav
-            className='flex items-center gap-7 max-desktop:hidden'
-            aria-label='Homepage'
-          >
-            <a
-              className='border-b-2 border-primary pb-1.25 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-              href='#top'
-            >
-              Overview
-            </a>
-            <a
-              className='text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-              href='#tiers'
-            >
-              Tiers
-            </a>
-            <a
-              className='text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-              href='#rules'
-            >
-              Rules
-            </a>
-            <a
-              className='text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-              href='#how-it-works'
-            >
-              How it works
-            </a>
-          </nav>
-
-          <a
-            className={cn(
-              buttonVariants({ size: 'sm' }),
-              'ml-auto min-h-9 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs',
-            )}
-            href='/signin?callbackUrl=%2Finvite'
-          >
-            Enter tournament
-            <ArrowIcon />
-          </a>
-        </div>
-      </header>
+      <MarketingHeader activePage='overview' entry={entry} />
 
       <main>
         <section
@@ -178,9 +52,7 @@ export default function Home() {
 
               <div className='mt-6.5 max-phone:mt-5.5'>
                 <h1 className='m-0' id='hero-title'>
-                  <RiftClashLogo
-                    className='block h-auto w-[min(100%,22rem)] max-tablet:w-[min(100%,20rem)] max-phone:w-[min(100%,18rem)]'
-                  />
+                  <RiftClashLogo className='block h-auto w-[min(100%,22rem)] max-tablet:w-[min(100%,20rem)] max-phone:w-[min(100%,18rem)]' />
                   <span className='sr-only'>Rift Clash</span>
                 </h1>
                 <p className='mt-7 max-w-copy text-lg leading-[1.6] text-secondary-foreground max-phone:mt-5.5 max-phone:text-base max-phone:leading-normal'>
@@ -190,25 +62,25 @@ export default function Home() {
               </div>
 
               <div className='mt-7 flex flex-wrap items-center gap-3.5 max-phone:grid max-phone:grid-cols-1'>
-                <a
+                <Link
                   className={cn(
                     buttonVariants({ size: 'lg' }),
                     'inline-flex min-h-12.5 rounded-md bg-primary px-5.5 py-3.5 text-base font-bold text-primary-foreground shadow-xl shadow-primary/35 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
                   )}
-                  href='/signin?callbackUrl=%2Finvite'
+                  href={entry.href}
                 >
-                  Enter tournament
-                  <ArrowIcon />
-                </a>
-                <a
+                  {entry.label}
+                  <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
+                </Link>
+                <Link
                   className={cn(
                     buttonVariants({ variant: 'secondary', size: 'lg' }),
                     'inline-flex min-h-12.5 rounded-md border border-border bg-secondary px-5.5 py-3.5 text-base font-bold text-foreground hover:border-border-strong hover:bg-secondary/80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
                   )}
-                  href='#rules'
+                  href='/rules'
                 >
                   View team rules
-                </a>
+                </Link>
               </div>
 
               <div
@@ -246,10 +118,10 @@ export default function Home() {
               </div>
 
               <h2 className='mt-5.5 px-5.5 font-display text-2xl font-bold leading-[1.15]'>
-                Have the invite?
+                {entry.title}
               </h2>
               <p className='mx-5.5 mb-5 mt-2 text-sm leading-[1.55] text-secondary-foreground'>
-                Sign in first, then use the link or code your organizer shared.
+                {entry.description}
               </p>
 
               <ol className='m-0 flex list-none flex-col p-0'>
@@ -273,187 +145,60 @@ export default function Home() {
                 ))}
               </ol>
 
-              <div className='flex items-center gap-3 border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground max-phone:flex-col max-phone:items-start'>
-                <span>Private tournament data stays behind sign-in.</span>
-                <Button variant={'link'}>
-                  <Link
-                    className='ml-auto inline-flex items-center gap-1.25 whitespace-nowrap font-semibold text-primary-muted focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:ml-0'
-                    href='/signin?callbackUrl=%2Finvite'
+              {showInviteCodeEntry ? (
+                <form
+                  action='/invite'
+                  className='flex items-end gap-3.5 border-t border-border bg-background/45 px-5.5 py-5 max-phone:flex-col max-phone:items-stretch'
+                  method='get'
+                >
+                  <div className='min-w-0 flex-1'>
+                    <label
+                      className='block text-sm font-semibold text-foreground'
+                      htmlFor='landing-invite-code'
+                    >
+                      Have an invite code?
+                    </label>
+                    <p
+                      className='mt-1 text-xs leading-4.5 text-muted-foreground'
+                      id='landing-invite-code-help'
+                    >
+                      Enter the 4-digit code from the organizer.
+                    </p>
+                    <Input
+                      aria-describedby='landing-invite-code-help'
+                      aria-label='Invite code'
+                      autoComplete='one-time-code'
+                      className='mt-3 min-h-12 rounded-md border-border bg-card px-3.5 font-mono text-base tracking-[0.12em] uppercase'
+                      id='landing-invite-code'
+                      inputMode='numeric'
+                      maxLength={4}
+                      name='code'
+                      pattern='[0-9]{4}'
+                      placeholder='1234'
+                      required
+                      spellCheck={false}
+                    />
+                  </div>
+                  <button
+                    className={cn(
+                      buttonVariants({ size: 'lg' }),
+                      'min-h-12 rounded-md bg-primary px-4.5 py-3 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-phone:w-full',
+                    )}
+                    type='submit'
                   >
-                    Sign in to continue
-                    <ArrowIcon />
-                  </Link>
-                </Button>
+                    Use code
+                    <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
+                  </button>
+                </form>
+              ) : null}
+
+              <div className='border-t border-border bg-background px-5.5 py-3.5 text-xs text-muted-foreground'>
+                <span>{entry.status}</span>
               </div>
             </Card>
           </MotionReveal>
         </section>
-
-        <section className='mx-auto grid w-full max-w-page grid-cols-[minmax(0,1fr)_380px] items-start gap-6 px-12 pb-14 pt-6 max-desktop:grid-cols-1 max-tablet:px-5 max-tablet:pb-10.5 max-tablet:pt-7'>
-          <div className='min-w-0' id='tiers'>
-            <div className='mb-4 flex items-end justify-between gap-5 max-phone:items-start max-phone:flex-col max-phone:gap-2'>
-              <div>
-                <p className='mb-1.25 font-mono text-3xs tracking-[0.13em] text-primary-muted'>
-                  TEAM BALANCE
-                </p>
-                <h2 className='m-0 font-display text-xl font-bold leading-7'>
-                  Tier system
-                </h2>
-              </div>
-              <span className='font-mono text-2xs tracking-widest text-muted-foreground'>
-                SELF-ASSESS · ORGANIZER REVIEW
-              </span>
-            </div>
-
-            <div className='grid grid-cols-2 gap-3.5 max-tablet:grid-cols-1'>
-              {tiers.map((tier) => (
-                <Card
-                  className={[
-                    'flex min-h-28 items-start gap-3.5 rounded-xl border border-border border-l-3 bg-card gap-3.5 p-4.5 py-4.5 ring-0',
-                    tierCardTones[tier.tone],
-                  ].join(' ')}
-                  key={tier.tier}
-                  role='article'
-                >
-                  <Badge
-                    className={[
-                      'h-11 w-11 shrink-0 rounded-lg border border-current p-0 font-display text-sm font-extrabold',
-                      tierBadgeTones[tier.tone],
-                    ].join(' ')}
-                  >
-                    {tier.tier}
-                  </Badge>
-                  <div>
-                    <h3 className='mb-1.25 mt-px text-sm font-bold leading-4.5'>
-                      {tier.range}
-                    </h3>
-                    <p className='m-0 text-xs leading-[1.45] text-secondary-foreground'>
-                      {tier.detail}
-                    </p>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            <div
-              className='mt-3.5 grid grid-cols-3 gap-3 max-tablet:grid-cols-1'
-              id='how-it-works'
-            >
-              <Card
-                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
-                role='article'
-              >
-                <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-primary bg-primary font-mono text-xs font-bold text-primary-foreground'>
-                  1
-                </span>
-                <div className='flex min-w-0 flex-col gap-0.75'>
-                  <strong className='text-sm leading-4.5'>Register</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>
-                    Add Riot ID, rank, tier, and roles.
-                  </small>
-                </div>
-              </Card>
-              <Card
-                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
-                role='article'
-              >
-                <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-secondary font-mono text-xs font-bold text-secondary-foreground'>
-                  2
-                </span>
-                <div className='flex min-w-0 flex-col gap-0.75'>
-                  <strong className='text-sm leading-4.5'>Get approved</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>
-                    The organizer confirms your tier.
-                  </small>
-                </div>
-              </Card>
-              <Card
-                className='flex min-h-17.5 items-center gap-2.75 rounded-xl border border-border bg-card p-3.5 py-3.5 ring-0'
-                role='article'
-              >
-                <span className='grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-secondary font-mono text-xs font-bold text-secondary-foreground'>
-                  3
-                </span>
-                <div className='flex min-w-0 flex-col gap-0.75'>
-                  <strong className='text-sm leading-4.5'>Form a team</strong>
-                  <small className='text-xs leading-4.25 text-muted-foreground'>
-                    Build five starters and optional subs.
-                  </small>
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          <Card
-            className='overflow-hidden rounded-2xl border border-border bg-card gap-0 py-0 ring-0'
-            id='rules'
-            role='complementary'
-          >
-            <div className='flex items-center gap-2.5 border-b border-border bg-linear-to-r from-secondary to-card px-4.5 py-4'>
-              <span
-                className='grid size-7.5 shrink-0 place-items-center rounded-lg bg-primary text-lg text-primary-foreground'
-                aria-hidden='true'
-              >
-                ◇
-              </span>
-              <h2 className='m-0 font-display text-base font-bold leading-5'>
-                Team rules
-              </h2>
-              <Badge className='ml-auto h-auto rounded-full bg-primary/15 px-2 py-1 font-mono text-3xs font-semibold text-primary-muted'>
-                ENFORCED
-              </Badge>
-            </div>
-
-            <ul className='m-0 list-none p-0'>
-              {teamRules.map(([badge, title, description], index) => (
-                <li
-                  className='flex min-h-18.5 items-center gap-3.5 border-b border-border px-4.5 py-4'
-                  key={badge}
-                >
-                  <Badge
-                    className={[
-                      'h-9 w-10 shrink-0 rounded-lg border border-border bg-background p-0 font-mono text-xs font-bold',
-                      index === 1
-                        ? 'border-tier-t1/20 bg-tier-t1/10 text-tier-t1'
-                        : '',
-                      index === 2
-                        ? 'border-tier-t2/20 bg-tier-t2/10 text-tier-t2'
-                        : 'text-tier-t1',
-                    ].join(' ')}
-                  >
-                    {badge}
-                  </Badge>
-                  <span className='flex min-w-0 flex-col gap-0.75'>
-                    <strong className='text-sm leading-4.5'>{title}</strong>
-                    <small className='text-xs leading-4.25 text-muted-foreground'>
-                      {description}
-                    </small>
-                  </span>
-                  <span className='ml-auto grid size-5.5 shrink-0 place-items-center rounded-full bg-success/15 text-success'>
-                    <CheckIcon />
-                  </span>
-                </li>
-              ))}
-            </ul>
-
-            <div className='flex items-center justify-between gap-3 bg-background px-4.5 py-3 text-2xs text-muted-foreground max-phone:items-start max-phone:flex-col'>
-              <span className='inline-flex items-center gap-1.5 font-mono text-secondary-foreground'>
-                <i
-                  className='size-1.5 rounded-full bg-success'
-                  aria-hidden='true'
-                />
-                ROSTER VALIDATION
-              </span>
-              <span>Role coverage warns, but does not block.</span>
-            </div>
-          </Card>
-        </section>
       </main>
-
-      <footer className='mx-auto flex w-full max-w-page items-center justify-between gap-6 border-t border-border px-12 py-5.5 font-mono text-2xs tracking-[0.04em] text-muted-foreground max-tablet:items-start max-tablet:flex-col max-tablet:gap-2 max-tablet:px-5 max-tablet:py-5'>
-        <span>Rift Clash · A private tournament for friends</span>
-        <span>Match days stay in Discord</span>
-      </footer>
     </div>
   );
 }

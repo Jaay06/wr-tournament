@@ -20,6 +20,115 @@ export type RosterValidation = {
   tierCounts: Record<TournamentTier, number>;
 };
 
+export type LineupAssignment = Pick<
+  TournamentMemberData,
+  "registrationId" | "lineupPosition" | "starterRole"
+>;
+
+export type LineupDropTarget =
+  | { kind: "starter"; role: TournamentRole }
+  | { kind: "substitute" }
+  | { kind: "player"; registrationId: string };
+
+export function participantTeamExitMode({
+  isCaptain,
+  memberCount,
+}: {
+  isCaptain: boolean;
+  memberCount: number;
+}): "leave" | "delete" | "transfer" {
+  if (!isCaptain) return "leave";
+  return memberCount === 1 ? "delete" : "transfer";
+}
+
+export function reconcileLineupAssignments(
+  current: LineupAssignment[],
+  members: LineupAssignment[],
+): LineupAssignment[] {
+  const currentByRegistrationId = new Map(
+    current.map((assignment) => [assignment.registrationId, assignment]),
+  );
+  const next = members.map(
+    (member) =>
+      currentByRegistrationId.get(member.registrationId) ?? {
+        registrationId: member.registrationId,
+        lineupPosition: member.lineupPosition,
+        starterRole: member.starterRole,
+      },
+  );
+
+  return next.length === current.length &&
+    next.every((assignment, index) => assignment === current[index])
+    ? current
+    : next;
+}
+
+export function arrangeLineupAssignments(
+  assignments: LineupAssignment[],
+  registrationId: string,
+  target: LineupDropTarget,
+): LineupAssignment[] {
+  const sourceIndex = assignments.findIndex(
+    (assignment) => assignment.registrationId === registrationId,
+  );
+  if (sourceIndex === -1) return assignments;
+
+  const source = assignments[sourceIndex];
+  let targetIndex = -1;
+  let destination: Pick<
+    LineupAssignment,
+    "lineupPosition" | "starterRole"
+  >;
+
+  if (target.kind === "player") {
+    targetIndex = assignments.findIndex(
+      (assignment) => assignment.registrationId === target.registrationId,
+    );
+    if (targetIndex === -1 || targetIndex === sourceIndex) return assignments;
+    destination = {
+      lineupPosition: assignments[targetIndex].lineupPosition,
+      starterRole: assignments[targetIndex].starterRole,
+    };
+  } else if (target.kind === "starter") {
+    targetIndex = assignments.findIndex(
+      (assignment) =>
+        assignment.lineupPosition === "starter" &&
+        assignment.starterRole === target.role,
+    );
+    if (targetIndex === sourceIndex) return assignments;
+    destination = { lineupPosition: "starter", starterRole: target.role };
+  } else {
+    if (source.lineupPosition === "substitute") return assignments;
+    const substituteCount = assignments.filter(
+      (assignment) => assignment.lineupPosition === "substitute",
+    ).length;
+    if (substituteCount >= 2) return assignments;
+    destination = { lineupPosition: "substitute", starterRole: null };
+  }
+
+  const next = assignments.map((assignment, index) => {
+    if (index === sourceIndex) {
+      return { ...assignment, ...destination };
+    }
+    if (index === targetIndex) {
+      return {
+        ...assignment,
+        lineupPosition: source.lineupPosition,
+        starterRole: source.starterRole,
+      };
+    }
+    return assignment;
+  });
+
+  return next.every(
+    (assignment, index) =>
+      assignment.lineupPosition === assignments[index].lineupPosition &&
+      assignment.starterRole === assignments[index].starterRole,
+  )
+    ? assignments
+    : next;
+}
+
 export function shouldReopenSubmittedTeam(
   teamStatus: "draft" | "submitted",
   validation: Pick<RosterValidation, "valid">,

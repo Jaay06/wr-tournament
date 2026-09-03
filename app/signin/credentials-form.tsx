@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import Link from 'next/link';
 
 import { signInWithCredentials, type SignInState } from '@/app/signin/actions';
 import { AnimatedButtonLabel } from '@/components/ui/animated-button-label';
@@ -68,6 +69,12 @@ export function CredentialsForm({ callbackUrl }: { callbackUrl: string }) {
             required
             type='password'
           />
+          <Link
+            className='w-fit text-xs font-semibold text-primary-muted hover:text-primary'
+            href='/forgot-password'
+          >
+            Forgot password?
+          </Link>
         </Field>
       </FieldGroup>
 

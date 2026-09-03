@@ -19,7 +19,7 @@ export function EntryShell({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-background px-5 py-5 text-foreground max-tablet:px-4">
+    <div className="min-h-[100dvh] bg-background px-5 py-5 text-foreground max-tablet:px-4">
       <header className="mx-auto flex min-h-14 w-full max-w-page items-center justify-between gap-5 border-b border-border pb-5">
         <Link
           aria-label="Rift Clash home"

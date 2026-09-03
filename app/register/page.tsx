@@ -1,8 +1,14 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { auth } from "@/auth";
 import { EntryShell } from "@/components/auth/entry-shell";
 import { Card } from "@/components/ui/card";
-import { firstSearchParam, safeCallbackUrl } from "@/lib/redirect";
+import {
+  firstSearchParam,
+  postAuthRedirectPath,
+  safeCallbackUrl,
+} from "@/lib/redirect";
 import { getInviteIntentStatus } from "@/lib/invite-intent";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -19,6 +25,12 @@ export default async function RegisterPage({
 }) {
   const params = await searchParams;
   const callbackUrl = safeCallbackUrl(firstSearchParam(params.callbackUrl));
+  const session = await auth();
+
+  if (session?.user?.id) {
+    redirect(postAuthRedirectPath(callbackUrl));
+  }
+
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   const inviteStatus = await getInviteIntentStatus(callbackUrl);
   const inviteRecognized = inviteStatus === "recognized";

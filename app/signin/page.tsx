@@ -1,13 +1,18 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-import { discordEnabled } from "@/auth";
+import { auth, discordEnabled } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FieldSeparator } from "@/components/ui/field";
 import { Card } from "@/components/ui/card";
 import { CredentialsForm } from "./credentials-form";
 import { EntryShell } from "@/components/auth/entry-shell";
 import { DiscordSignInButton } from "@/components/auth/discord-signin-button";
-import { firstSearchParam, safeCallbackUrl } from "@/lib/redirect";
+import {
+  firstSearchParam,
+  postAuthRedirectPath,
+  safeCallbackUrl,
+} from "@/lib/redirect";
 import { getInviteIntentStatus } from "@/lib/invite-intent";
 
 type SignInSearchParams = Promise<{
@@ -23,6 +28,12 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = safeCallbackUrl(firstSearchParam(params.callbackUrl));
+  const session = await auth();
+
+  if (session?.user?.id) {
+    redirect(postAuthRedirectPath(callbackUrl));
+  }
+
   const error = firstSearchParam(params.error);
   const created = firstSearchParam(params.created) === "1";
   const registerUrl = `/register?callbackUrl=${encodeURIComponent(callbackUrl)}`;

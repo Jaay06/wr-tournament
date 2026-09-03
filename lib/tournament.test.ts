@@ -3,7 +3,10 @@ import test from "node:test";
 
 import { generateInviteCode, formatDeadlineState } from "./tournament";
 import {
+  arrangeLineupAssignments,
   availableTournamentParticipants,
+  participantTeamExitMode,
+  reconcileLineupAssignments,
   roleMatchesPreferences,
   shouldReopenSubmittedTeam,
   validateRoster,
@@ -11,6 +14,7 @@ import {
 import {
   callbackPathFromAuthCookie,
   inviteCodeFromCallbackUrl,
+  postAuthRedirectPath,
 } from "./redirect";
 import { inviteCodeSchema } from "./validation";
 
@@ -103,6 +107,206 @@ test("invite choices exclude assigned players and already-pending recipients", (
   );
 });
 
+test("lineup drafts add new members without discarding existing edits", () => {
+  const assignments = reconcileLineupAssignments(
+    [
+      {
+        registrationId: "captain",
+        lineupPosition: "substitute" as const,
+        starterRole: null,
+      },
+      {
+        registrationId: "departed",
+        lineupPosition: "starter" as const,
+        starterRole: "Mid" as const,
+      },
+    ],
+    [
+      {
+        registrationId: "captain",
+        lineupPosition: "starter" as const,
+        starterRole: "Baron" as const,
+      },
+      {
+        registrationId: "new-member",
+        lineupPosition: "substitute" as const,
+        starterRole: null,
+      },
+    ],
+  );
+
+  assert.deepEqual(assignments, [
+    {
+      registrationId: "captain",
+      lineupPosition: "substitute",
+      starterRole: null,
+    },
+    {
+      registrationId: "new-member",
+      lineupPosition: "substitute",
+      starterRole: null,
+    },
+  ]);
+});
+
+test("moving a substitute onto an occupied starter role swaps both players", () => {
+  const assignments = [
+    {
+      registrationId: "starter",
+      lineupPosition: "starter" as const,
+      starterRole: "Baron" as const,
+    },
+    {
+      registrationId: "substitute",
+      lineupPosition: "substitute" as const,
+      starterRole: null,
+    },
+  ];
+
+  assert.deepEqual(
+    arrangeLineupAssignments(assignments, "substitute", {
+      kind: "starter",
+      role: "Baron",
+    }),
+    [
+      {
+        registrationId: "starter",
+        lineupPosition: "substitute",
+        starterRole: null,
+      },
+      {
+        registrationId: "substitute",
+        lineupPosition: "starter",
+        starterRole: "Baron",
+      },
+    ],
+  );
+});
+
+test("moving a starter onto another starter role swaps their roles", () => {
+  const assignments = [
+    {
+      registrationId: "baron",
+      lineupPosition: "starter" as const,
+      starterRole: "Baron" as const,
+    },
+    {
+      registrationId: "mid",
+      lineupPosition: "starter" as const,
+      starterRole: "Mid" as const,
+    },
+  ];
+
+  assert.deepEqual(
+    arrangeLineupAssignments(assignments, "baron", {
+      kind: "starter",
+      role: "Mid",
+    }),
+    [
+      {
+        registrationId: "baron",
+        lineupPosition: "starter",
+        starterRole: "Mid",
+      },
+      {
+        registrationId: "mid",
+        lineupPosition: "starter",
+        starterRole: "Baron",
+      },
+    ],
+  );
+});
+
+test("a starter can use an open substitute slot but cannot overfill the bench", () => {
+  const assignments = [
+    {
+      registrationId: "baron",
+      lineupPosition: "starter" as const,
+      starterRole: "Baron" as const,
+    },
+    {
+      registrationId: "sub-one",
+      lineupPosition: "substitute" as const,
+      starterRole: null,
+    },
+  ];
+  const moved = arrangeLineupAssignments(assignments, "baron", {
+    kind: "substitute",
+  });
+
+  assert.equal(moved[0].lineupPosition, "substitute");
+  assert.equal(
+    arrangeLineupAssignments(
+      [
+        ...assignments,
+        {
+          registrationId: "sub-two",
+          lineupPosition: "substitute" as const,
+          starterRole: null,
+        },
+      ],
+      "baron",
+      { kind: "substitute" },
+    )[0].lineupPosition,
+    "starter",
+  );
+});
+
+test("a starter can swap with a named substitute when the bench is full", () => {
+  const assignments = [
+    {
+      registrationId: "baron",
+      lineupPosition: "starter" as const,
+      starterRole: "Baron" as const,
+    },
+    {
+      registrationId: "sub-one",
+      lineupPosition: "substitute" as const,
+      starterRole: null,
+    },
+    {
+      registrationId: "sub-two",
+      lineupPosition: "substitute" as const,
+      starterRole: null,
+    },
+  ];
+
+  assert.deepEqual(
+    arrangeLineupAssignments(assignments, "baron", {
+      kind: "player",
+      registrationId: "sub-two",
+    }),
+    [
+      {
+        registrationId: "baron",
+        lineupPosition: "substitute",
+        starterRole: null,
+      },
+      assignments[1],
+      {
+        registrationId: "sub-two",
+        lineupPosition: "starter",
+        starterRole: "Baron",
+      },
+    ],
+  );
+});
+
+test("team exit controls follow captain ownership rules", () => {
+  assert.equal(
+    participantTeamExitMode({ isCaptain: false, memberCount: 4 }),
+    "leave",
+  );
+  assert.equal(
+    participantTeamExitMode({ isCaptain: true, memberCount: 1 }),
+    "delete",
+  );
+  assert.equal(
+    participantTeamExitMode({ isCaptain: true, memberCount: 4 }),
+    "transfer",
+  );
+});
+
 test("Discord account-link recovery preserves the invite callback path", () => {
   const callback = "/invite?code=ABCDEF0123456789ABCDEF0123456789";
 
@@ -124,4 +328,11 @@ test("invite intent parsing only accepts the invite route", () => {
     "ABCDEF0123456789ABCDEF0123456789",
   );
   assert.equal(inviteCodeFromCallbackUrl("/tournament?code=secret"), null);
+});
+
+test("signed-in auth pages return to a safe application route", () => {
+  assert.equal(postAuthRedirectPath("/tournament/team"), "/tournament/team");
+  assert.equal(postAuthRedirectPath("/signin?callbackUrl=/signin"), "/invite");
+  assert.equal(postAuthRedirectPath("/register"), "/invite");
+  assert.equal(postAuthRedirectPath("https://example.com"), "/invite");
 });

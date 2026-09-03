@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter_Tight, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import { getSiteUrl, siteConfig } from '@/lib/site';
 import './globals.css';
+import { MarketingFooter } from '@/components/marketing/marketing-footer';
 
 const interTight = Inter_Tight({
   variable: '--font-inter-tight',
@@ -57,9 +58,12 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang='en'
-      className={`${interTight.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans`}
+      className={`relative min-h-[100dvh] ${interTight.variable} ${spaceGrotesk.variable} ${jetBrainsMono.variable} font-sans`}
     >
-      <body>{children}</body>
+      <body className='flex min-h-[100dvh] flex-col'>
+        <main className='flex-1'>{children}</main>
+        <MarketingFooter />
+      </body>
     </html>
   );
 }
