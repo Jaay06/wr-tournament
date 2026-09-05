@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 type TierTone = (typeof tiers)[number]['tone'];
 
 const tierCardTones: Record<TierTone, string> = {
-  gold: 'border-danger/55 bg-danger-soft/65',
-  silver: 'border-primary/55 bg-warning-soft/70',
+  gold: 'border-tier-t1/45 bg-tier-t1/10',
+  silver: 'border-tier-t2/45 bg-tier-t2/10',
   bronze: 'border-border-strong bg-card',
   grey: 'border-border-strong bg-card',
 };
@@ -49,10 +49,10 @@ export default function TiersPage() {
             <p className='m-0 font-mono text-xs font-semibold tracking-[0.16em] text-primary max-phone:text-3xs'>
               TEAM BALANCE / ORGANIZER REVIEW
             </p>
-            <h1 className='mt-5 text-balance font-display text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.02] tracking-[-0.045em]'>
+            <h1 className='mt-5 text-balance font-display text-[clamp(2.375rem,4vw,3.25rem)] font-bold leading-[1.02] tracking-[-0.045em]'>
               Four tiers. One fair room.
             </h1>
-            <p className='mt-4 max-w-2xl text-lg leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
+            <p className='mt-4 max-w-2xl text-base leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
               Self-assess when you register. The organizer confirms the tier
               used to validate every roster.
             </p>
@@ -76,11 +76,11 @@ export default function TiersPage() {
             Rank ranges
           </h2>
 
-          <div className='grid grid-cols-4 gap-3 max-tablet:grid-cols-2 max-phone:grid-cols-1'>
+          <div className='grid grid-cols-4 gap-3 max-tablet:grid-cols-2'>
             {tiers.map((tier) => (
               <Card
                 className={cn(
-                  'flex min-h-56 flex-col items-stretch justify-between rounded-xl border p-5 ring-0 max-tablet:min-h-44',
+                  'flex min-h-56 flex-col items-stretch justify-between rounded-xl border p-5 ring-0 max-tablet:min-h-44 max-phone:p-4',
                   tierCardTones[tier.tone],
                 )}
                 key={tier.tier}
@@ -99,7 +99,7 @@ export default function TiersPage() {
                   </span>
                 </div>
                 <div className='mt-10'>
-                  <h3 className='mb-2 font-display text-xl font-bold leading-tight'>
+                  <h3 className='mb-2 font-display text-xl font-semibold leading-tight max-phone:text-lg'>
                     {tier.range}
                   </h3>
                   <p className='m-0 text-sm leading-[1.5] text-secondary-foreground'>

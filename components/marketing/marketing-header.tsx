@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowRight, Menu, X } from 'lucide-react';
 
 import { auth } from '@/auth';
-import { RiftClashLogo } from '@/components/brand/rift-clash-logo';
+import { RiftClashMark } from '@/components/brand/rift-clash-logo';
 import { buttonVariants } from '@/components/ui/button';
 import {
   tournamentEntryFor,
@@ -42,11 +42,12 @@ export async function MarketingHeader({
           href='/#top'
           aria-label='Rift Clash home'
         >
-          <RiftClashLogo className='h-12 w-auto max-phone:h-10' />
+          <RiftClashMark className='size-9.5' />
+          <span className='text-base font-semibold tracking-wide'>RIFT CLASH<span className='mt-1 block font-mono text-[8px] font-normal tracking-[0.25em] text-muted-foreground'>PRIVATE WILD RIFT</span></span>
         </Link>
 
         <nav
-          className='flex items-center gap-7 max-desktop:hidden'
+          className='ml-auto flex items-center gap-7 max-desktop:hidden'
           aria-label='Public navigation'
         >
           {navItems.map((item) => {
@@ -68,7 +69,7 @@ export async function MarketingHeader({
           })}
         </nav>
 
-        {activePage !== 'overview' ? (
+        {(
           <Link
             className={cn(
               buttonVariants({ size: 'sm' }),
@@ -79,8 +80,6 @@ export async function MarketingHeader({
             {resolvedEntry.label}
             <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
           </Link>
-        ) : (
-          <span className='ml-auto max-desktop:hidden' />
         )}
 
         <details className='group relative hidden max-desktop:block max-phone:ml-auto'>
@@ -120,7 +119,7 @@ export async function MarketingHeader({
                   </Link>
                 );
               })}
-              {activePage !== 'overview' ? (
+              {(
                 <Link
                   className={cn(
                     buttonVariants({ size: 'lg' }),
@@ -131,7 +130,7 @@ export async function MarketingHeader({
                   {resolvedEntry.label}
                   <ArrowRight aria-hidden='true' size={16} strokeWidth={1.8} />
                 </Link>
-              ) : null}
+              )}
             </nav>
           </div>
         </details>

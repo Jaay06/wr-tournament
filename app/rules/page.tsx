@@ -69,10 +69,10 @@ export default async function RulesPage() {
             <p className='m-0 font-mono text-xs font-semibold tracking-[0.16em] text-primary max-phone:text-3xs'>
               ROSTER VALIDATION / ENFORCED
             </p>
-            <h1 className='mt-5 text-balance font-display text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.02] tracking-[-0.045em]'>
+            <h1 className='mt-5 text-balance font-display text-[clamp(2.375rem,4vw,3.25rem)] font-bold leading-[1.02] tracking-[-0.045em]'>
               Know what blocks a roster.
             </h1>
-            <p className='mt-4 max-w-2xl text-lg leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
+            <p className='mt-4 max-w-2xl text-base leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
               Build five starters, respect the tier ceiling, and submit before
               the room closes.
             </p>
@@ -175,10 +175,10 @@ export default async function RulesPage() {
           </section>
         </div>
 
-        <div className='mt-5 flex items-center justify-between gap-4 rounded-xl border border-warning/40 bg-warning-soft px-5 py-4 text-sm text-warning max-phone:items-start'>
+        <div className='mt-5 flex items-center justify-between gap-4 rounded-xl border border-warning/40 bg-warning-soft px-5 py-4 text-sm text-warning max-phone:items-start max-phone:flex-col'>
           <span>A registration change can invalidate a submitted team.</span>
           <span className='shrink-0 font-mono text-3xs tracking-widest'>
-            ORGANIZER UNLOCK REQUIRED
+            INVALID ROSTERS RETURN TO DRAFT
           </span>
         </div>
       </main>
