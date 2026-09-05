@@ -1,20 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
+import type { FormEvent } from "react";
+import { useState } from "react";
 
-import { joinTournament, type InviteState } from "@/app/invite/actions";
 import { AnimatedButtonLabel } from "@/components/ui/animated-button-label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-const initialState: InviteState = {};
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
     <Button
       className="min-h-12 w-full rounded-md bg-primary px-4 py-3 text-base font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
@@ -30,10 +25,46 @@ function SubmitButton() {
 }
 
 export function InviteForm({ initialCode = "" }: { initialCode?: string }) {
-  const [state, formAction] = useActionState(joinTournament, initialState);
+  const [error, setError] = useState<string>();
+  const [pending, setPending] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(undefined);
+    setPending(true);
+
+    try {
+      const response = await fetch("/api/tournament/join", {
+        method: "POST",
+        body: new FormData(event.currentTarget),
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+        redirectTo?: "/tournament" | "/tournament/register";
+      } | null;
+
+      if (!response.ok) {
+        setError(result?.error ?? "We couldn't check the invite. Refresh and try again.");
+        return;
+      }
+
+      if (!result?.redirectTo) {
+        setError("We couldn't open the tournament. Refresh and try again.");
+        return;
+      }
+
+      window.location.assign(result.redirectTo);
+    } catch {
+      setError("We couldn't check the invite. Refresh and try again.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <Field>
         <FieldLabel className="text-sm font-semibold" htmlFor="code">
           Invite code
@@ -56,13 +87,13 @@ export function InviteForm({ initialCode = "" }: { initialCode?: string }) {
         />
       </Field>
 
-      {state.error ? (
+      {error ? (
         <Alert aria-live="polite" className="rounded-md border-danger/30 bg-danger/10 text-danger" variant="destructive">
-          <AlertDescription className="text-danger">{state.error}</AlertDescription>
+          <AlertDescription className="text-danger">{error}</AlertDescription>
         </Alert>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton pending={pending} />
     </form>
   );
 }
