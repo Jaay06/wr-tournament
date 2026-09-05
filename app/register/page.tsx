@@ -38,8 +38,8 @@ export default async function RegisterPage({
   return (
     <EntryShell
       description={inviteRecognized ? "Create your account and we will take you back to the private invite without making you enter the code twice." : "Make an account first. You will still need the private invite from the organizer before you can see the tournament."}
-      eyebrow="NEW PLAYER"
-      title={inviteRecognized ? "Keep your invite." : "Pull up a chair."}
+      eyebrow="CREATE ACCOUNT"
+      title={inviteRecognized ? "Keep your invite." : "Make your way in."}
     >
       <div className="flex flex-col gap-5">
         {inviteRecognized ? (
@@ -57,14 +57,6 @@ export default async function RegisterPage({
             </AlertDescription>
           </Alert>
         ) : null}
-        <div>
-          <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
-            CREATE ACCOUNT
-          </p>
-          <h2 className="mt-2 mb-0 font-display text-xl font-bold leading-7">
-            Set up your login
-          </h2>
-        </div>
 
         <RegisterForm signInHref={signInHref} />
 

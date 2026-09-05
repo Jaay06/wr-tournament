@@ -42,9 +42,9 @@ export default async function SignInPage({
 
   return (
     <EntryShell
-      description={inviteRecognized ? "Your private invite is ready. Sign in and we will take you straight back to the code." : "Sign in first. If the organizer invited you, you will enter the private tournament room next."}
-      eyebrow="PRIVATE ACCESS"
-      title={inviteRecognized ? "Your invite is ready." : "Get back in the room."}
+      description={inviteRecognized ? "Your private invite is ready. Sign in and we will take you straight back to the code." : "Sign in to manage your profile, find a team, or keep a roster moving."}
+      eyebrow="WELCOME BACK"
+      title={inviteRecognized ? "Your invite is ready." : "Step back into the room."}
     >
       <div className="flex flex-col gap-5">
         {inviteRecognized ? (
@@ -62,14 +62,6 @@ export default async function SignInPage({
             </AlertDescription>
           </Alert>
         ) : null}
-        <div>
-          <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
-            SIGN IN
-          </p>
-          <h2 className="mt-2 mb-0 font-display text-xl font-bold leading-7">
-            Use your tournament account
-          </h2>
-        </div>
 
         {created ? (
           <Alert aria-live="polite" className="rounded-md border-success/30 bg-success/10 text-success">
@@ -87,7 +79,6 @@ export default async function SignInPage({
 
         {discordEnabled ? (
           <div className="flex flex-col gap-3">
-            <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">RECOMMENDED</p>
             <DiscordSignInButton callbackUrl={callbackUrl} />
           </div>
         ) : (
@@ -98,12 +89,9 @@ export default async function SignInPage({
           </Alert>
         )}
 
-        <FieldSeparator className="my-0 text-2xs font-mono tracking-widest">OR</FieldSeparator>
+        <FieldSeparator className="my-0 text-2xs font-mono tracking-widest">OR EMAIL</FieldSeparator>
 
         <div className="flex flex-col gap-3">
-          <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
-            EMAIL + PASSWORD
-          </p>
           <div className="[&>form]:flex [&>form]:flex-col [&>form]:gap-4">
             {/** The client form owns validation state and pending UI. */}
             <CredentialsForm callbackUrl={callbackUrl} />

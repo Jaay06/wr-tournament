@@ -74,6 +74,9 @@ function isUniqueViolation(error: unknown) {
 function revalidateTournamentPages() {
   revalidatePath("/");
   revalidatePath("/admin");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/announcements");
+  revalidatePath("/tournament/announcements");
   revalidatePath("/admin/teams");
   revalidatePath("/invite");
   revalidatePath("/tournament");
@@ -266,9 +269,30 @@ export async function deleteAnnouncement(
     return { error: "That announcement could not be found." };
   }
 
-  await db.delete(announcements).where(eq(announcements.id, id));
+  const [deleted] = await db.delete(announcements).where(eq(announcements.id, id)).returning({ id: announcements.id });
+  if (!deleted) return { error: "That announcement has already been removed." };
   revalidateTournamentPages();
   return { success: "Announcement deleted." };
+}
+
+export async function updateAnnouncement(
+  _previousState: AnnouncementState,
+  formData: FormData,
+): Promise<AnnouncementState> {
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return { error: accessResult.error };
+  const id = formString(formData, "id");
+  const parsed = announcementSchema.safeParse({
+    title: formString(formData, "title"),
+    body: formString(formData, "body"),
+  });
+  if (!id || !parsed.success) return { error: "Enter a title and message before saving." };
+  const [updated] = await db.update(announcements)
+    .set({ ...parsed.data, updatedAt: new Date() })
+    .where(eq(announcements.id, id)).returning({ id: announcements.id });
+  if (!updated) return { error: "That announcement has already been removed." };
+  revalidateTournamentPages();
+  return { success: "Announcement updated." };
 }
 
 function validationMember(

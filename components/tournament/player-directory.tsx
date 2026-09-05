@@ -242,12 +242,12 @@ export function PlayerDirectoryView({
   }, [query, source, tier]);
 
   return (
-    <main className='mx-auto w-full max-w-page px-5 py-7 desktop:px-12 desktop:py-10'>
+    <main className='w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7'>
       <div className='flex flex-col gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-5'>
           <div>
             <Kicker className='text-primary-muted'>PLAYER DIRECTORY</Kicker>
-            <h1 className='mt-3 max-w-3xl font-display text-3xl font-bold leading-[1.05] tracking-[-0.04em] desktop:text-[46px]'>
+            <h1 className='mt-2 max-w-3xl font-display text-[28px] font-bold leading-[1.1] tracking-[-0.035em] desktop:text-[31px]'>
               Find a tournament player
             </h1>
             <p className='mt-3 max-w-2xl text-base leading-6 text-secondary-foreground'>
@@ -286,7 +286,7 @@ export function PlayerDirectoryView({
               <Button
                 aria-pressed={tier === value}
                 className={cn(
-                  'min-h-10 rounded-full border px-3.5 py-2 text-xs font-bold',
+                  'min-h-9 rounded-lg border px-3 py-2 text-xs font-semibold',
                   tier === value
                     ? 'border-primary/35 bg-primary-soft text-primary-muted'
                     : 'border-border bg-secondary text-secondary-foreground',
@@ -308,7 +308,8 @@ export function PlayerDirectoryView({
         </div>
 
         {visiblePlayers.length > 0 ? (
-          <div className='grid gap-4 tablet:grid-cols-2 desktop:grid-cols-3'>
+          <>
+          <div className='grid gap-3 desktop:hidden'>
             {visiblePlayers.map((player) => (
               <PlayerCard
                 href={
@@ -322,6 +323,18 @@ export function PlayerDirectoryView({
               />
             ))}
           </div>
+          <div className='hidden overflow-hidden rounded-[14px] border border-border bg-card desktop:block'>
+            <table className='w-full table-fixed text-left text-sm'>
+              <thead className='bg-secondary font-mono text-2xs font-medium uppercase tracking-wider text-muted-foreground'><tr><th className='w-[28%] px-5 py-4'>Player</th><th className='w-[17%] px-3 py-4'>Current rank</th><th className='w-[15%] px-3 py-4'>Approved tier</th><th className='w-[24%] px-3 py-4'>Role preference</th><th className='px-3 py-4'>Team</th></tr></thead>
+              <tbody>{visiblePlayers.map(player => <tr className='border-t border-border/50 hover:bg-secondary/50' key={player.id}>
+                <td className='px-5 py-4'><Link className='flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-primary' href={players === undefined ? '/ui-preview?screen=player-details' : `/tournament/players/${player.id}`}><PlayerAvatar className='size-8 shrink-0 text-xs' player={player} /><span className='min-w-0'><span className='block truncate font-semibold'>{player.displayName}{player.id === currentId ? ' (you)' : ''}</span><span className='mt-1 block truncate text-xs text-muted-foreground'>{player.riotName}#{player.riotTag}</span></span></Link></td>
+                <td className='px-3 py-4 text-secondary-foreground'>{player.currentRank}</td><td className='px-3 py-4'><TierBadge player={player} /></td>
+                <td className='px-3 py-4'><span className='flex flex-wrap items-center gap-1.5 text-xs text-secondary-foreground'><RoleIcon className='size-4 text-role-icon' roleName={player.primaryRole} />{player.primaryRole}<span className='text-muted-foreground'>/</span><RoleIcon className='size-4 text-role-icon' roleName={player.secondaryRole} />{player.secondaryRole}</span></td>
+                <td className='px-3 py-4'>{player.team ? <Link className='text-xs hover:text-primary' href={`/tournament/teams/${player.team.id}`}>{player.team.name}</Link> : <span className='text-xs text-success'>Open</span>}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          </>
         ) : (
           <Empty className='rounded-card border border-dashed border-border-strong bg-secondary/45 p-8'>
             <EmptyHeader>
@@ -354,7 +367,7 @@ export function PlayerDetailsView({
     player.id === (currentRegistrationId ?? (playerProfile === undefined ? player.id : undefined));
 
   return (
-    <main className='mx-auto w-full max-w-page px-5 py-7 desktop:px-12 desktop:py-10'>
+    <main className='w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7'>
       <div className='flex flex-col gap-6'>
         <Link
           className='-mx-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm font-bold text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
