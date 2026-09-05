@@ -1,5 +1,7 @@
 "use client";
 
+import { OrganizerLineup } from "@/components/tournament/organizer-lineup";
+
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Check, LockKeyhole, ShieldCheck, Trash2, Wrench } from "lucide-react";
@@ -151,7 +153,7 @@ function TeamCard({
   team: TournamentTeamData;
 }) {
   const [lineup, setLineup] = useState<LineupEntry[]>(() => memberLineup(team));
-  const [lineupState, lineupAction] = useActionState<TeamAdminState, FormData>(
+  const [lineupState, lineupAction, lineupPending] = useActionState<TeamAdminState, FormData>(
     organizerUpdateTeamLineup,
     {},
   );
@@ -276,8 +278,8 @@ function TeamCard({
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-5 desktop:grid-cols-[minmax(0,1fr)_minmax(280px,0.7fr)]">
-        <section>
+      <div className="mt-5 grid gap-5">
+        <section className="order-2">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="m-0 font-mono text-2xs font-semibold tracking-widest text-muted-foreground">
@@ -337,7 +339,7 @@ function TeamCard({
           {removeState.blockingIssues?.map((issue) => <p aria-live="polite" className="mt-2 mb-0 text-xs text-secondary-foreground" key={issue}>{issue}</p>)}
         </section>
 
-        <section className="rounded-xl border border-border bg-secondary/45 p-4">
+        <section className="order-1 rounded-xl border border-border bg-secondary/45 p-4">
           <div className="flex items-start gap-3">
             <Wrench className="mt-0.5 shrink-0 text-primary-muted" size={18} />
             <div>
@@ -354,58 +356,7 @@ function TeamCard({
           <form action={lineupAction} className="mt-4 flex flex-col gap-3">
             <input name="teamId" type="hidden" value={team.id} />
             <input name="lineup" type="hidden" value={JSON.stringify(lineup)} readOnly />
-            {team.members.map((member) => {
-              const entry = lineupByRegistration.get(member.registrationId) ?? {
-                registrationId: member.registrationId,
-                lineupPosition: "substitute" as const,
-                starterRole: null,
-              };
-              return (
-                <div className="grid gap-2 rounded-xl border border-border bg-background p-3" key={member.id}>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-semibold">{member.displayName}</span>
-                    <TierBadge tier={member.approvedTier} />
-                  </div>
-                  <div className="grid gap-2 tablet:grid-cols-2">
-                    <label className="flex flex-col gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Position
-                      <NativeSelect
-                        className="w-full"
-                        value={entry.lineupPosition}
-                        onChange={(event) =>
-                          updateLineup(member.registrationId, {
-                            lineupPosition: event.target.value as LineupEntry["lineupPosition"],
-                          })
-                        }
-                      >
-                        <NativeSelectOption value="starter">Starter</NativeSelectOption>
-                        <NativeSelectOption value="substitute">Substitute</NativeSelectOption>
-                      </NativeSelect>
-                    </label>
-                    <label className="flex flex-col gap-1.5 text-2xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Starter role
-                      <NativeSelect
-                        className="w-full"
-                        disabled={entry.lineupPosition !== "starter"}
-                        value={entry.starterRole ?? ""}
-                        onChange={(event) =>
-                          updateLineup(member.registrationId, {
-                            starterRole: (event.target.value || null) as TournamentRole | null,
-                          })
-                        }
-                      >
-                        <NativeSelectOption value="">Choose a role</NativeSelectOption>
-                        {roleOptions.map((role) => (
-                          <NativeSelectOption key={role} value={role}>
-                            {role}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelect>
-                    </label>
-                  </div>
-                </div>
-              );
-            })}
+            <OrganizerLineup members={team.members} lineup={lineup} onChange={setLineup} disabled={lineupPending} />
             <SubmitButton className="w-full bg-primary text-primary-foreground shadow-lg shadow-primary/15 hover:bg-primary-hover">
               <Check size={16} /> Save lineup
             </SubmitButton>
@@ -480,22 +431,26 @@ export function OrganizerTeamManager({
   participants: TournamentParticipantOption[];
   teams: TournamentTeamData[];
 }) {
+  const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.id ?? "");
+  const selectedTeam =
+    teams.find((team) => team.id === selectedTeamId) ?? teams[0];
+
   return (
-    <main className="mx-auto w-full max-w-page px-5 py-7 desktop:px-12 desktop:py-10">
+    <main className="w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7">
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="m-0 font-mono text-2xs font-semibold tracking-[0.14em] text-primary-muted">
               TEAM OVERSIGHT
             </p>
-            <h1 className="mt-3 mb-0 font-display text-3xl font-bold leading-[1.05] tracking-[-0.04em] desktop:text-[46px]">
+            <h1 className="mt-2 mb-0 max-w-3xl text-balance font-display text-[28px] font-bold leading-[1.1] tracking-[-0.035em] desktop:text-[31px]">
               Keep every roster tournament-ready
             </h1>
             <p className="mt-3 mb-0 max-w-2xl text-base leading-6 text-secondary-foreground">
               Review live team membership, repair lineup slots, and unlock submissions when a registration change makes a roster invalid.
             </p>
           </div>
-          <span className="rounded-full border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground">
+          <span className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground">
             {teams.length} {teams.length === 1 ? "TEAM" : "TEAMS"}
           </span>
         </div>
@@ -509,19 +464,65 @@ export function OrganizerTeamManager({
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="flex flex-col gap-5">
-            {teams.map((team) => (
+          <div className="grid items-start gap-4 desktop:grid-cols-[220px_minmax(0,1fr)]">
+            <aside className="overflow-x-auto rounded-xl border border-border bg-card p-2 desktop:sticky desktop:top-24 desktop:overflow-visible">
+              <p className="px-2 pt-2 pb-3 font-mono text-[9px] font-semibold tracking-[0.16em] text-muted-foreground">
+                TEAM LIST
+              </p>
+              <div className="flex min-w-max gap-2 desktop:min-w-0 desktop:flex-col">
+                {teams.map((team) => {
+                  const teamValidation = validateRoster(
+                    team.members.map((member) => ({
+                      displayName: member.displayName,
+                      approvedTier: member.approvedTier,
+                      lineupPosition: member.lineupPosition,
+                      starterRole: member.starterRole,
+                      primaryRole: member.primaryRole,
+                      secondaryRole: member.secondaryRole,
+                    })),
+                  );
+                  const selected = team.id === selectedTeam?.id;
+
+                  return (
+                    <button
+                      aria-pressed={selected}
+                      className={cn(
+                        "min-w-48 rounded-lg border px-3 py-3 text-left transition-[background-color,border-color,transform] duration-150 active:translate-y-px desktop:min-w-0",
+                        selected
+                          ? "border-danger/25 bg-danger-soft"
+                          : "border-transparent bg-transparent hover:border-border hover:bg-secondary",
+                      )}
+                      key={team.id}
+                      onClick={() => setSelectedTeamId(team.id)}
+                      type="button"
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="truncate text-sm font-semibold">{team.name}</span>
+                        <span className={cn("font-mono text-[9px] font-bold", teamValidation.valid ? "text-success" : "text-danger")}>
+                          {teamValidation.valid ? "READY" : `${teamValidation.blockingIssues.length} BLOCKERS`}
+                        </span>
+                      </span>
+                      <span className="mt-1 block text-[11px] text-muted-foreground">
+                        {team.members.length} / 7 members. Captain {team.members.find((member) => member.isCaptain)?.displayName ?? "not assigned"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
+
+            {selectedTeam ? (
               <TeamCard
-                key={`${team.id}:${team.status}:${team.submittedAt ?? ""}:${team.members
+                key={`${selectedTeam.id}:${selectedTeam.status}:${selectedTeam.submittedAt ?? ""}:${selectedTeam.members
                   .map(
                     (member) =>
                       `${member.registrationId}-${member.lineupPosition}-${member.starterRole ?? ""}`,
                   )
                   .join("|")}`}
                 participants={participants}
-                team={team}
+                team={selectedTeam}
               />
-            ))}
+            ) : null}
           </div>
         )}
       </div>

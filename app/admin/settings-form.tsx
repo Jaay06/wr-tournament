@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useActionState } from "react";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
+import { Check, Copy, RefreshCw, AlertTriangle } from "lucide-react";
 
 import {
   generateTournamentInvite,
@@ -39,7 +40,7 @@ function SaveButton() {
 
   return (
     <Button
-      className="min-h-12 rounded-md bg-primary px-4 py-3 text-base font-bold text-primary-foreground hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
+      className="h-11 w-full rounded-[10px] px-4 text-sm font-semibold"
       disabled={pending}
       size="lg"
       type="submit"
@@ -47,6 +48,7 @@ function SaveButton() {
       <AnimatedButtonLabel stateKey={pending ? "pending" : "ready"}>
         {pending ? "Saving settings..." : "Save settings"}
       </AnimatedButtonLabel>
+      <Check size={16} />
     </Button>
   );
 }
@@ -80,9 +82,12 @@ export function SettingsForm({
   registrationDeadline: string;
   inviteEnabled: boolean;
 }) {
-  const [state, formAction] = useActionState<SettingsState, FormData>(
-    updateTournamentSettings,
-    {},
+  const [values, setValues] = useState({ name, region, deadlineLocal: registrationDeadline, inviteEnabled });
+  const [state, formAction, pending] = useActionState<SettingsState, FormData>(
+    async (previous, data) => {
+      try { return await updateTournamentSettings(previous, data); }
+      catch { return { error: "Settings could not be saved. Your changes are still here; try again." }; }
+    }, {},
   );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -105,14 +110,17 @@ export function SettingsForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-5" onSubmit={handleSubmit}>
-      <FieldGroup className="gap-5">
-        <Field>
+      <FieldGroup className="grid gap-4 tablet:grid-cols-2">
+        <Field className="tablet:col-span-2">
           <FieldLabel className="text-sm font-semibold" htmlFor="name">
             Tournament name
           </FieldLabel>
           <Input
-            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
-            defaultValue={name}
+            className="h-11 rounded-lg border-border bg-background px-3 text-sm"
+            value={values.name}
+            onChange={event => setValues({ ...values, name: event.target.value })}
+            maxLength={80}
+            disabled={pending}
             id="name"
             name="name"
             required
@@ -125,8 +133,12 @@ export function SettingsForm({
             Wild Rift region
           </FieldLabel>
           <Input
-            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
-            defaultValue={region}
+            className="h-11 rounded-lg border-border bg-background px-3 text-sm"
+            value={values.region}
+            onChange={event => setValues({ ...values, region: event.target.value })}
+            minLength={2}
+            maxLength={40}
+            disabled={pending}
             id="region"
             name="region"
             required
@@ -139,8 +151,10 @@ export function SettingsForm({
             Registration deadline <span className="font-normal text-muted-foreground">UTC</span>
           </FieldLabel>
           <Input
-            className="min-h-12 rounded-md border-border bg-background px-3.5 text-base"
-            defaultValue={registrationDeadline}
+            className="h-11 min-w-0 rounded-lg border-border bg-background px-3 text-sm"
+            value={values.deadlineLocal}
+            onChange={event => setValues({ ...values, deadlineLocal: event.target.value })}
+            disabled={pending}
             id="deadlineLocal"
             name="deadlineLocal"
             type="datetime-local"
@@ -157,7 +171,6 @@ export function SettingsForm({
       />
 
       <Field className="rounded-md border border-border bg-secondary px-3.5 py-3 text-foreground" orientation="horizontal">
-        <Switch defaultChecked={inviteEnabled} id="inviteEnabled" name="inviteEnabled" />
         <FieldContent>
           <FieldLabel className="font-semibold" htmlFor="inviteEnabled">
             Accept new friends
@@ -166,6 +179,7 @@ export function SettingsForm({
             Existing participants keep access when this is turned off.
           </FieldDescription>
         </FieldContent>
+        <Switch checked={values.inviteEnabled} onCheckedChange={checked => setValues({ ...values, inviteEnabled: checked })} disabled={pending} id="inviteEnabled" name="inviteEnabled" />
       </Field>
 
       {state.error ? (
@@ -191,11 +205,19 @@ export function InviteCodeForm() {
     {},
   );
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [copyState, setCopyState] = useState("");
+
+  async function copyCode() {
+    if (!state.code) return;
+    try { await navigator.clipboard.writeText(state.code); setCopyState("Copied"); }
+    catch { setCopyState("Copy failed. Select and copy the code above."); }
+  }
 
   return (
     <div className="flex flex-col gap-4">
       <AlertDialog onOpenChange={setConfirmOpen} open={confirmOpen}>
-        <AlertDialogTrigger render={<Button className="min-h-11 self-start rounded-md border border-border bg-secondary px-3.5 py-2.5 text-sm font-bold text-foreground hover:border-border-strong hover:bg-secondary/80" size="lg" variant="secondary" />}>
+        <AlertDialogTrigger render={<Button className="h-11 w-full gap-2 rounded-lg" size="lg" variant="outline" />}>
+          <RefreshCw size={15} />
           Generate new code
         </AlertDialogTrigger>
         <AlertDialogContent>
@@ -228,11 +250,14 @@ export function InviteCodeForm() {
           <code className="mt-2 block break-all font-mono text-base font-bold tracking-widest text-foreground">
             {state.code}
           </code>
+          <Button type="button" variant="secondary" className="mt-3 h-11 gap-2" onClick={copyCode}><Copy size={15} />{copyState === "Copied" ? "Copied" : "Copy code"}</Button>
+          {copyState && <p role="status" className="mt-2 text-xs">{copyState}</p>}
           <p className="mt-2 mb-0 text-xs leading-5 text-secondary-foreground">
             Copy it now. It will not be shown again, and generating another code invalidates this one.
           </p>
         </Alert>
       ) : null}
+      <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft p-3 text-xs leading-relaxed text-warning"><AlertTriangle size={15} className="shrink-0" /><p className="m-0">A new code immediately invalidates every invite link already shared.</p></div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { CheckCircle2, Scale } from 'lucide-react';
 import Link from 'next/link';
 
 import { MarketingHeader } from '@/components/marketing/marketing-header';
@@ -24,10 +25,10 @@ export const metadata: Metadata = {
 type TierTone = (typeof tiers)[number]['tone'];
 
 const tierCardTones: Record<TierTone, string> = {
-  gold: 'border-l-tier-t1',
-  silver: 'border-l-tier-t2',
-  bronze: 'border-l-tier-t3',
-  grey: 'border-l-tier-t4',
+  gold: 'border-danger/55 bg-danger-soft/65',
+  silver: 'border-primary/55 bg-warning-soft/70',
+  bronze: 'border-border-strong bg-card',
+  grey: 'border-border-strong bg-card',
 };
 
 const tierBadgeTones: Record<TierTone, string> = {
@@ -42,55 +43,66 @@ export default function TiersPage() {
     <div className='min-h-[100dvh] overflow-hidden bg-background text-foreground'>
       <MarketingHeader activePage='tiers' />
 
-      <main className='mx-auto w-full max-w-page px-12 py-16 max-tablet:px-5 max-tablet:py-10'>
-        <div className='max-w-3xl'>
-          <p className='m-0 font-mono text-xs font-semibold tracking-[0.13em] text-success max-phone:text-3xs'>
-            TEAM BALANCE · ORGANIZER REVIEW
-          </p>
-          <h1 className='mt-5 font-display text-4xl font-bold leading-[1.08] max-tablet:text-3xl'>
-            Tier system
-          </h1>
-          <p className='mt-4 max-w-2xl text-lg leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
-            Self-assess your tier when you register. The organizer reviews it
-            before it can be used to validate a submitted roster.
-          </p>
+      <main className='mx-auto w-full max-w-page px-12 py-14 max-tablet:px-5 max-tablet:py-9'>
+        <div className='flex items-end justify-between gap-12 max-tablet:items-start max-tablet:flex-col max-tablet:gap-6'>
+          <div className='max-w-3xl'>
+            <p className='m-0 font-mono text-xs font-semibold tracking-[0.16em] text-primary max-phone:text-3xs'>
+              TEAM BALANCE / ORGANIZER REVIEW
+            </p>
+            <h1 className='mt-5 text-balance font-display text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.02] tracking-[-0.045em]'>
+              Four tiers. One fair room.
+            </h1>
+            <p className='mt-4 max-w-2xl text-lg leading-[1.6] text-secondary-foreground max-phone:text-base max-phone:leading-normal'>
+              Self-assess when you register. The organizer confirms the tier
+              used to validate every roster.
+            </p>
+          </div>
+
+          <aside className='flex min-w-80 items-center justify-between gap-8 rounded-xl border border-primary/45 bg-warning-soft px-5 py-5 max-phone:min-w-0 max-phone:w-full'>
+            <div>
+              <p className='font-mono text-3xs font-semibold tracking-[0.16em] text-warning'>
+                ROSTER CEILING
+              </p>
+              <p className='mt-2 font-display text-2xl font-semibold'>
+                1 T1 / 2 T2
+              </p>
+            </div>
+            <Scale className='text-primary' size={28} strokeWidth={1.7} />
+          </aside>
         </div>
 
         <section className='mt-10 w-full' aria-labelledby='tier-system-title'>
-          <div className='mb-4 flex items-end justify-between gap-5 max-phone:items-start max-phone:flex-col max-phone:gap-2'>
-            <h2
-              className='m-0 font-display text-xl font-bold leading-7'
-              id='tier-system-title'
-            >
-              Rank ranges
-            </h2>
-            <span className='font-mono text-2xs tracking-widest text-muted-foreground'>
-              SELF-ASSESS · ORGANIZER REVIEW
-            </span>
-          </div>
+          <h2 className='sr-only' id='tier-system-title'>
+            Rank ranges
+          </h2>
 
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-3.5 max-tablet:grid-cols-1'>
+          <div className='grid grid-cols-4 gap-3 max-tablet:grid-cols-2 max-phone:grid-cols-1'>
             {tiers.map((tier) => (
               <Card
                 className={cn(
-                  'flex min-h-28 items-start gap-3.5 rounded-xl border border-border border-l-3 bg-card p-4.5 py-4.5 ring-0',
+                  'flex min-h-56 flex-col items-stretch justify-between rounded-xl border p-5 ring-0 max-tablet:min-h-44',
                   tierCardTones[tier.tone],
                 )}
                 key={tier.tier}
               >
-                <Badge
-                  className={cn(
-                    'h-11 w-11 shrink-0 rounded-lg border border-current p-0 font-display text-sm font-extrabold',
-                    tierBadgeTones[tier.tone],
-                  )}
-                >
-                  {tier.tier}
-                </Badge>
-                <div>
-                  <h3 className='mb-1.25 mt-px text-sm font-bold leading-4.5'>
+                <div className='flex items-center justify-between'>
+                  <Badge
+                    className={cn(
+                      'h-auto rounded-md border border-current px-2 py-1 font-mono text-2xs font-bold tracking-widest',
+                      tierBadgeTones[tier.tone],
+                    )}
+                  >
+                    {tier.tier}
+                  </Badge>
+                  <span className='font-mono text-3xs tracking-widest text-muted-foreground'>
+                    {tier.tier === 'T1' ? 'MAX 1' : tier.tier === 'T2' ? 'MAX 2' : 'OPEN'}
+                  </span>
+                </div>
+                <div className='mt-10'>
+                  <h3 className='mb-2 font-display text-xl font-bold leading-tight'>
                     {tier.range}
                   </h3>
-                  <p className='m-0 text-xs leading-[1.45] text-secondary-foreground'>
+                  <p className='m-0 text-sm leading-[1.5] text-secondary-foreground'>
                     {tier.detail}
                   </p>
                 </div>
@@ -100,22 +112,25 @@ export default function TiersPage() {
         </section>
 
         <section
-          className='mt-6 w-full rounded-2xl border border-border bg-card p-5'
+          className='mt-6 flex w-full items-center justify-between gap-7 rounded-xl border border-border-strong bg-card p-5 max-tablet:items-start max-tablet:flex-col'
           aria-labelledby='tier-review-title'
         >
-          <h2 className='font-display text-lg font-bold' id='tier-review-title'>
-            How approval affects teams
-          </h2>
-          <p className='mt-3 text-sm leading-6 text-secondary-foreground'>
-            You can join a draft team while your tier is pending, but every
-            player needs an approved tier before the captain can submit the
-            roster. T1 and T2 limits are checked across starters and
-            substitutes.
-          </p>
+          <div className='flex gap-3'>
+            <CheckCircle2 className='mt-0.5 shrink-0 text-success' size={19} />
+            <div>
+              <h2 className='font-display text-lg font-bold' id='tier-review-title'>
+                What approval changes
+              </h2>
+              <p className='mt-2 text-sm leading-6 text-secondary-foreground'>
+                Pending players can join a draft. Every player needs an
+                approved tier before the captain can submit the roster.
+              </p>
+            </div>
+          </div>
           <Link
             className={cn(
               buttonVariants({ variant: 'link' }),
-              'mt-4 min-h-11 px-0 font-semibold text-primary-muted',
+              'min-h-11 shrink-0 px-0 font-semibold text-primary-muted',
             )}
             href='/rules'
           >

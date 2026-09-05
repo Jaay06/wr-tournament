@@ -10,19 +10,26 @@ import {
   useDragControls,
   useReducedMotion,
 } from 'motion/react';
-import type { FormEvent, HTMLAttributes, ReactNode } from 'react';
+import type {
+  FormEvent,
+  HTMLAttributes,
+  PointerEvent as ReactPointerEvent,
+  ReactNode,
+} from 'react';
 import { useActionState } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowLeftRight,
   ArrowRight,
   Check,
   CheckCircle2,
   Clock3,
   Crown,
   GripVertical,
+  Info,
   LockKeyhole,
   LogOut,
   Menu,
@@ -58,10 +65,8 @@ import {
 } from '@/app/tournament/actions';
 import { OrganizerTeamManager } from '@/app/admin/teams/team-manager';
 import { EntryShell } from '@/components/auth/entry-shell';
-import {
-  RiftClashLogo,
-  RiftClashMark,
-} from '@/components/brand/rift-clash-logo';
+import { RiftClashMark } from '@/components/brand/rift-clash-logo';
+import { OrganizerAnnouncements, OrganizerSettings, ParticipantAnnouncements, type RoomSettings } from '@/components/tournament/room-communications';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -108,7 +113,6 @@ import {
   availableTournamentParticipants,
   participantTeamExitMode,
   reconcileLineupAssignments,
-  roleMatchesPreferences,
   type LineupAssignment,
   type LineupDropTarget,
   validateRoster,
@@ -142,7 +146,10 @@ export type TournamentView =
   | 'submitted'
   | 'admin'
   | 'tier-review'
-  | 'admin-teams';
+  | 'admin-teams'
+  | 'announcements'
+  | 'admin-announcements'
+  | 'admin-settings';
 
 type Tier = 'T1' | 'T2' | 'T3' | 'T4';
 type Role = 'Baron' | 'Jungle' | 'Mid' | 'Dragon' | 'Support';
@@ -171,6 +178,7 @@ export type TournamentAppProps = {
   adminTeams?: TournamentTeamData[];
   announcements?: TournamentAnnouncementData[];
   incomingInvites?: TournamentIncomingInviteData[];
+  settings?: RoomSettings;
 };
 
 type Player = {
@@ -373,6 +381,12 @@ const previewTeamDetails: TournamentTeamDetailData = {
   }),
 };
 
+const previewTeam: TournamentTeamData = {
+  ...previewTeamDetails,
+  joinRequests: [],
+  invites: [],
+};
+
 const teamCards = [
   {
     name: 'Night Sentinels',
@@ -407,39 +421,33 @@ const stateSwapTransition = {
   bounce: 0,
 } as const;
 
-function Brand({ href }: { href: string }) {
+function DashboardBrand({ href, organizer = false }: { href: string; organizer?: boolean }) {
   return (
     <Link
       aria-label='Rift Clash home'
-      className='flex min-h-11 shrink-0 items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
+      className='flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
       href={href}
     >
-      <RiftClashLogo className='h-11 w-auto' />
-    </Link>
-  );
-}
-
-function DashboardBrand({ href }: { href: string }) {
-  return (
-    <Link
-      aria-label='Rift Clash home'
-      className='flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted desktop:w-[178px]'
-      href={href}
-    >
-      <RiftClashMark className='size-10 shrink-0' />
+      <RiftClashMark className='size-7 shrink-0' />
       <span className='flex min-w-0 flex-col leading-none'>
-        <span className='font-display text-[15px] font-bold tracking-[0.02em] text-foreground'>
+        <span className='font-display text-[15px] font-bold tracking-[0.02em] text-current'>
           RIFT CLASH
         </span>
-        <span className='mt-1 font-mono text-[10px] font-medium tracking-[0.08em] text-muted-foreground'>
-          PRIVATE WILD RIFT
+        <span className='mt-1 font-mono text-[9px] font-medium tracking-[0.1em] text-current opacity-55'>
+          {organizer ? 'ORGANIZER ROOM' : 'PRIVATE WILD RIFT'}
         </span>
       </span>
     </Link>
   );
 }
 
-function ClientSignOutButton({ compact = false }: { compact?: boolean }) {
+function ClientSignOutButton({
+  compact = false,
+  iconOnly = false,
+}: {
+  compact?: boolean;
+  iconOnly?: boolean;
+}) {
   const [pending, setPending] = useState(false);
 
   async function handleSignOut() {
@@ -450,17 +458,31 @@ function ClientSignOutButton({ compact = false }: { compact?: boolean }) {
   return (
     <Button
       className={cn(
-        'border border-border bg-secondary text-foreground hover:border-border-strong hover:bg-secondary/80',
-        compact
-          ? 'min-h-9 rounded-full px-3.5 py-2 text-xs'
-          : 'min-h-11 w-full',
+        'border border-white/10 bg-white/5 text-shell-sidebar-foreground hover:border-white/20 hover:bg-white/10',
+        iconOnly
+          ? 'size-9 min-h-9 shrink-0 rounded-lg border-0 bg-transparent p-0 text-shell-sidebar-muted hover:bg-white/6 hover:text-shell-sidebar-foreground'
+          : compact
+            ? 'min-h-9 rounded-full px-3.5 py-2 text-xs'
+            : 'min-h-11 w-full',
       )}
       disabled={pending}
       onClick={handleSignOut}
-      size={compact ? 'sm' : 'lg'}
+      size={iconOnly ? 'icon' : compact ? 'sm' : 'lg'}
       type='button'
+      aria-label={iconOnly ? 'Sign out' : undefined}
     >
-      {pending ? 'Signing out...' : 'Sign out'}
+      {iconOnly ? (
+        <>
+          <LogOut aria-hidden='true' size={15} />
+          <span className='sr-only'>
+            {pending ? 'Signing out...' : 'Sign out'}
+          </span>
+        </>
+      ) : pending ? (
+        'Signing out...'
+      ) : (
+        'Sign out'
+      )}
     </Button>
   );
 }
@@ -470,6 +492,7 @@ function AppHeader({
   region,
   userName,
   showSignOut,
+  teamStatus,
   approvedTier,
   tierStatus,
   deadlineRemaining,
@@ -479,44 +502,78 @@ function AppHeader({
   region: string;
   userName: string;
   showSignOut: boolean;
+  teamStatus?: 'draft' | 'submitted';
   approvedTier?: Tier | null;
   tierStatus?: 'pending' | 'approved';
   deadlineRemaining?: string;
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  // Every authenticated tournament view uses the revised shell. The invite
-  // state returns before this header is rendered, but keeping the condition
-  // tied to `view` makes the presentation contract explicit for previews and
-  // future entry states.
-  const revisedShell = view !== 'invite';
   const organizer =
-    view === 'admin' || view === 'tier-review' || view === 'admin-teams';
+    view === 'admin' || view === 'tier-review' || view.startsWith('admin-');
   const participantItems = [
-    ['dashboard', 'Overview', '/tournament'],
-    ['profile', 'Profile', '/tournament/profile'],
-    ['builder', 'My team', '/tournament/team'],
-    ['teams', 'Browse teams', '/tournament/teams'],
-    ['announcements', 'Announcements', '/tournament#announcements'],
+    {
+      key: 'dashboard',
+      label: 'Overview',
+      href: '/tournament',
+      icon: ShieldCheck,
+    },
+    {
+      key: 'profile',
+      label: 'Profile',
+      href: '/tournament/profile',
+      icon: UserRoundCheck,
+    },
+    { key: 'builder', label: 'My team', href: '/tournament/team', icon: Users },
+    {
+      key: 'teams',
+      label: 'Browse teams',
+      href: '/tournament/teams',
+      icon: Search,
+    },
+    {
+      key: 'announcements',
+      label: 'Announcements',
+      href: '/tournament/announcements',
+      icon: MessageSquareText,
+    },
   ] as const;
   const organizerItems = [
-    ['admin', 'Overview', '/admin'],
-    ['tier-review', 'Tier review', '/admin/tier-review'],
-    ['teams-admin', 'Teams', '/admin/teams'],
-    ['announcements', 'Announcements', '/admin#announcements'],
-    ['settings', 'Settings', '/admin#settings-form'],
+    { key: 'admin', label: 'Overview', href: '/admin', icon: ShieldCheck },
+    {
+      key: 'tier-review',
+      label: 'Tier review',
+      href: '/admin/tier-review',
+      icon: UserRoundCheck,
+    },
+    { key: 'teams-admin', label: 'Teams', href: '/admin/teams', icon: Users },
+    {
+      key: 'announcements',
+      label: 'Announcements',
+      href: '/admin/announcements',
+      icon: MessageSquareText,
+    },
+    {
+      key: 'settings',
+      label: 'Settings',
+      href: '/admin/settings',
+      icon: Settings,
+    },
   ] as const;
   const items = organizer ? organizerItems : participantItems;
   const activeKey =
     view === 'registration'
       ? 'profile'
-      : view === 'team-details' || view === 'players' || view === 'player-details'
+      : view === 'team-details' ||
+          view === 'players' ||
+          view === 'player-details'
         ? 'teams'
-      : view === 'submitted'
-        ? 'builder'
-        : view === 'admin-teams'
-          ? 'teams-admin'
-          : view;
+        : view === 'submitted'
+          ? 'builder'
+          : view === 'admin-teams'
+            ? 'teams-admin'
+            : view === 'admin-announcements' ? 'announcements'
+              : view === 'admin-settings' ? 'settings' : view;
   const participantTierLabel = approvedTier
     ? `${approvedTier} APPROVED`
     : tierStatus === 'pending'
@@ -524,130 +581,188 @@ function AppHeader({
       : 'PROFILE INCOMPLETE';
   const deadlineLabel =
     deadlineStatus === 'passed' ? 'CLOSED' : (deadlineRemaining ?? 'OPEN');
+  const activeItem = items.find((item) => item.key === activeKey);
+  const homeHref = organizer ? '/admin' : '/tournament';
+  const teamRoom = view === 'builder' || view === 'submitted';
 
   return (
-    <header
-      className={cn(
-        'z-40',
-        revisedShell
-          ? 'relative border-0 bg-transparent'
-          : 'sticky top-0 border-b border-border bg-background/95 backdrop-blur-xl',
-      )}
-    >
-      <div
-        className={cn(
-          'mx-auto flex w-full max-w-page items-center gap-8',
-          revisedShell
-            ? 'min-h-20 px-4 py-4 phone:px-5 desktop:min-h-19 desktop:px-7'
-            : 'min-h-18 px-5 py-3 desktop:px-12',
-        )}
-      >
-        {revisedShell ? (
-          <DashboardBrand href={organizer ? '/admin' : '/tournament'} />
-        ) : (
-          <Brand href={organizer ? '/admin' : '/tournament'} />
-        )}
-
-        <nav
-          className={cn(
-            'hidden items-center desktop:flex',
-            revisedShell ? 'min-w-0 flex-1 justify-center gap-2' : 'gap-1',
-          )}
-          aria-label={organizer ? 'Organizer' : 'Tournament'}
-        >
-          {items.map(([key, label, href]) => (
-            <Link
-              className={cn(
-                'inline-flex items-center text-secondary-foreground transition-colors hover:bg-secondary/70 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-muted',
-                revisedShell
-                  ? 'min-h-11 rounded-[10px] px-[22px] text-[15px] font-normal'
-                  : 'min-h-11 rounded-lg px-3 text-sm font-semibold',
-                activeKey === key && 'bg-primary-soft text-primary-muted',
-                activeKey === key && revisedShell && 'font-bold',
-              )}
-              href={href}
-              key={key}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className='ml-auto hidden items-center gap-2 desktop:flex'>
-          <StatusPill
-            tone={organizer ? 'primary' : approvedTier ? 'success' : 'warning'}
+    <>
+      <aside className='fixed inset-y-0 left-0 z-40 hidden w-[244px] flex-col border-r border-white/10 bg-shell-sidebar px-[18px] py-7 text-shell-sidebar-foreground desktop:flex'>
+        <div className='px-1'>
+          <DashboardBrand href={homeHref} organizer={organizer} />
+        </div>
+        <div className='mt-5 border-t border-white/10 pt-6'>
+          <p className='m-0 px-3 font-mono text-[9px] font-semibold tracking-[0.2em] text-shell-sidebar-muted'>
+            {organizer ? 'CONTROL ROOM' : 'TOURNAMENT'}
+          </p>
+          <nav
+            className='mt-4 flex flex-col gap-1'
+            aria-label={organizer ? 'Organizer' : 'Tournament'}
           >
-            {organizer ? 'ORGANIZER' : participantTierLabel}
-          </StatusPill>
-          {!organizer ? (
-            <StatusPill
-              tone={deadlineStatus === 'passed' ? 'danger' : 'warning'}
-            >
-              {deadlineLabel}
-            </StatusPill>
-          ) : null}
-          <Badge className='h-auto rounded-full border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground'>
-            {region.toUpperCase()}
-          </Badge>
-          <span
-            className='grid size-9 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-muted'
-            aria-hidden='true'
-          >
-            {userName.slice(0, 1).toUpperCase()}
-          </span>
-          {showSignOut && !revisedShell ? <ClientSignOutButton compact /> : null}
+            {items.map(({ href, icon: Icon, key, label }) => (
+              <Link
+                className={cn(
+                  'relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-shell-sidebar-muted transition-[background-color,color,transform] duration-150 hover:bg-white/6 hover:text-shell-sidebar-foreground active:translate-y-px focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                  activeKey === key &&
+                    'bg-white/9 font-semibold text-shell-sidebar-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary',
+                )}
+                href={href}
+                aria-current={activeKey === key ? 'page' : undefined}
+                key={key}
+              >
+                <Icon aria-hidden='true' size={17} strokeWidth={1.7} />
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
 
-        <Button
-          aria-expanded={menuOpen}
-          aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-          className='ml-auto size-11 rounded-xl border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden'
-          onClick={() => setMenuOpen((open) => !open)}
-          size='icon-lg'
-          type='button'
-        >
-          {menuOpen ? <X size={19} /> : <Menu size={19} />}
-        </Button>
-      </div>
+        <div className='mt-auto flex flex-col gap-4'>
+          {!teamRoom ? (
+            <div className='rounded-xl border border-white/10 bg-white/4 p-3.5'>
+              <p className='m-0 font-mono text-[9px] font-semibold tracking-[0.16em] text-shell-sidebar-muted'>
+                {organizer ? 'ROOM STATUS' : 'REGISTRATION'}
+              </p>
+              <p className='mt-2 mb-0 text-sm font-semibold text-success'>
+                {deadlineStatus === 'passed' ? 'Closed' : 'Open'}
+              </p>
+              <p className='mt-1 mb-0 text-[11px] leading-4 text-shell-sidebar-muted'>
+                {deadlineStatus === 'open'
+                  ? 'No closing time set.'
+                  : deadlineLabel}
+              </p>
+            </div>
+          ) : null}
+          <div className='flex items-center gap-3 border-t border-white/10 pt-4'>
+            <span className='grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-sm font-bold'>
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+            <span className='min-w-0 flex-1'>
+              <span className='block truncate text-sm font-semibold'>
+                {userName}
+              </span>
+              <span className='mt-0.5 block font-mono text-[8px] tracking-[0.12em] text-shell-sidebar-muted'>
+                {organizer
+                  ? 'ORGANIZER'
+                  : teamRoom
+                    ? `${region.toUpperCase()} / ${participantTierLabel}`
+                    : participantTierLabel}
+              </span>
+            </span>
+            {showSignOut && teamRoom ? <ClientSignOutButton iconOnly /> : null}
+          </div>
+          {showSignOut && !teamRoom ? <ClientSignOutButton /> : null}
+        </div>
+      </aside>
 
-      <AnimatePresence initial={false}>
-        {menuOpen ? (
-          <motion.div
-            animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
-            className='border-t border-border bg-card px-5 py-4 desktop:hidden'
-            exit={{ opacity: 0, transform: 'translateY(-4px) scale(0.99)' }}
-            initial={{ opacity: 0, transform: 'translateY(-8px) scale(0.98)' }}
-            key='mobile-navigation'
-            style={{ transformOrigin: 'top right' }}
-            transition={{ duration: 0.18, ease: easeOutExpo }}
-          >
-            <nav
-              className='mx-auto flex max-w-page flex-col gap-1'
-              aria-label={organizer ? 'Mobile organizer' : 'Mobile tournament'}
+      <header className='sticky top-0 z-30 border-b border-border bg-background/94 backdrop-blur-xl desktop:ml-[244px]'>
+        <div className='flex min-h-[76px] items-center gap-4 px-[18px] desktop:min-h-[78px] desktop:px-[34px]'>
+          <div className='text-foreground desktop:hidden'>
+            <DashboardBrand href={homeHref} organizer={organizer} />
+          </div>
+          <div className='hidden min-w-0 items-center gap-2 font-mono text-[10px] font-semibold tracking-[0.12em] text-muted-foreground desktop:flex'>
+            <span>{organizer ? 'CONTROL ROOM' : 'TOURNAMENT'}</span>
+            <span aria-hidden='true'>/</span>
+            <span className='truncate text-foreground'>
+              {activeItem?.label ?? 'Overview'}
+            </span>
+          </div>
+
+          <div className='ml-auto hidden items-center gap-2 desktop:flex'>
+            {teamRoom ? (
+              <span
+                className={cn(
+                  'font-mono text-[9px] font-semibold tracking-[0.12em]',
+                  teamStatus === 'submitted' ? 'text-success' : 'text-danger',
+                )}
+              >
+                {(teamStatus ?? 'draft').toUpperCase()}
+              </span>
+            ) : (
+              <StatusPill
+                tone={
+                  organizer ? 'primary' : approvedTier ? 'success' : 'warning'
+                }
+              >
+                {organizer ? 'ORGANIZER' : participantTierLabel}
+              </StatusPill>
+            )}
+            {!organizer && !teamRoom ? (
+              <StatusPill
+                tone={deadlineStatus === 'passed' ? 'danger' : 'warning'}
+              >
+                {deadlineLabel}
+              </StatusPill>
+            ) : null}
+            <Badge className='h-auto rounded-full border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground'>
+              {region.toUpperCase()}
+            </Badge>
+            <span
+              className='grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground'
+              aria-hidden='true'
             >
-              {items.map(([key, label, href]) => (
-                <Link
-                  className={cn(
-                    'flex min-h-11 items-center rounded-xl px-3 text-sm font-semibold text-secondary-foreground',
-                    activeKey === key && 'bg-primary-soft text-primary-muted',
-                  )}
-                  href={href}
-                  key={key}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {label}
-                </Link>
-              ))}
-              {showSignOut ? (
-                <div className='mt-3 border-t border-border pt-3'>
-                  <ClientSignOutButton />
-                </div>
-              ) : null}
-            </nav>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </header>
+              {userName.slice(0, 1).toUpperCase()}
+            </span>
+          </div>
+
+          <Button
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+            className='ml-auto size-10 rounded-lg border border-border bg-secondary text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted desktop:hidden'
+            onClick={() => setMenuOpen((open) => !open)}
+            size='icon-lg'
+            type='button'
+          >
+            {menuOpen ? <X size={19} /> : <Menu size={19} />}
+          </Button>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {menuOpen ? (
+            <motion.div
+              animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
+              className='absolute inset-x-0 top-full border-t border-border bg-card px-5 py-4 shadow-2xl shadow-background/35 desktop:hidden'
+              exit={{ opacity: 0, transform: 'translateY(-4px) scale(0.99)' }}
+              initial={{
+                opacity: 0,
+                transform: 'translateY(-8px) scale(0.98)',
+              }}
+              key='mobile-navigation'
+              style={{ transformOrigin: 'top right' }}
+              transition={{ duration: 0.18, ease: easeOutExpo }}
+            >
+              <nav
+                className='mx-auto flex max-w-page flex-col gap-1'
+                aria-label={
+                  organizer ? 'Mobile organizer' : 'Mobile tournament'
+                }
+              >
+                {items.map(({ href, icon: Icon, key, label }) => (
+                  <Link
+                    className={cn(
+                      'flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-semibold text-secondary-foreground',
+                      activeKey === key && 'bg-primary-soft text-primary-muted',
+                    )}
+                    href={href}
+                    aria-current={activeKey === key ? 'page' : undefined}
+                    key={key}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Icon aria-hidden='true' size={17} strokeWidth={1.7} />
+                    {label}
+                  </Link>
+                ))}
+                {showSignOut ? (
+                  <div className='mt-3 border-t border-border pt-3'>
+                    <ClientSignOutButton />
+                  </div>
+                ) : null}
+              </nav>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </header>
+    </>
   );
 }
 
@@ -661,7 +776,7 @@ function PageFrame({
   return (
     <main
       className={cn(
-        'mx-auto w-full max-w-page px-5 py-7 desktop:px-12 desktop:py-10',
+        'w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7',
         className,
       )}
     >
@@ -1149,7 +1264,9 @@ function RegistrationView({
           <SectionHeading
             detail={`${tournamentName} · ${region}. The organizer confirms the tier used for team limits.`}
             eyebrow={initial ? 'PLAYER PROFILE' : 'PLAYER REGISTRATION'}
-            title={initial ? 'Your player profile' : 'Create your player profile'}
+            title={
+              initial ? 'Your player profile' : 'Create your player profile'
+            }
           />
           <div className='flex flex-wrap gap-2'>
             <StatusPill tone={initial?.approvedTier ? 'success' : 'warning'}>
@@ -1167,8 +1284,8 @@ function RegistrationView({
           </div>
         </div>
 
-        <div className='grid items-start gap-5 desktop:grid-cols-[300px_minmax(0,1fr)]'>
-          <aside className='flex flex-col gap-5 desktop:sticky desktop:top-24'>
+        <div className='grid items-start gap-5 desktop:grid-cols-[minmax(0,1fr)_300px]'>
+          <aside className='order-2 flex flex-col gap-5 desktop:sticky desktop:top-24'>
             <Card className='p-5'>
               <Kicker>ACCOUNT</Kicker>
               <div className='mt-4 flex items-center gap-3'>
@@ -1254,7 +1371,7 @@ function RegistrationView({
 
           <form
             action={formAction}
-            className='flex flex-col gap-5'
+            className='order-1 flex min-w-0 flex-col gap-5'
             onSubmit={captureSubmission}
           >
             <fieldset
@@ -1552,69 +1669,22 @@ function dashboardAvatarClass(player: Player) {
   }[player.tier];
 }
 
-function DashboardRoleLabel({ role }: { role: Role }) {
-  return (
-    <div className='flex items-center gap-2'>
-      <RoleIcon className='size-4 text-role-icon' roleName={role} />
-      <span className='font-mono text-[12px] font-bold tracking-[0.1em] text-primary-muted'>
-        {role.toUpperCase()}
-      </span>
+function DashboardStarterCard({ role, player }: { role: Role; player?: Player }) {
+  return <div className={cn(
+    'min-w-0 rounded-lg border border-border p-3 desktop:min-h-[88px]',
+    player ? 'bg-secondary' : 'hidden place-items-center bg-background/35 desktop:grid',
+  )} aria-label={role + (player ? ': ' + player.name : ': open slot')}>
+    <div className="flex items-center justify-between gap-2">
+      <RoleIcon className={cn('size-5', player ? 'text-role-icon' : 'text-muted-foreground')} roleName={role} />
+      {player && <span className="font-mono text-[8px] text-success">STARTER</span>}
     </div>
-  );
-}
-
-function DashboardStarterCard({
-  role,
-  player,
-}: {
-  role: Role;
-  player?: Player;
-}) {
-  const preference = player
-    ? role === player.primaryRole
-      ? `Primary ${player.primaryRole}`
-      : role === player.secondaryRole
-        ? `Secondary ${player.secondaryRole}`
-        : `Prefers ${player.primaryRole} / ${player.secondaryRole}`
-    : 'Open starter slot';
-
-  return (
-    <div className='flex h-[170px] min-h-[170px] flex-col overflow-hidden rounded-[14px] border border-border bg-secondary p-3'>
-      <DashboardRoleLabel role={role} />
-      {player ? (
-        <div className='mt-2 flex flex-col items-center text-center'>
-          <Avatar
-            player={{ ...player, avatarClass: dashboardAvatarClass(player) }}
-            size='size-12'
-          />
-          <p className='mt-2 max-w-full truncate text-[15px] font-bold text-foreground'>
-            {player.name}
-          </p>
-          <div className='mt-1'>
-            {player.tierStatus === 'pending' ? (
-              <DashboardBadge compact tone='warning'>
-                PENDING
-              </DashboardBadge>
-            ) : (
-              <TierBadge tier={player.tier} />
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className='mt-2 flex flex-col items-center text-center'>
-          <span className='grid size-12 place-items-center rounded-full border border-border-strong bg-card font-display text-lg font-bold text-muted-foreground'>
-            <Plus aria-hidden='true' size={18} />
-          </span>
-          <p className='mt-2 text-sm font-semibold text-muted-foreground'>
-            Empty slot
-          </p>
-        </div>
-      )}
-      <p className='mt-auto mb-0 truncate whitespace-nowrap text-center font-mono text-[12px] font-medium text-muted-foreground'>
-        {preference}
-      </p>
-    </div>
-  );
+    {player && <div className="mt-3 flex min-w-0 items-center gap-2">
+      <Avatar player={{ ...player, avatarClass: dashboardAvatarClass(player) }} size="size-7" />
+      <div className="min-w-0"><p className="m-0 truncate text-sm font-bold">{player.name}</p>
+        <p className="mt-0.5 mb-0 text-[10px] text-muted-foreground">{player.tierStatus === 'pending' ? 'Tier pending' : player.tier} - {player.primaryRole} / {player.secondaryRole}</p>
+      </div>
+    </div>}
+  </div>;
 }
 
 function dashboardTime(value: string) {
@@ -1646,7 +1716,6 @@ function RevisedDashboardView({
   tournamentName,
   region,
   deadline,
-  deadlineRemaining,
   deadlineStatus,
   userName,
   registration,
@@ -1678,22 +1747,6 @@ function RevisedDashboardView({
   const liveRegistration =
     registration === undefined ? previewRegistration : registration;
   const profileName = userName || liveRegistration?.riotName || 'Player';
-  const user: Player = {
-    ...rosterPlayers[2],
-    name: profileName,
-    riotId: liveRegistration
-      ? `${liveRegistration.riotName}#${liveRegistration.riotTag}`
-      : `${profileName}#0420`,
-    rank: liveRegistration?.currentRank ?? 'Registration incomplete',
-    tier:
-      liveRegistration?.approvedTier ??
-      liveRegistration?.selfAssessedTier ??
-      'T3',
-    tierStatus: liveRegistration?.tierStatus,
-    primaryRole: liveRegistration?.primaryRole ?? 'Mid',
-    secondaryRole: liveRegistration?.secondaryRole ?? 'Support',
-    initial: profileName.slice(0, 1).toUpperCase(),
-  };
   const liveTeam = team === undefined ? null : team;
   const hasTeam = preview || Boolean(liveTeam);
   const teamMembers = liveTeam?.members ?? [];
@@ -1784,357 +1837,68 @@ function RevisedDashboardView({
     ? 0
     : notifications.filter((notification) => notification.status === 'unread')
         .length;
-  const latestUnread = notifications.find(
-    (notification) => notification.status === 'unread',
-  );
   const profileTierLabel = liveRegistration?.approvedTier
     ? `${liveRegistration.approvedTier} APPROVED`
     : liveRegistration?.tierStatus === 'pending'
       ? 'TIER PENDING'
       : 'PROFILE INCOMPLETE';
-  const deadlineValue =
-    deadlineStatus === 'passed'
-      ? 'Closed'
-      : deadlineStatus === 'open'
-        ? 'Open'
-        : (deadlineRemaining ?? 'Open');
   const validationTone: DashboardBadgeTone = validation?.blockingIssues.length
     ? 'danger'
     : validation?.warnings.length
       ? 'warning'
       : 'success';
-  const validationTitle = validation?.blockingIssues.length
-    ? `INVALID ROSTER · ${validation.blockingIssues.length} ${validation.blockingIssues.length === 1 ? 'BLOCKER' : 'BLOCKERS'}`
-    : validation?.warnings.length
-      ? `VALID ROSTER · ${validation.warnings.length} ${validation.warnings.length === 1 ? 'ROLE WARNING' : 'ROLE WARNINGS'}`
-      : 'VALID ROSTER';
-  const validationDetail =
-    validation?.blockingIssues[0] ??
-    validation?.warnings[0] ??
-    'All starter roles and tier limits are satisfied.';
+  const profileStatus = liveRegistration?.approvedTier ? 'Your profile is approved.' : liveRegistration ? 'Your tier is awaiting review.' : 'Complete your player profile.';
+  const teamStatusText = liveTeam?.status === 'submitted' ? 'Your team roster is submitted.' : hasTeam ? (starterCount < 5 ? 'Your draft team needs ' + (5 - starterCount) + ' more starters.' : 'Review the lineup before submission.') : 'Create a team or join an open roster.';
 
-  return (
-    <PageFrame className='px-5 py-5 desktop:px-7 desktop:py-5'>
-      <div
-        aria-label={`${tournamentName} participant dashboard`}
-        className='flex flex-col gap-5'
-      >
-        <div className='grid gap-4 desktop:grid-cols-[minmax(0,1fr)_330px_332px]'>
-          <Card className='min-h-[124px] rounded-[14px] border-border p-[18px] ring-0 desktop:h-[124px]'>
-            <div className='flex h-full flex-wrap items-center gap-3.5'>
-              <Avatar
-                player={{ ...user, avatarClass: dashboardAvatarClass(user) }}
-                size='size-14'
-              />
-              <div className='min-w-0 flex-1 max-phone:min-w-[120px]'>
-                <p className='m-0 truncate font-display text-lg font-bold'>
-                  {profileName}
-                </p>
-                <p className='mt-2 truncate text-base text-secondary-foreground'>
-                  {user.rank} · {user.primaryRole} / {user.secondaryRole} ·{' '}
-                  {region}
-                </p>
-              </div>
-              <div className='ml-auto flex shrink-0 flex-col items-end gap-2 max-phone:ml-[70px] max-phone:w-[calc(100%-70px)] max-phone:flex-row max-phone:flex-wrap max-phone:items-start max-phone:justify-start'>
-                <DashboardBadge
-                  tone={liveRegistration?.approvedTier ? 'success' : 'warning'}
-                >
-                  {profileTierLabel}
-                </DashboardBadge>
-                <DashboardBadge tone={liveRegistration ? 'neutral' : 'warning'}>
-                  {liveRegistration
-                    ? 'REGISTRATION COMPLETE'
-                    : 'REGISTRATION INCOMPLETE'}
-                </DashboardBadge>
-              </div>
-            </div>
-          </Card>
-          <Card className='min-h-[124px] rounded-[14px] border-border p-[18px] ring-0 desktop:h-[124px]'>
-            <Kicker
-              className={
-                deadlineStatus === 'passed'
-                  ? 'text-danger'
-                  : deadlineStatus === 'open'
-                    ? 'text-muted-foreground'
-                    : 'text-warning'
-              }
-            >
-              REGISTRATION DEADLINE
-            </Kicker>
-            <p
-              className={cn(
-                'mt-2 font-display text-2xl font-bold',
-                deadlineStatus === 'passed'
-                  ? 'text-danger'
-                  : deadlineStatus === 'open'
-                    ? 'text-foreground'
-                    : 'text-warning',
-              )}
-            >
-              {deadlineValue}
-            </p>
-            <p className='mt-1 text-xs font-medium text-muted-foreground'>
-              {deadlineStatus === 'open' ? 'No closing time set' : deadline}
-            </p>
-          </Card>
-          <Card
-            className={cn(
-              'min-h-[124px] rounded-[14px] border p-[18px] ring-0',
-              latestUnread
-                ? 'border-primary bg-primary-soft'
-                : 'border-border bg-card',
-            )}
-          >
-            <Kicker className={latestUnread ? 'text-primary-muted' : undefined}>
-              {latestUnread ? 'NEW NOTIFICATION' : 'NO NEW NOTIFICATION'}
-            </Kicker>
-            <p className='mt-2 line-clamp-2 text-base font-bold'>
-              {latestUnread?.message ?? 'You are all caught up.'}
-            </p>
-            <p className='mt-1 text-xs font-medium text-muted-foreground'>
-              {latestUnread
-                ? dashboardTime(latestUnread.createdAt)
-                : 'View notifications below'}
-            </p>
-          </Card>
-        </div>
-
-        <div className='grid items-start gap-4 desktop:grid-cols-[minmax(0,2.015fr)_minmax(0,1fr)]'>
-          <Card className='min-h-[534px] rounded-[14px] border-border p-5 ring-0'>
-            <div className='flex min-h-[58px] flex-wrap items-start justify-between gap-4'>
-              <div className='min-w-0'>
-                <h1 className='m-0 truncate font-display text-[24px] font-bold leading-[1.1] tracking-[-0.03em]'>
-                  {hasTeam ? (liveTeam?.name ?? 'Void Hunters') : 'No team yet'}
-                </h1>
-                <p className='mt-1 text-base text-secondary-foreground'>
-                  {hasTeam
-                    ? `${liveTeam?.status === 'submitted' ? 'Submitted roster' : 'Draft roster'} · Captain: ${captainName} · ${starterCount} starters · ${substituteCount} substitute${substituteCount === 1 ? '' : 's'}`
-                    : 'Create a team or browse open draft rosters.'}
-                </p>
-              </div>
-              {hasTeam ? (
-                <div className='flex shrink-0 items-center gap-2'>
-                  <DashboardBadge tone='primary'>
-                    {liveTeam?.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}
-                  </DashboardBadge>
-                  <DashboardBadge tone='neutral'>
-                    {teamMembers.length || (preview ? 6 : 0)}/7
-                  </DashboardBadge>
-                </div>
-              ) : null}
-            </div>
-            {hasTeam ? (
-              <>
-                <div className='mt-4 grid min-h-[180px] gap-3 desktop:grid-cols-5'>
-                  {starterSlots.map((role, index) => (
-                    <DashboardStarterCard
-                      key={role}
-                      player={teamStarters[index]}
-                      role={role}
-                    />
-                  ))}
-                </div>
-                <div
-                  className={cn(
-                    'mt-4 flex min-h-[62px] flex-col justify-center gap-2 rounded-[10px] border px-3 py-2.5 tablet:flex-row tablet:items-center tablet:justify-between',
-                    validationTone === 'danger'
-                      ? 'border-danger bg-danger-soft'
-                      : validationTone === 'warning'
-                        ? 'border-warning bg-warning-soft'
-                        : 'border-success bg-success-soft',
-                  )}
-                >
-                  <div className='min-w-0'>
-                    <p
-                      className={cn(
-                        'm-0 font-mono text-[12px] font-bold tracking-[0.06em]',
-                        validationTone === 'danger'
-                          ? 'text-danger'
-                          : validationTone === 'warning'
-                            ? 'text-warning'
-                            : 'text-success',
-                      )}
-                    >
-                      {validationTitle}
-                    </p>
-                    <p className='mt-1 truncate text-xs text-secondary-foreground'>
-                      {validationDetail}{' '}
-                      {validation?.warnings.length &&
-                      !validation?.blockingIssues.length
-                        ? 'Submission is still allowed.'
-                        : ''}
-                    </p>
-                  </div>
-                  <DashboardBadge
-                    tone={
-                      validation?.blockingIssues.length ? 'danger' : 'success'
-                    }
-                  >
-                    {validation?.blockingIssues.length
-                      ? 'BLOCKED'
-                      : 'NO BLOCKERS'}
-                  </DashboardBadge>
-                </div>
-                <div className='mt-4 flex min-h-12 flex-col justify-end gap-3 phone:flex-row'>
-                  <ButtonLink
-                    className='h-12 min-h-12 w-full rounded-[10px] px-5 phone:w-[240px]'
-                    href='/tournament/team'
-                  >
-                    Open team room <ArrowRight size={16} />
-                  </ButtonLink>
-                  <ButtonLink
-                    className='h-12 min-h-12 w-full rounded-[10px] px-5'
-                    href='/tournament/teams'
-                    variant='secondary'
-                  >
-                    Browse teams <ArrowRight size={16} />
-                  </ButtonLink>
-                </div>
-              </>
-            ) : (
-              <div className='flex flex-1 flex-col items-center justify-center py-16 text-center'>
-                <span className='grid size-14 place-items-center rounded-full bg-primary-soft text-primary-muted'>
-                  <Users size={24} />
-                </span>
-                <h2 className='mt-4 font-display text-xl font-bold'>
-                  Find your five
-                </h2>
-                <p className='mt-2 max-w-md text-sm leading-5 text-secondary-foreground'>
-                  Create a team or ask to join a draft roster with room for you.
-                </p>
-                <div className='mt-5 flex w-full flex-col justify-center gap-3 phone:flex-row'>
-                  <ButtonLink
-                    className='h-12 min-h-12 rounded-[10px] px-5'
-                    href='/tournament/team'
-                  >
-                    <Plus size={16} /> Create a team
-                  </ButtonLink>
-                  <ButtonLink
-                    className='h-12 min-h-12 rounded-[10px] px-5'
-                    href='/tournament/teams'
-                    variant='secondary'
-                  >
-                    Browse teams <ArrowRight size={16} />
-                  </ButtonLink>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          <aside className='flex flex-col gap-4'>
-            <Card
-              className='min-h-[290px] rounded-[14px] border-border p-[18px] ring-0'
-              id='announcements'
-            >
-              <div className='flex items-center justify-between gap-3'>
-                <h2 className='m-0 font-display text-lg font-bold'>
-                  Announcements
-                </h2>
-                <a
-                  className='inline-flex min-h-11 items-center rounded-lg text-base font-bold text-primary-muted hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted'
-                  href='#announcements'
-                >
-                  View all
-                </a>
-              </div>
-              <div className='mt-[14px] flex flex-col gap-[14px]'>
-                {announcements.length > 0 ? (
-                  announcements.slice(0, 2).map((announcement) => (
-                    <article
-                      className='min-h-[88px] rounded-[10px] bg-secondary p-3'
-                      key={announcement.id}
-                    >
-                      <p className='m-0 text-[15px] font-bold'>
-                        {announcement.title}
-                      </p>
-                      <p className='mt-1 text-sm leading-5 text-secondary-foreground'>
-                        {announcement.body}
-                      </p>
-                      <p className='mt-1 font-mono text-[12px] font-medium text-muted-foreground'>
-                        {dashboardTime(announcement.createdAt)}
-                      </p>
-                    </article>
-                  ))
-                ) : (
-                  <div className='grid min-h-[88px] place-items-center rounded-[10px] bg-secondary p-3 text-center text-sm text-muted-foreground'>
-                    No announcements yet.
-                  </div>
-                )}
-              </div>
-            </Card>
-            <Card
-              className='min-h-[228px] rounded-[14px] border-border p-[18px] ring-0'
-              id='notifications'
-            >
-              <div className='flex items-center justify-between gap-3'>
-                <h2 className='m-0 font-display text-lg font-bold'>
-                  Direct notifications
-                </h2>
-                {dashboard !== undefined && unreadCount > 0 ? (
-                  <form action={markAllAction}>
-                    <FormSubmitButton className='min-h-11 rounded-full bg-secondary px-3 py-2 text-[11px] text-secondary-foreground hover:bg-secondary/80'>
-                      Mark read
-                    </FormSubmitButton>
-                  </form>
-                ) : null}
-              </div>
-              {notificationState.error ? (
-                <Alert
-                  aria-live='polite'
-                  className='mt-3'
-                  variant='destructive'
-                >
-                  <AlertDescription>{notificationState.error}</AlertDescription>
-                </Alert>
-              ) : null}
-              <div className='mt-3 flex flex-col gap-3'>
-                {notifications.slice(preview ? 1 : 0, 3).map((notification) => {
-                  const tone = dashboardNotificationTone(notification.type);
-                  return (
-                    <article
-                      className={cn(
-                        'min-h-[72px] rounded-[10px] p-3',
-                        tone === 'success'
-                          ? 'bg-success-soft'
-                          : tone === 'primary'
-                            ? 'bg-primary-soft'
-                            : 'bg-secondary',
-                      )}
-                      key={notification.id}
-                    >
-                      <p
-                        className={cn(
-                          'm-0 text-[15px] font-bold',
-                          tone === 'success'
-                            ? 'text-success'
-                            : tone === 'primary'
-                              ? 'text-primary-muted'
-                              : 'text-foreground',
-                        )}
-                      >
-                        {dashboardNotificationTitle(
-                          notification.type,
-                          notification.message,
-                        )}
-                      </p>
-                      <p className='mt-1 text-sm leading-5 text-secondary-foreground'>
-                        {notification.message}
-                      </p>
-                    </article>
-                  );
-                })}
-                {notifications.length === 0 ? (
-                  <div className='grid min-h-[72px] place-items-center rounded-[10px] bg-secondary p-3 text-center text-sm text-muted-foreground'>
-                    No direct notifications yet.
-                  </div>
-                ) : null}
-              </div>
-            </Card>
-          </aside>
-        </div>
+  return <PageFrame>
+    <div aria-label={tournamentName + ' ' + region + ' participant dashboard'} className="flex flex-col gap-5">
+      <div className="flex flex-col justify-between gap-4 tablet:flex-row tablet:items-start">
+        <div><Kicker className="text-primary">PARTICIPANT OVERVIEW</Kicker><h1 className="mt-2 mb-0 text-[28px] font-bold leading-[1.1] tracking-[-0.035em] desktop:text-[34px]">Make the next move.</h1><p className="mt-2 mb-0 text-sm leading-relaxed text-secondary-foreground">{profileStatus} {teamStatusText}</p></div>
+        <Card className={cn('w-full rounded-xl p-3.5 ring-0 tablet:w-44', deadlineStatus === 'passed' ? 'border-danger/30 bg-danger-soft' : 'border-success/30 bg-success-soft')}>
+          <Kicker>REGISTRATION</Kicker><div className="mt-2 flex justify-between gap-3 tablet:block"><p className={cn('m-0 text-sm font-semibold', deadlineStatus === 'passed' ? 'text-danger' : 'text-success')}>{deadlineStatus === 'passed' ? 'Closed' : 'Open'}</p><p className="m-0 text-xs leading-relaxed text-secondary-foreground">{deadlineStatus === 'open' ? 'No closing time set' : deadline}</p></div>
+        </Card>
       </div>
-    </PageFrame>
-  );
+      <div className="grid items-start gap-[18px] desktop:grid-cols-[minmax(0,1fr)_280px]">
+        <Card className="min-w-0 rounded-[14px] p-[18px] ring-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0"><Kicker>YOUR TEAM</Kicker><div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="m-0 truncate text-2xl font-bold">{hasTeam ? liveTeam?.name ?? 'Void Hunters' : 'No team yet'}</h2>{hasTeam && <span className="font-mono text-[9px] text-muted-foreground">{liveTeam?.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}</span>}</div><p className="mt-1 mb-0 text-sm text-muted-foreground">{hasTeam ? 'Captain ' + captainName + ' - ' + (teamMembers.length || 6) + ' of 7 members' : 'Create a team or browse draft rosters.'}</p></div>
+            {hasTeam && <div className="shrink-0 text-right"><Kicker>STARTERS</Kicker><p className="mt-1 mb-0 text-xl font-semibold">{starterCount}<span className="text-xs text-muted-foreground"> / 5</span></p></div>}
+          </div>
+          {hasTeam ? <>
+            <div className="mt-4 grid gap-2 desktop:grid-cols-5">{starterSlots.map((role, index) => <DashboardStarterCard key={role} role={role} player={teamStarters[index]} />)}
+              {starterCount < 5 && <div className="flex items-center gap-3 rounded-lg border border-dashed border-border px-3 py-4 text-sm text-muted-foreground desktop:hidden"><Plus size={18} />{5 - starterCount} starter slots open</div>}
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <p className={cn('m-0 text-sm font-semibold', validationTone === 'danger' ? 'text-danger' : validationTone === 'warning' ? 'text-warning' : 'text-success')}>{validation?.blockingIssues.length ? validation.blockingIssues.length + ' blockers. Roster invalid.' : liveTeam?.status === 'submitted' ? 'Roster submitted.' : 'Roster valid.'}</p>
+              <div className="grid w-full gap-2 phone:flex phone:w-auto"><ButtonLink className="h-11 min-h-11 text-sm" href="/tournament/team" variant="secondary">Open team room <ArrowRight size={15} /></ButtonLink><ButtonLink className="h-11 min-h-11 text-sm" href="/tournament/teams" variant="secondary">Browse teams</ButtonLink></div>
+            </div>
+          </> : <div className="py-8"><p className="text-sm text-secondary-foreground">Find friends to fill the five starting roles.</p><div className="flex flex-wrap gap-2"><ButtonLink href={liveRegistration ? '/tournament/team' : '/tournament/register'}><Plus size={16} />{liveRegistration ? 'Create a team' : 'Complete profile'}</ButtonLink><ButtonLink href="/tournament/teams" variant="secondary">Browse teams</ButtonLink></div></div>}
+        </Card>
+        <aside className="grid gap-4">
+          <Card className="rounded-[14px] bg-secondary p-[18px] ring-0" id="notifications">
+            <div className="flex items-center justify-between gap-2"><Kicker>DIRECT NOTICES</Kicker><span className="text-xs text-primary">{unreadCount} new</span></div>
+            <div className="mt-3 divide-y divide-border">{notifications.slice(0, 3).map(notification => <article className="py-3 first:pt-0" key={notification.id}><p className={cn('m-0 text-sm leading-relaxed', notification.type === 'tier_approved' ? 'text-success' : 'text-foreground')}>{notification.message}</p><p className="mt-1 mb-0 text-2xs text-muted-foreground">{dashboardTime(notification.createdAt)}</p></article>)}</div>
+            {!notifications.length && <p className="text-sm text-muted-foreground">No direct notices yet.</p>}
+            {dashboard !== undefined && unreadCount > 0 && <form action={markAllAction} className="mt-3"><FormSubmitButton className="min-h-9 rounded-lg bg-background px-3 text-xs text-foreground">Mark all read</FormSubmitButton></form>}
+            {notificationState.error && <p role="alert" className="text-sm text-danger">{notificationState.error}</p>}
+          </Card>
+          <Card className="rounded-[14px] p-[18px] ring-0" id="announcements">
+            <Kicker>ANNOUNCEMENTS</Kicker>
+            {announcements.length ? announcements.slice(0, 2).map(post => <article className="mt-3" key={post.id}><h3 className="m-0 text-sm font-bold">{post.title}</h3><p className="mt-1 mb-0 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{post.body}</p></article>) : <><h3 className="mt-3 mb-1 text-lg font-bold">No posts yet.</h3><p className="m-0 text-xs leading-relaxed text-muted-foreground">Tournament updates will appear here.</p></>}
+            <ButtonLink className="mt-4 min-h-10 w-full text-xs" href="/tournament/announcements" variant="secondary">View announcements</ButtonLink>
+          </Card>
+        </aside>
+      </div>
+      <Card className="flex flex-col gap-4 rounded-xl p-4 ring-0 tablet:flex-row tablet:items-center tablet:justify-between">
+        <div><Kicker>NEXT STEPS</Kicker><p className="mt-2 mb-0 text-base font-bold">{liveTeam?.status === 'submitted' ? 'Your roster is locked. Watch for room updates.' : 'Finish the roster before you submit.'}</p></div>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/tournament/profile" className="rounded-lg bg-success-soft px-3 py-2 text-xs text-success">{liveRegistration?.approvedTier ? 'Profile approved' : liveRegistration ? 'Tier pending' : 'Complete profile'}</Link>
+          <Link href="/tournament/team" className="rounded-lg bg-warning-soft px-3 py-2 text-xs text-warning">Build the lineup</Link>
+          <Link href="/tournament/team" className={cn('rounded-lg px-3 py-2 text-xs', validation?.valid ? 'bg-success-soft text-success' : 'bg-secondary text-muted-foreground')}>{liveTeam?.status === 'submitted' ? 'View submission' : 'Review submission'}</Link>
+        </div>
+      </Card>
+    </div>
+  </PageFrame>;
 }
 
 function InvitePreviewView({
@@ -2766,7 +2530,9 @@ function TeamDetailsView({
             eyebrow='TEAM PROFILE'
             title={team.name}
           />
-          <StatusPill tone={team.status === 'submitted' ? 'success' : 'primary'}>
+          <StatusPill
+            tone={team.status === 'submitted' ? 'success' : 'primary'}
+          >
             {team.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}
           </StatusPill>
         </div>
@@ -2780,19 +2546,25 @@ function TeamDetailsView({
                   <p className='m-0 font-display text-2xl font-bold'>
                     {team.members.length}/7
                   </p>
-                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Members</p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>
+                    Members
+                  </p>
                 </div>
                 <div>
                   <p className='m-0 font-display text-2xl font-bold'>
                     {starters.filter(({ member }) => Boolean(member)).length}/5
                   </p>
-                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Starters</p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>
+                    Starters
+                  </p>
                 </div>
                 <div>
                   <p className='m-0 font-display text-2xl font-bold'>
                     {substitutes.length}/2
                   </p>
-                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>Substitutes</p>
+                  <p className='mt-1 mb-0 text-xs text-muted-foreground'>
+                    Substitutes
+                  </p>
                 </div>
               </div>
             </div>
@@ -2911,90 +2683,6 @@ function TeamDetailsView({
         ) : null}
       </div>
     </PageFrame>
-  );
-}
-
-function RoleSlot({
-  role,
-  player,
-  submitted,
-}: {
-  role: Role;
-  player?: Player;
-  submitted: boolean;
-}) {
-  const mismatch = Boolean(
-    player &&
-    !roleMatchesPreferences(role, player.primaryRole, player.secondaryRole),
-  );
-
-  if (!player) {
-    return (
-      <ShadcnCard
-        className='grid min-h-44 place-items-center rounded-2xl border border-dashed border-border-strong bg-secondary/45 p-4 py-4 text-center ring-0'
-        role='article'
-      >
-        <div>
-          <RoleLabel className='justify-center' role={role} />
-          <p className='mt-3 text-sm text-muted-foreground'>
-            Empty starter slot
-          </p>
-        </div>
-      </ShadcnCard>
-    );
-  }
-
-  return (
-    <ShadcnCard
-      className={cn(
-        'rounded-2xl border bg-secondary p-4 py-4 ring-0',
-        mismatch ? 'border-warning/40' : 'border-border',
-      )}
-      role='article'
-    >
-      <div className='flex items-center justify-between gap-2'>
-        <RoleLabel role={role} />
-        {player.isCaptain ? (
-          <Crown
-            className='text-primary-muted'
-            size={15}
-            aria-label='Captain'
-          />
-        ) : null}
-      </div>
-      <div className='mt-4 flex items-center gap-3 desktop:flex-col desktop:items-start'>
-        <Avatar player={player} size='size-11' />
-        <div className='min-w-0'>
-          <p className='m-0 truncate text-sm font-semibold'>{player.name}</p>
-          <p className='mt-1 truncate text-xs text-muted-foreground'>
-            {player.rank}
-          </p>
-        </div>
-      </div>
-      <div className='mt-4 flex items-center justify-between gap-2 border-t border-border pt-3'>
-        {player.tierStatus === 'pending' ? (
-          <StatusPill tone='warning'>PENDING TIER</StatusPill>
-        ) : (
-          <TierBadge tier={player.tier} />
-        )}
-        <RolePreference
-          className='justify-end text-right text-2xs text-muted-foreground'
-          primaryRole={player.primaryRole}
-          secondaryRole={player.secondaryRole}
-        />
-      </div>
-      {mismatch ? (
-        <p className='mt-3 flex items-start gap-1.5 text-xs leading-4 text-warning'>
-          <AlertTriangle className='mt-px shrink-0' size={13} /> Prefers{' '}
-          {player.primaryRole} or {player.secondaryRole}
-        </p>
-      ) : null}
-      {submitted ? (
-        <p className='mt-3 font-mono text-3xs tracking-widest text-muted-foreground'>
-          LOCKED
-        </p>
-      ) : null}
-    </ShadcnCard>
   );
 }
 
@@ -3196,6 +2884,210 @@ function RegistrationRequiredTeamView() {
   );
 }
 
+function LineupMoveMenu({
+  assignment,
+  assignments,
+  members,
+  onArrange,
+  onClose,
+  desktopPlacement = 'right',
+}: {
+  assignment: LineupAssignment;
+  assignments: LineupAssignment[];
+  members: TournamentMemberData[];
+  onArrange: (registrationId: string, target: LineupDropTarget) => void;
+  onClose: () => void;
+  desktopPlacement?: 'left' | 'right';
+}) {
+  const memberName = (registrationId: string) =>
+    members.find((member) => member.registrationId === registrationId)
+      ?.displayName ?? 'Player';
+  const substitutes = assignments.filter(
+    (entry) => entry.lineupPosition === 'substitute',
+  );
+  const choose = (target: LineupDropTarget) => {
+    onArrange(assignment.registrationId, target);
+    onClose();
+  };
+
+  return (
+    <motion.div
+      animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
+      aria-label={`Move ${memberName(assignment.registrationId)}`}
+      className={cn(
+        'absolute top-[calc(100%+10px)] right-0 z-50 w-[min(296px,calc(100vw-2rem))] origin-top-right overflow-hidden rounded-xl border border-border-strong bg-background shadow-2xl shadow-background/60',
+        desktopPlacement === 'left' &&
+          'desktop:left-0 desktop:right-auto desktop:origin-top-left',
+      )}
+      data-lineup-move-menu
+      exit={{ opacity: 0, transform: 'translateY(-4px) scale(0.98)' }}
+      initial={{ opacity: 0, transform: 'translateY(-4px) scale(0.98)' }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+      role='menu'
+      transition={{ duration: 0.18, ease: easeOutExpo }}
+    >
+      <div className='flex items-start justify-between gap-3 bg-secondary px-4 py-3'>
+        <div>
+          <Kicker className='text-primary'>
+            MOVE {memberName(assignment.registrationId).toUpperCase()}
+          </Kicker>
+          <p className='mt-1 text-xs font-medium text-foreground'>
+            Choose a new position
+          </p>
+        </div>
+        <button
+          aria-label='Close move menu'
+          className='grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground transition-[background-color,color,transform] duration-150 ease-out-quad hover:bg-background/60 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-[0.97] motion-reduce:active:scale-100'
+          onClick={onClose}
+          type='button'
+        >
+          <X aria-hidden='true' size={16} />
+        </button>
+      </div>
+      <div className='border-t border-border px-2.5 py-2.5'>
+        <Kicker className='px-2 text-[8px] tracking-[0.12em]'>
+          CHOOSE DESTINATION
+        </Kicker>
+        <div className='mt-1.5 grid gap-1'>
+          {starterSlots.map((role) => {
+            const occupant = assignments.find(
+              (entry) =>
+                entry.lineupPosition === 'starter' &&
+                entry.starterRole === role,
+            );
+            const current =
+              occupant?.registrationId === assignment.registrationId;
+            const occupiedByOther = Boolean(
+              occupant && occupant.registrationId !== assignment.registrationId,
+            );
+            return (
+              <button
+                aria-current={current ? 'true' : undefined}
+                className={cn(
+                  'flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left transition-[background-color,border-color,color,transform] duration-150 ease-out-quad focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring active:scale-[0.99] motion-reduce:active:scale-100',
+                  current
+                    ? 'cursor-default bg-background/60 text-muted-foreground'
+                    : 'text-secondary-foreground hover:bg-secondary hover:text-foreground',
+                )}
+                disabled={current}
+                key={role}
+                onClick={() =>
+                  choose(
+                    occupiedByOther && occupant
+                      ? {
+                          kind: 'player',
+                          registrationId: occupant.registrationId,
+                        }
+                      : { kind: 'starter', role },
+                  )
+                }
+                role='menuitem'
+                type='button'
+              >
+                <span className='flex min-w-0 items-center gap-2.5'>
+                  <RoleIcon
+                    className={cn(
+                      'size-5',
+                      current ? 'text-primary' : 'text-muted-foreground',
+                    )}
+                    roleName={role}
+                  />
+                  <span className='truncate text-xs font-medium'>{role}</span>
+                </span>
+                <span
+                  className={cn(
+                    'shrink-0 font-mono text-[8px] font-bold tracking-[0.08em]',
+                    current ? 'text-muted-foreground' : 'text-primary-muted',
+                  )}
+                >
+                  {current
+                    ? 'CURRENT'
+                    : occupiedByOther && occupant
+                      ? `SWAP · ${memberName(occupant.registrationId).toUpperCase()}`
+                      : 'MOVE'}
+                </span>
+              </button>
+            );
+          })}
+          {assignment.lineupPosition === 'starter' && substitutes.length < 2 ? (
+            <button
+              className='flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left text-secondary-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out-quad hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring active:scale-[0.99] motion-reduce:active:scale-100'
+              onClick={() => choose({ kind: 'substitute' })}
+              role='menuitem'
+              type='button'
+            >
+              <span className='flex items-center gap-2.5'>
+                <span className='grid size-5 place-items-center rounded-md bg-secondary text-muted-foreground'>
+                  <Users aria-hidden='true' size={13} />
+                </span>
+                <span className='text-xs font-medium'>Substitute</span>
+              </span>
+              <span className='font-mono text-[8px] font-bold tracking-[0.08em] text-primary-muted'>
+                MOVE
+              </span>
+            </button>
+          ) : null}
+          {assignment.lineupPosition === 'starter' && substitutes.length === 2
+            ? substitutes.map((substitute) => (
+                <button
+                  className='flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left text-secondary-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out-quad hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring active:scale-[0.99] motion-reduce:active:scale-100'
+                  key={substitute.registrationId}
+                  onClick={() =>
+                    choose({
+                      kind: 'player',
+                      registrationId: substitute.registrationId,
+                    })
+                  }
+                  role='menuitem'
+                  type='button'
+                >
+                  <span className='flex items-center gap-2.5'>
+                    <span className='grid size-5 place-items-center rounded-md bg-secondary text-muted-foreground'>
+                      <Users aria-hidden='true' size={13} />
+                    </span>
+                    <span className='text-xs font-medium'>
+                      {memberName(substitute.registrationId)}
+                    </span>
+                  </span>
+                  <span className='font-mono text-[8px] font-bold tracking-[0.08em] text-primary-muted'>
+                    SWAP
+                  </span>
+                </button>
+              ))
+            : null}
+        </div>
+      </div>
+      {assignment.lineupPosition === 'starter' && substitutes.length > 0 ? (
+        <div className='border-t border-border px-2.5 py-2.5'>
+          <Kicker className='px-2 text-[8px] tracking-[0.12em]'>
+            SWAP WITH A PLAYER
+          </Kicker>
+          <div className='mt-1.5 rounded-lg border border-border bg-secondary/70 px-2.5 py-2'>
+            <p className='m-0 flex items-start gap-2 text-[10px] leading-4 text-secondary-foreground'>
+              <Info
+                aria-hidden='true'
+                className='mt-0.5 shrink-0 text-primary'
+                size={13}
+              />
+              Occupied slots become swaps automatically.
+            </p>
+          </div>
+        </div>
+      ) : null}
+      <div className='border-t border-border bg-background/60 px-4 py-2.5'>
+        <p className='m-0 text-[10px] leading-4 text-muted-foreground'>
+          Changes remain draft until you save the lineup.
+        </p>
+      </div>
+    </motion.div>
+  );
+}
+
 function LineupPlayerCard({
   assignment,
   assignments,
@@ -3203,6 +3095,14 @@ function LineupPlayerCard({
   members,
   onArrange,
   onDragStateChange,
+  canEdit,
+  moveMenuOpen,
+  onToggleMoveMenu,
+  onCloseMoveMenu,
+  isSwapParticipant,
+  swapAnimationKey,
+  variant,
+  role,
 }: {
   assignment: LineupAssignment;
   assignments: LineupAssignment[];
@@ -3210,33 +3110,42 @@ function LineupPlayerCard({
   members: TournamentMemberData[];
   onArrange: (registrationId: string, target: LineupDropTarget) => void;
   onDragStateChange: (registrationId: string, active: boolean) => void;
+  canEdit: boolean;
+  moveMenuOpen: boolean;
+  onToggleMoveMenu: () => void;
+  onCloseMoveMenu: () => void;
+  isSwapParticipant: boolean;
+  swapAnimationKey: number | null;
+  variant: 'starter' | 'substitute';
+  role?: Role;
 }) {
   const player = playerFromMember(member);
   const dragControls = useDragControls();
   const shouldReduceMotion = useReducedMotion();
   const [isDragging, setIsDragging] = useState(false);
-  const substitutes = assignments.filter(
-    (entry) => entry.lineupPosition === 'substitute',
-  );
+  const isStarter = variant === 'starter';
+
+  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!canEdit) return;
+    dragControls.start(event);
+  };
 
   return (
     <motion.div
       className={cn(
-        'relative border border-border bg-card p-3 shadow-sm',
-        isDragging && 'border-primary/55 shadow-xl',
+        'relative select-none border border-border bg-secondary shadow-sm',
+        isStarter
+          ? 'flex min-h-23 flex-col justify-between gap-3 rounded-[11px] p-3.25'
+          : 'flex min-h-13 items-center gap-3 rounded-[10px] px-2.5 py-2',
+        isDragging && 'border-primary/70 shadow-xl shadow-background/50',
       )}
-      drag={shouldReduceMotion ? false : true}
+      drag={canEdit}
       dragControls={dragControls}
       dragElastic={0.06}
       dragListener={false}
       dragMomentum={false}
       dragSnapToOrigin
-      layout={!shouldReduceMotion}
-      layoutId={
-        shouldReduceMotion
-          ? undefined
-          : `lineup-player-${assignment.registrationId}`
-      }
+      layout={canEdit && !shouldReduceMotion}
       onDragEnd={(_, info) => {
         setIsDragging(false);
         onDragStateChange(assignment.registrationId, false);
@@ -3248,129 +3157,251 @@ function LineupPlayerCard({
         onDragStateChange(assignment.registrationId, true);
       }}
       style={{
-        borderRadius: 12,
+        borderRadius: isStarter ? 11 : 10,
         pointerEvents: isDragging ? 'none' : 'auto',
-        zIndex: isDragging ? 30 : 1,
+        zIndex: isDragging ? 30 : moveMenuOpen ? 60 : 1,
       }}
-      transition={{ layout: { type: 'spring', duration: 0.24, bounce: 0 } }}
-      whileDrag={{ scale: 1.02 }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { layout: { type: 'spring', duration: 0.36, bounce: 0.08 } }
+      }
+      whileDrag={shouldReduceMotion ? undefined : { scale: 1.02 }}
     >
+      {isSwapParticipant && swapAnimationKey !== null ? (
+        <motion.div
+          animate={
+            shouldReduceMotion
+              ? { opacity: [0, 0.72, 0] }
+              : {
+                  opacity: [0, 1, 0],
+                  transform: ['scale(0.96)', 'scale(1.01)', 'scale(1)'],
+                }
+          }
+          aria-hidden='true'
+          className='pointer-events-none absolute inset-0 z-10 border-2 border-primary bg-primary/5'
+          initial={
+            shouldReduceMotion
+              ? { opacity: 0 }
+              : { opacity: 0, transform: 'scale(0.96)' }
+          }
+          key={`swap-pulse-${swapAnimationKey}`}
+          style={{ borderRadius: isStarter ? 11 : 10 }}
+          transition={{ duration: 0.34, ease: easeOutExpo }}
+        />
+      ) : null}
       <div
         className={cn(
-          'flex items-start gap-2.5',
-          assignment.lineupPosition === 'starter' && 'desktop:block',
+          'min-w-0 touch-none cursor-grab active:cursor-grabbing',
+          isStarter
+            ? 'flex items-start justify-between gap-2'
+            : 'flex flex-1 items-center gap-3',
         )}
+        onPointerDown={startDrag}
+        title={canEdit ? `Drag ${player.name} to change position` : undefined}
       >
-        <Avatar player={player} size='size-9' />
         <div
           className={cn(
-            'min-w-0 flex-1',
-            assignment.lineupPosition === 'starter' && 'desktop:mt-2',
+            'flex min-w-0 items-center',
+            isStarter ? 'gap-2' : 'gap-3',
           )}
         >
-          <p
-            className='m-0 truncate text-sm font-semibold'
-            title={player.name}
-          >
-            {player.name}
-          </p>
-          <div className='mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-2xs text-muted-foreground'>
-            <span>{player.tier}</span>
-            <span aria-hidden='true'>·</span>
-            <RolePreference
-              primaryRole={player.primaryRole}
-              secondaryRole={player.secondaryRole}
+          {isStarter && role ? (
+            <RoleIcon
+              className={cn(
+                'size-5',
+                role === assignment.starterRole
+                  ? 'text-role-icon'
+                  : 'text-muted-foreground',
+              )}
+              roleName={role}
             />
+          ) : null}
+          {!isStarter ? <Avatar player={player} size='size-7' /> : null}
+          {canEdit ? (
+            <GripVertical
+              aria-hidden='true'
+              className='shrink-0 text-muted-foreground hover:text-primary focus-visible:text-primary'
+              size={15}
+              strokeWidth={1.8}
+            />
+          ) : null}
+          <div className='min-w-0'>
+            <p
+              className={cn(
+                'm-0 truncate font-semibold text-foreground',
+                isStarter ? 'text-sm' : 'text-xs',
+              )}
+              title={player.name}
+            >
+              {player.name}
+              {player.isCaptain ? (
+                <span className='ml-1 text-[9px] font-medium text-primary-muted'>
+                  captain
+                </span>
+              ) : null}
+            </p>
+            <div className='mt-1 flex items-center gap-1.5 text-[9px] text-muted-foreground'>
+              <span>{player.tier}</span>
+              <span aria-hidden='true'>·</span>
+              <RoleIcon
+                className='size-3 text-muted-foreground'
+                roleName={player.primaryRole}
+              />
+              <span className='sr-only'>Primary role {player.primaryRole}</span>
+              <RoleIcon
+                className='size-3 text-muted-foreground'
+                roleName={player.secondaryRole}
+              />
+              <span className='sr-only'>
+                Secondary role {player.secondaryRole}
+              </span>
+            </div>
           </div>
         </div>
-        {!shouldReduceMotion ? (
-          <div
-            aria-hidden='true'
-            className={cn(
-              '-m-2 flex size-11 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-foreground active:cursor-grabbing',
-              assignment.lineupPosition === 'starter' &&
-                'desktop:absolute desktop:right-1 desktop:top-1 desktop:m-0',
-            )}
-            onPointerDown={(event) => dragControls.start(event)}
-            title={`Drag ${player.name}`}
-          >
-            <GripVertical size={18} />
-          </div>
+        {isStarter ? (
+          <span className='shrink-0 font-mono text-[8px] font-bold tracking-[0.08em] text-success'>
+            STARTER
+          </span>
         ) : null}
       </div>
-      <label className='mt-3 block'>
-        <span className='sr-only'>Move or swap {player.name}</span>
-        <NativeSelect
-          aria-label={`Move or swap ${player.name}`}
-          className='w-full'
-          value=''
-          onChange={(event) => {
-            const [kind, value] = event.target.value.split(':');
-            if (kind === 'starter' && value) {
-              onArrange(assignment.registrationId, {
-                kind: 'starter',
-                role: value as Role,
-              });
-            } else if (kind === 'substitute') {
-              onArrange(assignment.registrationId, { kind: 'substitute' });
-            } else if (kind === 'player' && value) {
-              onArrange(assignment.registrationId, {
-                kind: 'player',
-                registrationId: value,
-              });
-            }
-          }}
+      {canEdit ? (
+        <div
+          className={cn(
+            'relative shrink-0',
+            isStarter ? 'self-end' : 'ml-auto',
+          )}
         >
-          <NativeSelectOption value=''>Reassign…</NativeSelectOption>
-          {starterSlots.map((role) => {
-            const occupant = assignments.find(
-              (entry) =>
-                entry.lineupPosition === 'starter' &&
-                entry.starterRole === role,
-            );
-            const occupantName = members.find(
-              (candidate) =>
-                candidate.registrationId === occupant?.registrationId,
-            )?.displayName;
-            const current = occupant?.registrationId === assignment.registrationId;
-            return (
-              <NativeSelectOption
-                disabled={current}
-                key={role}
-                value={`starter:${role}`}
-              >
-                {current
-                  ? `Current: ${role}`
-                  : occupantName
-                    ? `Swap with ${occupantName} · ${role}`
-                    : `Move to ${role}`}
-              </NativeSelectOption>
-            );
-          })}
-          {assignment.lineupPosition === 'starter' && substitutes.length < 2 ? (
-            <NativeSelectOption value='substitute:'>
-              Move to substitute
-            </NativeSelectOption>
-          ) : null}
-          {assignment.lineupPosition === 'starter' && substitutes.length === 2
-            ? substitutes.map((substitute) => {
-                const substituteName = members.find(
-                  (candidate) =>
-                    candidate.registrationId === substitute.registrationId,
-                )?.displayName;
-                return (
-                  <NativeSelectOption
-                    key={substitute.registrationId}
-                    value={`player:${substitute.registrationId}`}
-                  >
-                    Swap with {substituteName ?? 'substitute'}
-                  </NativeSelectOption>
-                );
-              })
-            : null}
-        </NativeSelect>
-      </label>
+          <Button
+            aria-expanded={moveMenuOpen}
+            aria-haspopup='menu'
+            className='min-h-9 gap-1.5 rounded-md border border-border-strong bg-background/25 px-2 text-[10px] text-foreground hover:border-primary/60 hover:bg-background/60 hover:text-foreground desktop:min-h-8'
+            data-lineup-move-trigger
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleMoveMenu();
+            }}
+            size='sm'
+            type='button'
+          >
+            <ArrowLeftRight aria-hidden='true' size={13} />
+            <span>Move</span>
+          </Button>
+          <AnimatePresence initial={false}>
+            {moveMenuOpen ? (
+              <LineupMoveMenu
+                assignment={assignment}
+                assignments={assignments}
+                desktopPlacement={
+                  isStarter && role !== 'Support' ? 'left' : 'right'
+                }
+                members={members}
+                onArrange={onArrange}
+                onClose={onCloseMoveMenu}
+              />
+            ) : null}
+          </AnimatePresence>
+        </div>
+      ) : null}
     </motion.div>
+  );
+}
+
+function LineupRoleSlot({
+  assignment,
+  activeRegistrationId,
+  assignments,
+  canEdit,
+  member,
+  members,
+  onArrange,
+  onDragStateChange,
+  onCloseMoveMenu,
+  onToggleMoveMenu,
+  moveMenuRegistrationId,
+  isSwapParticipant,
+  swapAnimationKey,
+  role,
+}: {
+  assignment?: LineupAssignment;
+  activeRegistrationId: string | null;
+  assignments: LineupAssignment[];
+  canEdit: boolean;
+  member?: TournamentMemberData;
+  members: TournamentMemberData[];
+  onArrange: (registrationId: string, target: LineupDropTarget) => void;
+  onDragStateChange: (registrationId: string, active: boolean) => void;
+  onCloseMoveMenu: () => void;
+  onToggleMoveMenu: () => void;
+  moveMenuRegistrationId: string | null;
+  isSwapParticipant: boolean;
+  swapAnimationKey: number | null;
+  role: Role;
+}) {
+  const activeDrop = Boolean(
+    activeRegistrationId && activeRegistrationId !== assignment?.registrationId,
+  );
+
+  if (!assignment || !member) {
+    return (
+      <ShadcnCard
+        className={cn(
+          'flex min-h-[92px] select-none flex-col justify-between rounded-[11px] border bg-background/15 p-[13px] text-left ring-0 transition-[background-color,border-color,transform] duration-200 ease-out-quad desktop:min-h-[92px]',
+          activeDrop
+            ? 'border-primary/70 bg-primary/5'
+            : 'border-border-strong',
+        )}
+        data-lineup-drop-kind='starter'
+        data-lineup-role={role}
+        role='article'
+      >
+        <div className='flex items-start justify-between gap-2'>
+          <RoleIcon className='size-5 text-muted-foreground' roleName={role} />
+          <span className='font-mono text-[8px] text-muted-foreground'>
+            OPEN
+          </span>
+        </div>
+        <p className='m-0 text-sm font-semibold text-secondary-foreground'>
+          Drop player here
+        </p>
+        <span className='sr-only'>{role} starter slot is open</span>
+      </ShadcnCard>
+    );
+  }
+
+  return (
+    <ShadcnCard
+      className={cn(
+        'relative min-h-[92px] select-none overflow-visible rounded-[11px] border bg-secondary p-0 ring-0 transition-[background-color,border-color,transform] duration-200 ease-out-quad',
+        activeDrop ? 'border-primary/70 bg-primary/5' : 'border-border-strong',
+      )}
+      data-lineup-drop-kind='starter'
+      data-lineup-role={role}
+      role='article'
+    >
+      <div
+        className='h-full'
+        data-lineup-drop-kind='player'
+        data-registration-id={assignment.registrationId}
+      >
+        <LineupPlayerCard
+          assignment={assignment}
+          assignments={assignments}
+          canEdit={canEdit}
+          member={member}
+          members={members}
+          moveMenuOpen={moveMenuRegistrationId === assignment.registrationId}
+          onArrange={onArrange}
+          onCloseMoveMenu={onCloseMoveMenu}
+          onDragStateChange={onDragStateChange}
+          onToggleMoveMenu={onToggleMoveMenu}
+          isSwapParticipant={isSwapParticipant}
+          swapAnimationKey={swapAnimationKey}
+          role={role}
+          variant='starter'
+        />
+      </div>
+    </ShadcnCard>
   );
 }
 
@@ -3378,16 +3409,25 @@ function LineupEditor({
   team,
   currentRegistrationId,
   deadlineStatus,
+  onAssignmentsChange,
+  className,
+  preview = false,
 }: {
   team: TournamentTeamData;
   currentRegistrationId?: string;
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  onAssignmentsChange?: (assignments: LineupAssignment[]) => void;
+  className?: string;
+  preview?: boolean;
 }) {
   const captain = team.members.some(
     (member) =>
       member.registrationId === currentRegistrationId && member.isCaptain,
   );
-  const [draftAssignments, setDraftAssignments] = useState(
+  const canEdit =
+    preview ||
+    (captain && team.status === 'draft' && deadlineStatus !== 'passed');
+  const [draftAssignments, setDraftAssignments] = useState<LineupAssignment[]>(
     team.members.map((member) => ({
       registrationId: member.registrationId,
       lineupPosition: member.lineupPosition,
@@ -3401,8 +3441,15 @@ function LineupEditor({
   const [activeRegistrationId, setActiveRegistrationId] = useState<
     string | null
   >(null);
+  const [moveMenuRegistrationId, setMoveMenuRegistrationId] = useState<
+    string | null
+  >(null);
   const [moveMessage, setMoveMessage] = useState('');
-  const shouldReduceMotion = useReducedMotion();
+  const [previewSaveMessage, setPreviewSaveMessage] = useState('');
+  const [swapAnimation, setSwapAnimation] = useState<{
+    registrationIds: string[];
+    key: number;
+  } | null>(null);
   const [state, formAction] = useActionState<TournamentActionState, FormData>(
     updateTeamLineup,
     {},
@@ -3410,43 +3457,111 @@ function LineupEditor({
   const substitutes = assignments.filter(
     (assignment) => assignment.lineupPosition === 'substitute',
   );
+  const starterCount = assignments.filter(
+    (assignment) => assignment.lineupPosition === 'starter',
+  ).length;
+  const displayedMembers = team.members.map((member) => {
+    const assignment = assignments.find(
+      (candidate) => candidate.registrationId === member.registrationId,
+    );
+    return assignment
+      ? {
+          ...member,
+          lineupPosition: assignment.lineupPosition,
+          starterRole: assignment.starterRole,
+        }
+      : member;
+  });
+  const validation = validateRoster(displayedMembers);
+  const blockingIssueCount = validation.blockingIssues.filter(
+    (issue) => !issue.toLowerCase().startsWith('add '),
+  ).length;
 
-  if (!captain || team.status !== 'draft' || deadlineStatus === 'passed') {
-    return null;
-  }
+  useEffect(() => {
+    if (!moveMenuRegistrationId) return;
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (
+        target?.closest('[data-lineup-move-trigger]') ||
+        target?.closest('[data-lineup-move-menu]')
+      ) {
+        return;
+      }
+      setMoveMenuRegistrationId(null);
+    };
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+    return () =>
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+  }, [moveMenuRegistrationId]);
 
   const arrange = (registrationId: string, target: LineupDropTarget) => {
+    if (!canEdit) return;
     const next = arrangeLineupAssignments(assignments, registrationId, target);
     if (next === assignments) return;
+    const targetAssignment =
+      target.kind === 'player'
+        ? assignments.find(
+            (assignment) => assignment.registrationId === target.registrationId,
+          )
+        : target.kind === 'starter'
+          ? assignments.find(
+              (assignment) =>
+                assignment.lineupPosition === 'starter' &&
+                assignment.starterRole === target.role,
+            )
+          : undefined;
     setDraftAssignments(next);
+    onAssignmentsChange?.(next);
+    const isSwap = Boolean(
+      targetAssignment && targetAssignment.registrationId !== registrationId,
+    );
+    setSwapAnimation((current) => {
+      if (!isSwap || !targetAssignment) {
+        return null;
+      }
+      return {
+        registrationIds: [registrationId, targetAssignment.registrationId],
+        key: (current?.key ?? 0) + 1,
+      };
+    });
     const playerName = team.members.find(
       (member) => member.registrationId === registrationId,
     )?.displayName;
-    const targetName =
-      target.kind === 'player'
-        ? team.members.find(
-            (member) => member.registrationId === target.registrationId,
-          )?.displayName
-        : null;
+    const targetName = targetAssignment
+      ? team.members.find(
+          (member) => member.registrationId === targetAssignment.registrationId,
+        )?.displayName
+      : null;
     setMoveMessage(
       target.kind === 'starter'
-        ? `${playerName ?? 'Player'} moved to ${target.role}. Save to keep this arrangement.`
+        ? isSwap
+          ? `${playerName ?? 'Player'} swapped with ${targetName ?? 'the selected player'}. Save to keep this arrangement.`
+          : `${playerName ?? 'Player'} moved to ${target.role}. Save to keep this arrangement.`
         : target.kind === 'player'
           ? `${playerName ?? 'Player'} swapped with ${targetName ?? 'the selected player'}. Save to keep this arrangement.`
           : `${playerName ?? 'Player'} moved to substitute. Save to keep this arrangement.`,
     );
+    setMoveMenuRegistrationId(null);
   };
 
-  const playerCard = (
-    assignment: LineupAssignment,
-  ) => {
-    const member = team.members.find(
-      (candidate) => candidate.registrationId === assignment.registrationId,
-    );
-    if (!member) return null;
+  const memberFor = (assignment?: LineupAssignment) =>
+    assignment
+      ? team.members.find(
+          (member) => member.registrationId === assignment.registrationId,
+        )
+      : undefined;
 
+  const renderSubstitute = (assignment: LineupAssignment) => {
+    const member = memberFor(assignment);
+    if (!member) return null;
     return (
       <div
+        className={cn(
+          'relative min-w-0 flex-1',
+          activeRegistrationId &&
+            activeRegistrationId !== assignment.registrationId &&
+            'rounded-[10px] ring-1 ring-primary/60',
+        )}
         data-lineup-drop-kind='player'
         data-registration-id={assignment.registrationId}
         key={assignment.registrationId}
@@ -3454,148 +3569,213 @@ function LineupEditor({
         <LineupPlayerCard
           assignment={assignment}
           assignments={assignments}
+          canEdit={canEdit}
+          isSwapParticipant={Boolean(
+            swapAnimation?.registrationIds.includes(assignment.registrationId),
+          )}
           member={member}
           members={team.members}
+          moveMenuOpen={moveMenuRegistrationId === assignment.registrationId}
           onArrange={arrange}
+          onCloseMoveMenu={() => setMoveMenuRegistrationId(null)}
           onDragStateChange={(registrationId, active) =>
             setActiveRegistrationId(active ? registrationId : null)
           }
+          onToggleMoveMenu={() =>
+            setMoveMenuRegistrationId((current) =>
+              current === assignment.registrationId
+                ? null
+                : assignment.registrationId,
+            )
+          }
+          swapAnimationKey={swapAnimation?.key ?? null}
+          variant='substitute'
         />
       </div>
     );
   };
 
   return (
-    <Card className='p-5 desktop:p-6'>
-      <div className='flex flex-wrap items-start justify-between gap-3'>
+    <Card
+      aria-labelledby='starting-lineup-heading'
+      className={cn(
+        'relative select-none overflow-visible bg-card p-[14px] desktop:p-[18px]',
+        className,
+      )}
+      id='starting-lineup-card'
+    >
+      <div className='flex items-start justify-between gap-3'>
         <div>
-          <Kicker>CAPTAIN EDITOR</Kicker>
-          <h2 className='mt-2 font-display text-xl font-bold'>
-            Arrange the lineup
+          <Kicker>STARTING LINEUP</Kicker>
+          <h2
+            className='mt-1 font-display text-lg font-bold desktop:text-[18px]'
+            id='starting-lineup-heading'
+          >
+            Five assigned roles
           </h2>
-          <p className='mt-2 max-w-2xl text-sm leading-6 text-muted-foreground'>
-            {shouldReduceMotion
-              ? 'Use each player menu to move or swap them.'
-              : 'Drag a player by the grip, or use their menu to move and swap them.'}
-          </p>
         </div>
-        <span className='text-xs text-muted-foreground'>
-          Changes save to the draft
+        <span className='font-mono text-xs text-secondary-foreground'>
+          {starterCount} / 5
+          <span className='hidden desktop:inline'> starters</span>
         </span>
       </div>
-      <form action={formAction} className='mt-5 flex flex-col gap-5'>
-        <input name='teamId' type='hidden' value={team.id} />
-        <input
-          name='lineup'
-          type='hidden'
-          value={JSON.stringify(assignments)}
-        />
+
+      {canEdit ? (
+        <div className='mt-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-background/35 px-2.5 py-2 text-[11px] text-secondary-foreground'>
+          <span className='flex min-w-0 items-center gap-2'>
+            <GripVertical
+              aria-hidden='true'
+              className='shrink-0 text-primary'
+              size={15}
+            />
+            <span>Drag a player card, or use Move to choose a role</span>
+          </span>
+          <span className='hidden shrink-0 font-mono text-[8px] font-bold tracking-[0.1em] text-primary desktop:inline'>
+            CAPTAIN CONTROL
+          </span>
+        </div>
+      ) : (
+        <p className='mt-3 rounded-lg border border-border bg-background/35 px-2.5 py-2 text-[11px] text-muted-foreground'>
+          {team.status === 'submitted'
+            ? 'This roster is locked for participant editing.'
+            : deadlineStatus === 'passed'
+              ? 'Roster changes closed with registration.'
+              : 'Only the team captain can arrange this lineup.'}
+        </p>
+      )}
+
+      {blockingIssueCount > 0 ? (
+        <div className='mt-3 flex items-center justify-between gap-4 text-[11px]'>
+          <span className='flex items-center gap-2 font-semibold text-danger'>
+            <AlertTriangle aria-hidden='true' size={15} />
+            Invalid roster · {blockingIssueCount} blockers
+          </span>
+          <span className='hidden text-muted-foreground desktop:inline'>
+            5 named roles must be filled before submission
+          </span>
+        </div>
+      ) : null}
+
+      <form
+        action={preview ? undefined : formAction}
+        className='mt-3'
+        onSubmit={
+          preview
+            ? (event) => {
+                event.preventDefault();
+                setPreviewSaveMessage('Lineup saved to the draft.');
+              }
+            : undefined
+        }
+      >
+        {canEdit ? (
+          <>
+            <input name='teamId' type='hidden' value={team.id} />
+            <input
+              name='lineup'
+              type='hidden'
+              value={JSON.stringify(assignments)}
+            />
+          </>
+        ) : null}
         <LayoutGroup id={`lineup-${team.id}`}>
-          <section aria-labelledby='starter-slots-heading'>
-            <div className='mb-3 flex items-center justify-between gap-3'>
-              <h3
-                className='font-display text-sm font-bold uppercase tracking-wide'
-                id='starter-slots-heading'
-              >
-                Starter slots
-              </h3>
-              <span className='text-xs text-muted-foreground'>
-                {assignments.filter((entry) => entry.lineupPosition === 'starter').length}
-                /5 assigned
-              </span>
-            </div>
-            <div className='grid gap-3 tablet:grid-cols-2 desktop:grid-cols-5'>
-              {starterSlots.map((role) => {
-                const assignment = assignments.find(
-                  (entry) =>
-                    entry.lineupPosition === 'starter' &&
-                    entry.starterRole === role,
-                );
-                return (
+          <div className='grid gap-2 desktop:grid-cols-5'>
+            {starterSlots.map((role) => {
+              const assignment = assignments.find(
+                (entry) =>
+                  entry.lineupPosition === 'starter' &&
+                  entry.starterRole === role,
+              );
+              return (
+                <LineupRoleSlot
+                  activeRegistrationId={activeRegistrationId}
+                  assignment={assignment}
+                  assignments={assignments}
+                  canEdit={canEdit}
+                  isSwapParticipant={Boolean(
+                    swapAnimation?.registrationIds.includes(
+                      assignment?.registrationId ?? '',
+                    ),
+                  )}
+                  key={role}
+                  member={memberFor(assignment)}
+                  members={team.members}
+                  moveMenuRegistrationId={moveMenuRegistrationId}
+                  onArrange={arrange}
+                  onCloseMoveMenu={() => setMoveMenuRegistrationId(null)}
+                  onDragStateChange={(registrationId, active) =>
+                    setActiveRegistrationId(active ? registrationId : null)
+                  }
+                  onToggleMoveMenu={() =>
+                    assignment
+                      ? setMoveMenuRegistrationId((current) =>
+                          current === assignment.registrationId
+                            ? null
+                            : assignment.registrationId,
+                        )
+                      : undefined
+                  }
+                  swapAnimationKey={swapAnimation?.key ?? null}
+                  role={role}
+                />
+              );
+            })}
+          </div>
+
+          <div className='mt-3 border-t border-border pt-3'>
+            <div className='flex flex-col gap-2 desktop:flex-row desktop:items-center'>
+              <div className='flex shrink-0 items-center justify-between gap-4 desktop:w-[112px] desktop:flex-col desktop:items-start desktop:justify-center desktop:gap-0'>
+                <Kicker>SUBSTITUTES</Kicker>
+                <span className='text-[11px] text-muted-foreground'>
+                  {substitutes.length} / 2 slots
+                </span>
+              </div>
+              <div className='flex min-w-0 flex-1 flex-col gap-2 tablet:flex-row'>
+                {substitutes.map(renderSubstitute)}
+                {substitutes.length < 2 ? (
                   <div
                     className={cn(
-                      'min-w-0 rounded-xl border border-border bg-secondary/55 p-2.5 transition-colors',
-                      activeRegistrationId && 'border-primary/45 bg-primary/5',
+                      'flex min-h-[52px] min-w-0 flex-1 select-none items-center gap-2 rounded-[10px] border border-border-strong bg-background/15 px-2.5 text-sm font-semibold text-secondary-foreground transition-[background-color,border-color,color,transform] duration-200 ease-out-quad',
+                      activeRegistrationId
+                        ? 'border-primary/70 bg-primary/5 text-primary-muted'
+                        : 'border-border-strong',
                     )}
-                    data-lineup-drop-kind='starter'
-                    data-lineup-role={role}
-                    key={role}
+                    data-lineup-drop-kind='substitute'
                   >
-                    <div className='mb-2 flex items-center gap-2 px-1 text-xs font-bold uppercase tracking-wide text-secondary-foreground'>
-                      <RoleIcon className='size-4' roleName={role} />
-                      {role}
-                    </div>
-                    {assignment ? (
-                      playerCard(assignment)
-                    ) : (
-                      <div className='flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border px-3 text-center text-xs text-muted-foreground'>
-                        Drop a player here
-                      </div>
-                    )}
+                    <Plus
+                      aria-hidden='true'
+                      className='text-muted-foreground'
+                      size={18}
+                    />
+                    <span>Drop substitute here</span>
                   </div>
-                );
-              })}
+                ) : null}
+              </div>
+              {canEdit ? (
+                <FormSubmitButton className='min-h-10 w-full bg-primary px-3.5 text-xs text-primary-foreground shadow-lg shadow-primary/15 hover:bg-primary-hover desktop:w-auto'>
+                  <Check aria-hidden='true' size={15} /> Save lineup
+                </FormSubmitButton>
+              ) : null}
             </div>
-          </section>
-
-          <section aria-labelledby='substitute-slots-heading'>
-            <div className='mb-3 flex items-center justify-between gap-3'>
-              <h3
-                className='font-display text-sm font-bold uppercase tracking-wide'
-                id='substitute-slots-heading'
-              >
-                Substitutes
-              </h3>
-              <span className='text-xs text-muted-foreground'>
-                {substitutes.length}/2 assigned
-              </span>
-            </div>
-            <div
-              className={cn(
-                'grid gap-3 rounded-xl border border-border bg-secondary/35 p-3 tablet:grid-cols-2',
-                activeRegistrationId && 'border-primary/45 bg-primary/5',
-              )}
-              data-lineup-drop-kind='substitute'
-            >
-              {substitutes.map(playerCard)}
-              {Array.from({ length: 2 - substitutes.length }, (_, index) => (
-                <div
-                  className='flex min-h-28 items-center justify-center rounded-xl border border-dashed border-border px-3 text-center text-xs text-muted-foreground'
-                  data-lineup-drop-kind='substitute'
-                  key={`open-substitute-${index}`}
-                >
-                  Open substitute slot
-                </div>
-              ))}
-            </div>
-            {activeRegistrationId && substitutes.length === 2 ? (
-              <p className='mt-2 text-xs text-muted-foreground'>
-                The bench is full. Drop onto a substitute to swap players.
-              </p>
-            ) : null}
-          </section>
+          </div>
         </LayoutGroup>
+
         <p aria-live='polite' className='sr-only'>
           {moveMessage}
         </p>
         {state.error ? (
-          <Alert aria-live='polite' variant='destructive'>
+          <Alert aria-live='polite' className='mt-3' variant='destructive'>
             <AlertDescription>{state.error}</AlertDescription>
           </Alert>
         ) : null}
-        {state.success ? (
-          <Alert
+        {state.success || previewSaveMessage ? (
+          <p
             aria-live='polite'
-            className='border-success/30 bg-success-soft text-success'
+            className='mt-2 text-[10px] font-medium text-success'
           >
-            <AlertDescription className='text-success'>
-              {state.success}
-            </AlertDescription>
-          </Alert>
+            {state.success ?? previewSaveMessage}
+          </p>
         ) : null}
-        <FormSubmitButton className='self-start border border-border bg-secondary text-foreground hover:border-border-strong'>
-          Save lineup
-        </FormSubmitButton>
       </form>
     </Card>
   );
@@ -3688,8 +3868,8 @@ function TeamMembershipControls({
       ) : exitMode === 'delete' ? (
         <>
           <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
-            You are the only member. Deleting the team keeps your player
-            profile and lets you create or join another team.
+            You are the only member. Deleting the team keeps your player profile
+            and lets you create or join another team.
           </p>
           <AlertDialog>
             <AlertDialogTrigger
@@ -3725,8 +3905,8 @@ function TeamMembershipControls({
       ) : (
         <>
           <p className='mt-3 text-sm leading-5 text-secondary-foreground'>
-            Leaving releases your roster spot. You will need a new invitation
-            or join request to return.
+            Leaving releases your roster spot. You will need a new invitation or
+            join request to return.
           </p>
           <AlertDialog>
             <AlertDialogTrigger
@@ -3825,6 +4005,9 @@ function TeamRoomContent({
     'pending' | 'accepted' | 'declined'
   >('pending');
   const [renaming, setRenaming] = useState(false);
+  const [lineupDraft, setLineupDraft] = useState<LineupAssignment[] | null>(
+    null,
+  );
   const [submitState, submitAction] = useActionState<
     TournamentActionState,
     FormData
@@ -3843,10 +4026,24 @@ function TeamRoomContent({
   >(renameTeam, {});
   const actualTeam = team;
   const liveMembers = actualTeam?.members ?? [];
-  const liveValidation = actualTeam ? validateRoster(liveMembers) : null;
+  const displayedMembers = lineupDraft
+    ? liveMembers.map((member) => {
+        const assignment = lineupDraft.find(
+          (candidate) => candidate.registrationId === member.registrationId,
+        );
+        return assignment
+          ? {
+              ...member,
+              lineupPosition: assignment.lineupPosition,
+              starterRole: assignment.starterRole,
+            }
+          : member;
+      })
+    : liveMembers;
+  const liveValidation = actualTeam ? validateRoster(displayedMembers) : null;
   const liveStarters = actualTeam
     ? starterSlots.map((role) => {
-        const member = liveMembers.find(
+        const member = displayedMembers.find(
           (candidate) =>
             candidate.lineupPosition === 'starter' &&
             candidate.starterRole === role,
@@ -3854,11 +4051,12 @@ function TeamRoomContent({
         return member ? playerFromMember(member) : undefined;
       })
     : rosterPlayers.slice(0, 5);
-  const liveSubstitutes: Array<TournamentMemberData | Player | null> =
-    actualTeam
-      ? liveMembers.filter((member) => member.lineupPosition === 'substitute')
-      : [rosterPlayers[5], null];
-  const substituteCount = liveSubstitutes.filter(Boolean).length;
+  const substituteCount = actualTeam
+    ? displayedMembers.filter(
+        (member) => member.lineupPosition === 'substitute',
+      ).length
+    : Number(Boolean(rosterPlayers[5]));
+  const starterCount = liveStarters.filter(Boolean).length;
   const tierEntries: Array<[Tier, number]> = liveValidation
     ? (Object.entries(liveValidation.tierCounts) as Array<[Tier, number]>)
     : [
@@ -3904,27 +4102,66 @@ function TeamRoomContent({
   }
 
   return (
-    <PageFrame
-      className={
-        !isSubmitted
-          ? 'pb-[calc(6rem+env(safe-area-inset-bottom))] desktop:pb-10'
-          : undefined
-      }
-    >
-      <div className='flex flex-col gap-6'>
-        <div className='flex flex-wrap items-end justify-between gap-5'>
-          <SectionHeading
-            detail={
-              actualTeam
-                ? `${actualTeam.members.find((member) => member.isCaptain)?.displayName ?? 'Captain'} is captain · ${liveMembers.filter((member) => member.lineupPosition === 'starter').length} starters · ${substituteCount} substitutes`
-                : 'Jinxed is captain · 5 starters · 1 substitute'
-            }
-            eyebrow='TEAM ROOM'
-            title={teamName}
-          />
-          <StatusPill tone={isSubmitted ? 'success' : 'primary'}>
-            {isSubmitted ? 'SUBMITTED' : 'DRAFT'}
-          </StatusPill>
+    <PageFrame className={!isSubmitted ? 'pb-10' : undefined}>
+      <div className='flex flex-col gap-[18px]'>
+        <div className='flex flex-col gap-3 desktop:flex-row desktop:items-end desktop:justify-between'>
+          <div>
+            <Kicker className='text-primary'>TEAM ROOM</Kicker>
+            <h1 className='mt-1 font-display text-[28px] font-bold leading-[1.1] tracking-[-0.03em] text-foreground desktop:text-[34px]'>
+              {teamName}.
+            </h1>
+            <p className='mt-1 text-[11px] text-secondary-foreground desktop:text-sm'>
+              <span className='desktop:hidden'>
+                Captain{' '}
+                {actualTeam?.members.find((member) => member.isCaptain)
+                  ?.displayName ?? 'Captain'}{' '}
+                - {isSubmitted ? 'submitted roster' : 'draft roster'} -{' '}
+                {starterCount} / 5 starters
+              </span>
+              <span className='hidden desktop:inline'>
+                Captain{' '}
+                {actualTeam?.members.find((member) => member.isCaptain)
+                  ?.displayName ?? 'Captain'}{' '}
+                - {isSubmitted ? 'submitted roster' : 'draft roster'} -{' '}
+                {liveMembers.length} members - {starterCount}{' '}
+                {starterCount === 1 ? 'starter' : 'starters'}
+              </span>
+            </p>
+          </div>
+          {!isSubmitted && showCaptainControls ? (
+            <div className='flex flex-wrap gap-2'>
+              <ButtonLink
+                className='min-h-10 rounded-xl px-3.5 py-2.5 text-xs shadow-primary/15'
+                href='#team-activity'
+              >
+                <Plus aria-hidden='true' size={15} /> Invite player
+              </ButtonLink>
+              <ButtonLink
+                className='min-h-10 rounded-lg border border-border-strong bg-transparent px-3 py-2.5 text-xs font-bold text-secondary-foreground hover:bg-secondary'
+                href='#team-activity'
+                variant='secondary'
+              >
+                Review request
+              </ButtonLink>
+              {canRename ? (
+                <Button
+                  className='min-h-10 rounded-lg border border-border-strong bg-transparent px-3 py-2.5 text-xs font-bold text-secondary-foreground hover:bg-secondary'
+                  onClick={() => setRenaming((current) => !current)}
+                  size='lg'
+                  type='button'
+                  variant='outline'
+                >
+                  {renaming ? (
+                    'Cancel'
+                  ) : (
+                    <>
+                      Rename <span className='hidden desktop:inline'>team</span>
+                    </>
+                  )}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {isSubmitted ? (
@@ -3998,39 +4235,7 @@ function TeamRoomContent({
             </Card>
           </motion.div>
         ) : (
-          <Card className='p-4 desktop:p-5'>
-            <div className='flex flex-col gap-3 tablet:flex-row tablet:items-center tablet:justify-between'>
-              <div>
-                <Kicker>
-                  {showCaptainControls ? 'CAPTAIN CONTROLS' : 'TEAM MEMBER'}
-                </Kicker>
-                <p className='mt-2 text-sm text-secondary-foreground'>
-                  {showCaptainControls
-                    ? 'Invite friends, resolve requests, then submit the valid roster.'
-                    : 'The captain manages invitations, requests, and submission for this draft.'}
-                </p>
-              </div>
-              {showCaptainControls ? (
-                <div className='flex flex-col gap-2 phone:flex-row'>
-                  <ButtonLink href='#team-activity' variant='secondary'>
-                    <Plus size={16} /> Invite player
-                  </ButtonLink>
-                  <ButtonLink href='#team-activity' variant='secondary'>
-                    <Users size={16} /> Review request
-                  </ButtonLink>
-                  {canRename ? (
-                    <Button
-                      className='min-h-11 border border-border bg-secondary text-foreground hover:border-border-strong'
-                      onClick={() => setRenaming((current) => !current)}
-                      size='lg'
-                      type='button'
-                    >
-                      {renaming ? 'Cancel rename' : 'Rename team'}
-                    </Button>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
+          <>
             {changesClosed ? (
               <Alert className='mt-4 border-danger/30 bg-danger-soft text-danger'>
                 <AlertDescription className='text-danger'>
@@ -4087,108 +4292,31 @@ function TeamRoomContent({
                 </AlertDescription>
               </Alert>
             ) : null}
-          </Card>
+          </>
         )}
 
-        <div className='grid items-start gap-5 desktop:grid-cols-12'>
-          <div className='flex flex-col gap-5 desktop:col-span-8'>
-            <Card className='p-5 desktop:p-6'>
-              <div className='flex items-center justify-between gap-3'>
-                <div>
-                  <Kicker>STARTING LINEUP</Kicker>
-                  <h2 className='mt-2 font-display text-xl font-bold'>
-                    Five assigned roles
-                  </h2>
-                </div>
-                <span className='font-mono text-xs text-secondary-foreground'>
-                  {liveStarters.filter(Boolean).length} / 5
-                </span>
-              </div>
-              <div className='mt-5 grid gap-3 tablet:grid-cols-2 desktop:grid-cols-5'>
-                {starterSlots.map((role, index) => (
-                  <RoleSlot
-                    key={role}
-                    player={liveStarters[index]}
-                    role={role}
-                    submitted={isSubmitted}
-                  />
-                ))}
-              </div>
-            </Card>
-
-            {actualTeam ? (
-              <LineupEditor
-                currentRegistrationId={currentRegistrationId}
-                deadlineStatus={deadlineStatus}
-                team={actualTeam}
-              />
-            ) : null}
-
-            <Card className='p-5 desktop:p-6'>
-              <div className='flex items-center justify-between gap-3'>
-                <div>
-                  <Kicker>SUBSTITUTES</Kicker>
-                  <h2 className='mt-2 font-display text-xl font-bold'>
-                    Up to two substitutes
-                  </h2>
-                </div>
-                <span className='font-mono text-xs text-secondary-foreground'>
-                  {substituteCount} / 2
-                </span>
-              </div>
-              <div className='mt-5 grid gap-3 tablet:grid-cols-2'>
-                {liveSubstitutes.map((member, index) => {
-                  if (!member)
-                    return (
-                      <div
-                        className='grid min-h-24 place-items-center rounded-2xl border border-dashed border-border-strong bg-secondary/45 p-4 text-center'
-                        key={`empty-${index}`}
-                      >
-                        <p className='m-0 flex items-center gap-2 text-sm text-muted-foreground'>
-                          <Plus size={16} /> Optional substitute
-                        </p>
-                      </div>
-                    );
-                  const player =
-                    'displayName' in member ? playerFromMember(member) : member;
-                  return (
-                    <div
-                      className='flex min-h-24 items-center gap-3 rounded-2xl border border-border bg-secondary p-4'
-                      key={
-                        'registrationId' in member
-                          ? member.registrationId
-                          : member.riotId
-                      }
-                    >
-                      <Avatar player={player} />
-                      <div className='min-w-0 flex-1'>
-                        <p className='m-0 text-sm font-semibold'>
-                          {player.name}
-                        </p>
-                        <RolePreference
-                          className='mt-1 text-xs text-muted-foreground'
-                          primaryRole={player.primaryRole}
-                          secondaryRole={player.secondaryRole}
-                        />
-                      </div>
-                      {player.tierStatus === 'pending' ? (
-                        <StatusPill tone='warning'>PENDING</StatusPill>
-                      ) : (
-                        <TierBadge tier={player.tier} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
+        <div className='grid grid-cols-2 gap-4'>
+          <div className='contents'>
+            <LineupEditor
+              className='desktop:col-span-2'
+              currentRegistrationId={currentRegistrationId}
+              deadlineStatus={deadlineStatus}
+              onAssignmentsChange={setLineupDraft}
+              preview={preview}
+              team={actualTeam ?? previewTeam}
+            />
 
             {!isSubmitted ? (
-              <Card className='p-5 desktop:p-6' id='team-activity'>
-                <div>
+              <Card
+                className='bg-secondary p-3.5 desktop:p-4.5 h-fit'
+                id='team-activity'
+              >
+                <div className='flex items-center justify-between gap-3'>
                   <Kicker>INVITES & REQUESTS</Kicker>
-                  <h2 className='mt-2 font-display text-xl font-bold'>
-                    Captain inbox
-                  </h2>
+                  <h2 className='sr-only'>Captain inbox</h2>
+                  <span className='text-[11px] text-primary'>
+                    {pendingInvites.length + pendingJoinRequests.length} waiting
+                  </span>
                 </div>
                 {isCaptain &&
                 !changesClosed &&
@@ -4196,7 +4324,7 @@ function TeamRoomContent({
                 inviteOptions.length > 0 ? (
                   <form
                     action={inviteAction}
-                    className='mt-5 flex flex-col gap-3 rounded-2xl border border-border bg-secondary p-4 tablet:flex-row tablet:items-end'
+                    className='mt-3 flex flex-col gap-3'
                   >
                     <input
                       name='teamId'
@@ -4207,8 +4335,11 @@ function TeamRoomContent({
                       <FieldLabel htmlFor='invitedRegistrationId'>
                         Invite a registered player
                       </FieldLabel>
+                      <FieldDescription>
+                        Select from players without a team.
+                      </FieldDescription>
                       <NativeSelect
-                        className='w-full'
+                        className='mt-2 w-full rounded-lg'
                         id='invitedRegistrationId'
                         name='invitedRegistrationId'
                         defaultValue=''
@@ -4227,8 +4358,8 @@ function TeamRoomContent({
                         ))}
                       </NativeSelect>
                     </Field>
-                    <FormSubmitButton className='bg-primary text-primary-foreground hover:bg-primary-hover'>
-                      <Send size={16} /> Send invite
+                    <FormSubmitButton className='self-start border border-border-strong bg-transparent text-secondary-foreground hover:bg-background/30'>
+                      Send invite
                     </FormSubmitButton>
                   </form>
                 ) : null}
@@ -4252,25 +4383,21 @@ function TeamRoomContent({
                   </Alert>
                 ) : null}
                 {pendingInvites.length > 0 ? (
-                  <div className='mt-5 grid gap-3 tablet:grid-cols-2'>
+                  <div className='mt-4 flex flex-col gap-2 border-t border-border pt-3'>
                     {pendingInvites.map((invite) => (
-                      <div
-                        className='rounded-2xl border border-border bg-secondary p-4'
-                        key={invite.id}
-                      >
-                        <div className='flex items-start justify-between gap-3'>
-                          <div>
-                            <Kicker>TEAM INVITE</Kicker>
-                            <p className='mt-2 text-sm font-semibold'>
-                              Invitation sent to {invite.displayName}
-                            </p>
-                          </div>
-                          <StatusPill tone='warning'>WAITING</StatusPill>
+                      <div className='flex items-start gap-2' key={invite.id}>
+                        <Clock3
+                          className='mt-0.5 shrink-0 text-primary'
+                          size={14}
+                        />
+                        <div>
+                          <p className='text-[11px] font-semibold'>
+                            Invitation sent to {invite.displayName}
+                          </p>
+                          <p className='mt-0.5 text-[9px] text-muted-foreground'>
+                            Waiting for acceptance
+                          </p>
                         </div>
-                        <p className='mt-3 text-xs leading-5 text-muted-foreground'>
-                          {invite.riotName}#{invite.riotTag} can accept while
-                          this roster remains a draft.
-                        </p>
                       </div>
                     ))}
                   </div>
@@ -4426,7 +4553,7 @@ function TeamRoomContent({
             ) : null}
           </div>
 
-          <aside className='flex flex-col gap-5 desktop:sticky desktop:top-24 desktop:col-span-4'>
+          <aside className='flex flex-col gap-5 row-span-2 '>
             <Card className='p-5'>
               <Kicker>ROSTER VALIDATION</Kicker>
               <div
@@ -4562,43 +4689,15 @@ function TeamRoomContent({
                 </Alert>
               ) : null}
             </Card>
-            {actualTeam ? (
-              <TeamMembershipControls
-                currentRegistrationId={currentRegistrationId}
-                deadlineStatus={deadlineStatus}
-                team={actualTeam}
-              />
-            ) : null}
           </aside>
+          {actualTeam ? (
+            <TeamMembershipControls
+              currentRegistrationId={currentRegistrationId}
+              deadlineStatus={deadlineStatus}
+              team={actualTeam}
+            />
+          ) : null}
         </div>
-        {!isSubmitted && showCaptainControls ? (
-          <div className='fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-xl desktop:hidden'>
-            {preview ? (
-              <Button
-                className='mx-auto min-h-11 w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover'
-                onClick={submitPreviewTeam}
-                size='lg'
-                type='button'
-              >
-                <ShieldCheck size={17} /> Submit team
-              </Button>
-            ) : (
-              <form
-                action={submitAction}
-                onSubmit={() => window.scrollTo({ top: 0 })}
-              >
-                <input
-                  name='teamId'
-                  type='hidden'
-                  value={actualTeam?.id ?? ''}
-                />
-                <FormSubmitButton className='mx-auto flex w-full max-w-md bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover'>
-                  <ShieldCheck size={17} /> Submit team
-                </FormSubmitButton>
-              </form>
-            )}
-          </div>
-        ) : null}
       </div>
     </PageFrame>
   );
@@ -4701,7 +4800,7 @@ function OrganizerOverview({
             eyebrow='ORGANIZER OVERVIEW'
             title={`${tournamentName} at a glance`}
           />
-          <ButtonLink href='#settings-form' variant='secondary'>
+          <ButtonLink href='/admin/settings' variant='secondary'>
             <Settings size={16} /> Tournament settings
           </ButtonLink>
         </div>
@@ -4925,7 +5024,7 @@ function OrganizerOverview({
             )}
             <ButtonLink
               className='mt-4 w-full'
-              href='/admin#announcement-form'
+              href='/admin/announcements'
               variant='secondary'
             >
               <Plus size={16} /> New announcement
@@ -4964,7 +5063,7 @@ function OrganizerOverview({
             </dl>
             <ButtonLink
               className='mt-4 w-full'
-              href='#settings-form'
+              href='/admin/settings'
               variant='secondary'
             >
               Edit settings <ArrowRight size={15} />
@@ -5205,8 +5304,8 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
             </ButtonLink>
           </Card>
         ) : (
-          <div className='grid items-start gap-5 desktop:grid-cols-[300px_minmax(0,1fr)]'>
-            <aside className='flex flex-col gap-5 desktop:sticky desktop:top-24'>
+          <div className='grid min-w-0 items-start gap-5 desktop:grid-cols-[300px_minmax(0,1fr)]'>
+            <aside className='flex min-w-0 flex-col gap-5 desktop:sticky desktop:top-24'>
               <Card className='p-4'>
                 <label className='relative block'>
                   <span className='sr-only'>Search pending registrations</span>
@@ -5297,7 +5396,7 @@ function OrganizerTierReviewContent({ review }: { review?: TierReviewData }) {
               </Card>
             </aside>
 
-            <div className='flex flex-col gap-5'>
+            <div className='flex min-w-0 flex-col gap-5'>
               <Card className='p-5 desktop:p-6'>
                 <div className='flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5'>
                   <div className='flex items-center gap-4'>
@@ -5542,6 +5641,7 @@ export function TournamentApp({
   adminTeams,
   announcements,
   incomingInvites,
+  settings,
 }: TournamentAppProps) {
   const previewRegistration =
     registration === undefined
@@ -5566,13 +5666,21 @@ export function TournamentApp({
 
   return (
     <MotionConfig reducedMotion='user'>
-      <div className='min-h-[100dvh] bg-background text-foreground'>
+      <div
+        className='min-h-[100dvh] bg-background text-foreground'
+        data-application-frame
+      >
         <AppHeader
           approvedTier={previewRegistration?.approvedTier}
           deadlineRemaining={deadlineRemaining}
           deadlineStatus={deadlineStatus}
           region={region}
           showSignOut={showSignOut}
+          teamStatus={
+            view === 'submitted' || team?.status === 'submitted'
+              ? 'submitted'
+              : 'draft'
+          }
           tierStatus={previewRegistration?.tierStatus}
           userName={userName}
           view={view}
@@ -5664,6 +5772,9 @@ export function TournamentApp({
             teams={adminTeams ?? []}
           />
         ) : null}
+        {view === 'announcements' ? <PageFrame><ParticipantAnnouncements announcements={announcements ?? []} team={team} deadline={deadline} deadlineStatus={deadlineStatus} /></PageFrame> : null}
+        {view === 'admin-announcements' ? <PageFrame><OrganizerAnnouncements announcements={announcements ?? []} /></PageFrame> : null}
+        {view === 'admin-settings' && settings ? <PageFrame><OrganizerSettings settings={settings} deadlineStatus={deadlineStatus} /></PageFrame> : null}
       </div>
     </MotionConfig>
   );

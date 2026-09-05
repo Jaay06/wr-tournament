@@ -23,9 +23,9 @@ const navItems: readonly {
   page: MarketingPage;
 }[] = [
   { label: 'Overview', href: '/', page: 'overview' },
-  { label: 'Tiers', href: '/tiers', page: 'tiers' },
-  { label: 'Rules', href: '/rules', page: 'rules' },
   { label: 'How it works', href: '/how-it-works', page: 'how-it-works' },
+  { label: 'Rules', href: '/rules', page: 'rules' },
+  { label: 'Tiers', href: '/tiers', page: 'tiers' },
 ];
 
 export async function MarketingHeader({
@@ -56,8 +56,7 @@ export async function MarketingHeader({
               <Link
                 className={cn(
                   'inline-flex min-h-11 items-center rounded-lg text-sm font-medium text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-primary-muted',
-                  isActive &&
-                    'border-b-2 border-primary pb-1.25 font-semibold text-foreground',
+                  isActive && 'font-semibold text-primary',
                 )}
                 href={item.href}
                 aria-current={isActive ? 'page' : undefined}
@@ -73,7 +72,7 @@ export async function MarketingHeader({
           <Link
             className={cn(
               buttonVariants({ size: 'sm' }),
-              'ml-auto min-h-11 rounded-full bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs max-phone:hidden',
+              'ml-auto min-h-11 rounded-lg bg-primary px-4.5 py-2 text-sm font-bold text-primary-foreground hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted max-tablet:px-3.5 max-tablet:text-xs max-phone:hidden',
             )}
             href={resolvedEntry.href}
           >

@@ -17,7 +17,7 @@ fi
 
 rules_body="$(curl --fail --silent --show-error "$tournament_url/rules")"
 
-if ! printf '%s' "$rules_body" | rg -q 'Tournament rules'; then
+if ! printf '%s' "$rules_body" | rg -q 'Know what blocks a roster'; then
   printf 'FAIL: the public rules page did not render its title\n' >&2
   exit 1
 fi

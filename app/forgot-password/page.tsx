@@ -10,8 +10,8 @@ export default function ForgotPasswordPage() {
     <EntryShell
       badgeLabel="ACCOUNT ACCESS"
       description="Enter the email on your Rift Clash account. We will send a one-time reset link when an eligible account exists."
-      eyebrow="PASSWORD RESET"
-      title="Get back to your account."
+      eyebrow="ACCOUNT RECOVERY"
+      title="Back in before draft lock."
     >
       <div className="flex flex-col gap-5">
         <Card className="rounded-2xl border-primary/25 bg-primary-soft p-4" role="note">
@@ -38,4 +38,3 @@ export default function ForgotPasswordPage() {
     </EntryShell>
   );
 }
-
