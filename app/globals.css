@@ -172,6 +172,44 @@ body:has(.entry-shell) > footer {
   color: var(--primary-foreground);
 }
 
+@keyframes room-loading-sheen {
+  from {
+    transform: translate3d(-140%, 0, 0);
+  }
+  to {
+    transform: translate3d(260%, 0, 0);
+  }
+}
+
+.room-loading-sheen {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.room-loading-sheen::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.08),
+    transparent
+  );
+  content: '';
+  pointer-events: none;
+  transform: translate3d(-140%, 0, 0);
+  animation: room-loading-sheen 1.7s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-loading-sheen::after {
+    animation: none;
+  }
+}
+
 @layer base {
   a {
     color: inherit;
