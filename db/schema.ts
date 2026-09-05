@@ -57,11 +57,17 @@ export const users = pgTable(
     displayName: text("display_name").notNull(),
     avatarUrl: text("avatar_url"),
     role: accountRole("role").default("user").notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("users_email_unique").on(table.email),
-    uniqueIndex("users_discord_id_unique").on(table.discordId),
+    uniqueIndex("users_email_unique")
+      .on(table.email)
+      .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("users_discord_id_unique")
+      .on(table.discordId)
+      .where(sql`${table.deletedAt} is null`),
+    index("users_deleted_at_idx").on(table.deletedAt),
     check(
       "users_identity_check",
       sql`${table.email} is not null or ${table.discordId} is not null`,

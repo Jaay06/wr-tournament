@@ -4,11 +4,28 @@
 
 The app should feel like a private tournament room for friends: direct, lightweight, and easy to understand on a phone. It should not resemble a public esports platform or an enterprise administration tool.
 
-Use the approved Paper design as the visual reference. These guidelines define behavior and information hierarchy rather than replacing that design.
+## Design source
+
+Brilliant MCP holds the current app design. Use project `Scratch`, currently keyed by `/Users/jay/.config/brilliant/scratch`, and canvas `rift-clash/app-screens-redesign`. This location was verified through Brilliant MCP on 2026-09-05. It contains desktop and mobile frames for participant, organizer, authentication, registration, announcements, and public-guide screens.
+
+Before implementing or changing a screen, inspect its relevant frames through Brilliant MCP. Read the frame properties and export the target for visual comparison. Use the actual Rift Clash frames for typography, colors, spacing, and layout; the project's generic default design-system catalog is not the app's visual specification. If multiple frames could be authoritative, ask which one to follow.
+
+Brilliant defines the visual target. The product and business-rule docs define behavior and access. The code and `app/globals.css` describe the current implementation, which may still differ from the design. Resolve conflicts with the product owner before changing the affected behavior. Ask for design direction when a state is missing or a new direction is needed; existing designs do not need to be proposed again.
+
+Paper and Penpot are superseded design sources. `PENPOT_REALIGNMENT_PLAN.md` is a retirement notice, not an implementation plan.
 
 Use Tailwind CSS utilities for component styling. Keep global CSS limited to Tailwind imports, design tokens, resets, and truly global browser rules. Do not add page-specific CSS modules for the interface.
 
 Use semantic Tailwind color utilities rather than arbitrary color values. The app palette is defined in `app/globals.css` with `oklch(...)` tokens and consumed through classes such as `bg-background`, `bg-primary`, `bg-secondary`, `bg-card`, `text-foreground`, `text-muted-foreground`, and `border-border`.
+
+## Implemented interface
+
+- Dark navy backgrounds, yellow primary actions, Inter Tight typography, and JetBrains Mono labels.
+- Tailwind CSS v4 with Base UI components, Lucide icons, and Motion for React.
+- Shared room navigation includes Overview, Profile, My team, Browse teams, and Announcements. Announcements has its own route at `/tournament/announcements`.
+- Private player browsing is at `/tournament/players`, with details at `/tournament/players/[registrationId]`. Team details use `/tournament/teams/[teamId]`.
+- Screen components live in `components/tournament/tournament-app-*-route*.tsx`; `tournament-app.tsx` dispatches views, and the shared frame provides room layout and reduced-motion configuration.
+- `/ui-preview` supplies development fixtures and is disabled in production. Responsive and accessibility behavior still needs full browser verification.
 
 ## Visual language
 
@@ -34,12 +51,13 @@ Check contrast before using these colors for text. Prefer badges with accessible
 
 ### Private entry
 
-The private invite opens a compact tournament introduction containing:
+After authentication, the private invite opens a compact tournament introduction containing:
 
 - Tournament name and region.
 - Registration deadline.
-- Sign-in or create-account action.
-- Invite acceptance after authentication.
+- Four-digit invite entry and acceptance.
+
+Before authentication, the sign-in and create-account pages can show invite recognition status while preserving the callback code. Tournament name, region, and deadline appear on authenticated invite entry.
 
 Do not show a public participant directory or public team list. Preserve the invite intent through the sign-in flow so the user does not need to enter the code twice.
 
@@ -105,7 +123,7 @@ After submission, participant editing controls are replaced by a locked-state me
 
 ## Organizer view
 
-Use a simple top-level navigation:
+The organizer navigation contains:
 
 - Overview.
 - Tier review.

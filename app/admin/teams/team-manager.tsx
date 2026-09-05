@@ -436,7 +436,7 @@ export function OrganizerTeamManager({
     teams.find((team) => team.id === selectedTeamId) ?? teams[0];
 
   return (
-    <main className="w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7">
+    <main className="w-full px-[18px] py-[22px] desktop:px-[34px] desktop:py-7">
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>

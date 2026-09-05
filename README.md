@@ -17,14 +17,19 @@ The MVP does not include public profiles, multiple tournaments, brackets, result
 
 ## Current state
 
-The responsive private-entry homepage follows the Paper design language and the confirmed product scope. Neon and Drizzle are connected, the schema migration is applied, and authentication, private entry, and organizer tournament settings are implemented. Password reset and player registration are next.
+As of 2026-09-05, the code implements authentication and password reset, private entry, player registration and profiles, tier review, team invitations and requests, captain transfer, lineup editing and submission, organizer repairs, announcements, and notification read state. Public pages explain the app, rules, tiers, and entry flow. Tournament records remain private.
 
-## Planned stack
+The current app design lives in Brilliant MCP, project `Scratch`, canvas `rift-clash/app-screens-redesign`. See the [UI guidelines](docs/UI_UX_GUIDELINES.md) for the design workflow. The interface uses shared Base UI components, Tailwind tokens, and Motion. See the [roadmap](docs/DEVELOPMENT_ROADMAP.md) for implementation status and remaining verification. Source review does not establish the state of a deployed database or production email delivery.
+
+## Stack
 
 - Next.js App Router and TypeScript.
 - Tailwind CSS.
 - PostgreSQL with Drizzle ORM.
-- Auth.js or NextAuth with Discord OAuth and credentials.
+- Auth.js through `next-auth` v5 beta, with Discord OAuth and credentials.
+- Base UI, Lucide icons, and Motion for React.
+
+See `package.json` and `pnpm-lock.yaml` for dependency versions.
 
 ## Local development
 
@@ -33,16 +38,17 @@ Requirements:
 - Node.js 20.9 or newer.
 - pnpm.
 
-Install and run the current scaffold:
+Install dependencies and configure the environment:
 
     pnpm install
     cp .env.example .env.local
+
+The database uses Neon PostgreSQL through Drizzle. Create a Neon project, copy its connection string into `DATABASE_URL` in `.env.local`, then apply the committed migrations and start the app:
+
+    pnpm db:migrate
     pnpm dev
 
-The database uses Neon PostgreSQL through Drizzle. Create a Neon project, copy its connection string into `DATABASE_URL` in `.env.local`, then generate and apply the first migration:
-
-    pnpm db:generate
-    pnpm db:migrate
+Run `pnpm db:generate` only after changing `db/schema.ts`.
 
 Create the organizer's account at `/register` using the same `ORGANIZER_EMAIL`, then initialize the one tournament and promote that account. Setup defaults to `Rift Clash` in `EU`, leaves the deadline open, generates an invite code, and prints it once:
 
@@ -50,7 +56,21 @@ Create the organizer's account at `/register` using the same `ORGANIZER_EMAIL`, 
 
 Set `AUTH_SECRET` and `ORGANIZER_EMAIL` before using authentication or running `pnpm db:setup`. Discord OAuth variables are optional until Discord sign-in is enabled. See [environment variables](docs/ENV_VARIABLES.md) for the full configuration.
 
-After setup, the organizer can visit `/admin` to set or extend the registration deadline, close or reopen entry, and generate a replacement invite code.
+To deactivate an account without deleting its row or tournament history, run:
+
+    pnpm db:soft-delete --email friend@example.com
+
+After setup, sign out and sign in again to refresh the organizer role in the JWT session. Visit `/admin` for tier review, team oversight, announcements, and settings.
+
+## Verification
+
+- `pnpm test` runs the helper and validation tests in `lib/*.test.ts`.
+- `pnpm lint` runs ESLint.
+- `pnpm build` checks the production build.
+- With the app running, `pnpm test:homepage` checks the homepage and public rules page. Set `TOURNAMENT_URL` to check another origin.
+- `/ui-preview?screen=...` renders UI fixtures outside production. It returns 404 in production.
+
+These checks do not replace authenticated database integration tests or end-to-end tournament testing.
 
 ## Documentation
 

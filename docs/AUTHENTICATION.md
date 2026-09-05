@@ -13,28 +13,34 @@ Email verification is not required. Email delivery is used only for password res
 
 - Email addresses are normalized and unique when present.
 - Discord identities are unique.
-- Passwords are hashed with a current password-hashing algorithm and never logged or stored in plain text.
-- A Discord-only user may add credentials later only through an authenticated account-linking flow.
+- Passwords are hashed with Node.js scrypt and a random salt and never logged or stored in plain text.
+- Account linking and adding credentials to a Discord-only account are not implemented. Any future linking flow must authenticate ownership first.
 - Accounts are not linked automatically only because a Discord email matches an existing credentials email.
 - Sign-in responses must not reveal whether an email address exists.
-- Authentication endpoints require rate limiting appropriate to the deployment environment.
+- Password-reset requests use process-local rate limits: 20 per client IP per hour and 3 per email per 15 minutes. Sign-in, account registration, and tournament invite checks have no application rate limiter. Shared rate limiting across instances remains deployment work.
 
 ## Sessions
 
-Use secure, HTTP-only cookies with JWT-backed sessions unless implementation constraints require a database session. Production cookies must use secure transport and an appropriate same-site policy.
+`auth.ts` configures Auth.js JWT sessions and its session cookies. There are no database session or OAuth account tables. Production cookies must use secure transport and an appropriate same-site policy.
 
 The session exposes only the identity and role needed by the app:
 
-- User identifier.
+- User identifier and email.
 - Display name and avatar when available.
 - user or organizer account role.
 - Whether the user has joined the tournament.
+
+Identity and role are cached in the JWT. Signing out and back in refreshes a role changed through setup. Password reset does not revoke existing JWT sessions. Tournament routes check participation in the database.
 
 Server-side authorization remains authoritative. Hiding a control in the interface is not access control.
 
 ## Tournament invite
 
 Authentication and tournament access are separate.
+
+Invite codes contain four digits. The generator chooses 1000 through 9999; the validator accepts any four-digit string. Codes are hashed with SHA-256 and compared with a timing-safe comparison.
+
+`/invite?code=...` preserves the code in a validated local callback through sign-in, Discord OAuth, and account creation. Sign-in and registration may show recognized, invalid, or closed invite status before authentication. They do not disclose tournament settings or participant records. The authenticated join operation rechecks the code.
 
 After signing in, a user who has not joined the tournament must enter the active private invite link or code. The server hashes the submitted code and compares it with the stored hash. A successful join creates a tournament participant record.
 
@@ -57,7 +63,9 @@ The MVP has one organizer role and no role-management screen. The initial organi
 A credentials user may request a one-time password-reset link.
 
 - The stored token is hashed.
-- The token expires after a short configured period.
+- Tokens contain 32 random bytes, encoded as 64 hex characters; only a SHA-256 hash is stored.
+- The default lifetime is 30 minutes, configurable with `PASSWORD_RESET_TOKEN_TTL_MINUTES`.
+- Requesting a new token deletes earlier unused tokens.
 - The token is invalid after first use.
 - A successful reset invalidates any other outstanding reset tokens for the user.
 - The request endpoint returns a neutral response even when no account matches.
@@ -67,9 +75,11 @@ In local development, the reset link may be logged to a protected development co
 
 ## Route protection
 
-- Public: sign-in, registration, OAuth callback, password-reset request, and password-reset completion.
+- Public: `/`, `/how-it-works`, `/rules`, `/tiers`, `/signin`, `/register`, `/api/auth/[...nextauth]`, `/forgot-password`, and `/reset-password`.
 - Signed-in only: tournament summary and invite entry.
 - Participant only: registrations, participant directory, teams, announcements, and tournament notices.
 - Organizer only: tournament settings, tier review, team overrides, and announcement management.
+
+`proxy.ts` redirects signed-out visitors on `/invite`, `/tournament/*`, and `/admin/*`. Page loaders and actions enforce participation and organizer access; the layouts primarily supply metadata. Private and authentication pages use noindex metadata. `/ui-preview` is unavailable in production.
 
 Every mutation repeats its authorization check on the server.

@@ -6,6 +6,7 @@
 - Closing or replacing an invite does not remove existing participants.
 - Authentication without a successful tournament join does not expose participant, team, or announcement data.
 - The tournament invite never grants organizer privileges.
+- Invite acceptance is independent of the registration deadline. An enabled invite can grant access after the deadline, but registration and participant roster changes remain closed.
 
 ## Player registration and tier review
 
@@ -27,8 +28,8 @@
 - When a player joins a team, their other pending invitations and join requests are revoked.
 - A captain cannot leave while other members remain. They must transfer captaincy first.
 - A captain who is the only member may delete the draft team.
-- Deleting a draft team releases all members and revokes pending invitations and requests.
-- A member departure makes any submitted team a draft again.
+- Deleting a draft team is allowed only when the captain is its sole member. Database cascades delete its membership, invitations, and requests, including their history. The player registration remains.
+- Participants cannot leave a submitted team. The organizer must unlock it first, or remove a member through organizer repair, which revalidates the roster.
 - Participant membership changes are not allowed after the deadline.
 
 ## Lineup and submission
@@ -53,7 +54,7 @@ A submitted team is read-only for participants. The organizer may unlock it, whi
 ## Deadline
 
 - A null deadline keeps registration and participant changes open until the organizer sets one.
-- The deadline is stored as an absolute timestamp and displayed in the viewer's local time with the tournament time zone or offset made clear.
+- The deadline is stored as an absolute timestamp. `formatDeadline` displays it in UTC; relative labels are calculated during server rendering.
 - At the deadline, participants cannot create or edit registrations, create or alter teams, resolve invites or requests, or submit teams.
 - The organizer may continue to review tiers, repair teams, and update settings.
 - Extending the deadline re-enables eligible participant actions when the new timestamp is in the future.
@@ -66,7 +67,7 @@ A submitted team is read-only for participants. The organizer may unlock it, whi
 - Only an unteamed registered participant may request to join.
 - A duplicate pending invitation or request is rejected.
 - Invitations and requests for submitted or deleted teams cannot be accepted.
-- A declined or revoked item remains historical but cannot be reused.
+- A declined or revoked item cannot be reused. It remains historical while the team exists; team deletion cascades to these records.
 - Team invitations are separate from the private tournament invite.
 
 ## Organizer repairs

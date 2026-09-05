@@ -30,6 +30,7 @@ import { RoleIcon } from '@/components/tournament/role-icon';
 import { cn } from '@/lib/utils';
 import type { RoomSettings } from '@/components/tournament/room-communications';
 import type {
+  AccountConnectionsData,
   TournamentMemberData,
   TournamentParticipantOption,
   TournamentPlayerProfileData,
@@ -49,6 +50,7 @@ export type TournamentView =
   | 'invite'
   | 'registration'
   | 'profile'
+  | 'account'
   | 'dashboard'
   | 'teams'
   | 'team-details'
@@ -77,6 +79,8 @@ export type TournamentAppProps = {
   userName?: string;
   showSignOut?: boolean;
   registration?: TournamentRegistrationData | null;
+  account?: AccountConnectionsData;
+  accountNotice?: 'linked' | 'already-connected' | 'expired' | { error: string };
   teams?: TournamentTeamSummary[];
   team?: TournamentTeamData | null;
   teamDetails?: TournamentTeamDetailData | null;
@@ -686,14 +690,14 @@ export function PageFrame({
   className?: string;
 }) {
   return (
-    <main
+    <div
       className={cn(
-        'w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7',
+        'w-full px-[18px] py-[22px] desktop:px-[34px] desktop:py-7',
         className,
       )}
     >
       {children}
-    </main>
+    </div>
   );
 }
 

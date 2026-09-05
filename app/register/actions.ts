@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -38,7 +38,7 @@ export async function registerWithCredentials(
   const [existingUser] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, parsed.data.email))
+    .where(and(eq(users.email, parsed.data.email), isNull(users.deletedAt)))
     .limit(1);
 
   if (existingUser) {

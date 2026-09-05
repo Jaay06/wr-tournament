@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -111,7 +111,12 @@ async function getOrganizerAccess(): Promise<
     })
     .from(tournamentParticipants)
     .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-    .where(eq(tournamentParticipants.userId, session.user.id))
+    .where(
+      and(
+        eq(tournamentParticipants.userId, session.user.id),
+        isNull(users.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!participant) {
@@ -241,7 +246,9 @@ export async function createAnnouncement(
 
     const participants = await tx
       .select({ userId: tournamentParticipants.userId })
-      .from(tournamentParticipants);
+      .from(tournamentParticipants)
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(isNull(users.deletedAt));
     if (participants.length > 0) {
       await tx.insert(notifications).values(
         participants.map(({ userId }) => ({
@@ -632,7 +639,13 @@ export async function addTeamMember(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
-        .where(eq(playerRegistrations.id, registrationId.data))
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(playerRegistrations.id, registrationId.data),
+            isNull(users.deletedAt),
+          ),
+        )
         .limit(1);
       if (!target) {
         throw new AdminTeamActionError("NOT_FOUND", "That participant is not registered.");

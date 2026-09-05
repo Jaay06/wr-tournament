@@ -9,6 +9,7 @@ import {
 } from './tournament-app-admin-routes';
 import { TournamentDashboardRoute } from './tournament-app-dashboard-route';
 import { TournamentInviteRoute } from './tournament-app-invite-view';
+import { TournamentAccountRoute } from './tournament-app-account-route';
 import {
   TournamentPlayerDetailsRoute,
   TournamentPlayersRoute,
@@ -31,6 +32,8 @@ export function TournamentApp(props: TournamentAppProps) {
     case 'registration':
     case 'profile':
       return <TournamentRegistrationRoute {...props} />;
+    case 'account':
+      return <TournamentAccountRoute {...props} />;
     case 'dashboard':
       return <TournamentDashboardRoute {...props} />;
     case 'teams':

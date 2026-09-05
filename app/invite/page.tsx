@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { EntryShell } from "@/components/auth/entry-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { db } from "@/db";
-import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import {
+  tournamentParticipants,
+  tournamentSettings,
+  users,
+} from "@/db/schema";
 import { firstSearchParam } from "@/lib/redirect";
 import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
 import { getRegistrationForParticipant } from "@/lib/tournament-data";
@@ -33,7 +37,13 @@ export default async function InvitePage({
   const [participant] = await db
     .select({ id: tournamentParticipants.id })
     .from(tournamentParticipants)
-    .where(eq(tournamentParticipants.userId, session.user.id))
+    .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+    .where(
+      and(
+        eq(tournamentParticipants.userId, session.user.id),
+        isNull(users.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (participant) {

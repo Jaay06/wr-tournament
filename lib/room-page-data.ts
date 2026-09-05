@@ -1,9 +1,13 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import {
+  tournamentParticipants,
+  tournamentSettings,
+  users,
+} from "@/db/schema";
 import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
 
 export async function getRoomPageData(path: string, organizer = false) {
@@ -15,7 +19,13 @@ export async function getRoomPageData(path: string, organizer = false) {
     db
       .select({ id: tournamentParticipants.id })
       .from(tournamentParticipants)
-      .where(eq(tournamentParticipants.userId, session.user.id))
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(
+        and(
+          eq(tournamentParticipants.userId, session.user.id),
+          isNull(users.deletedAt),
+        ),
+      )
       .limit(1),
     db
       .select()

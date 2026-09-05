@@ -1,5 +1,7 @@
 # Database schema
 
+The implemented schema is `db/schema.ts`; committed SQL migrations live in `drizzle/`. Migration files establish the schema history, not whether a particular environment has applied it.
+
 The MVP stores one active tournament. Tournament-specific tables therefore do not carry a tournament identifier. Supporting multiple tournaments later will require an explicit migration.
 
 ## Enumerations
@@ -37,7 +39,7 @@ A singleton row containing the active tournament configuration.
 
 | Column | Notes |
 |---|---|
-| id | Primary key; the application permits one row |
+| id | Integer primary key, default 1; database check requires id = 1 |
 | name | Tournament name |
 | region | Organizer-selected Wild Rift region |
 | invite_code_hash | Hash of the current private invite code |
@@ -75,7 +77,7 @@ Authentication alone does not create this row; a valid tournament invite does. C
 | created_at | Creation timestamp |
 | updated_at | Last update timestamp |
 
-Changing current rank or self-assessed tier returns tier status to pending.
+Changing current rank or self-assessed tier returns tier status to pending. A database check requires a null approved tier for pending registrations and a non-null tier for approved registrations. Another check requires different primary and secondary roles. There is no dedicated review timestamp or reviewer column; `updated_at` also changes on ordinary registration edits.
 
 ### teams
 
@@ -100,7 +102,7 @@ Changing current rank or self-assessed tier returns tier status to pending.
 | starter_role | Nullable; one of the five starter slots |
 | joined_at | Membership timestamp |
 
-The unique registration reference enforces one team per player. The application must preserve exactly one captain per team. A database uniqueness constraint should prevent two starters on the same team from occupying the same starter role.
+The unique registration reference enforces one team per player. A partial unique index permits at most one captain per team; application transactions preserve the existence of that captain. A unique index on `team_id, starter_role` prevents duplicate starter slots. A check requires a starter role for starters and a null role for substitutes. Multiple null substitute roles are allowed.
 
 ### team_invites
 
@@ -137,7 +139,7 @@ Only one pending request may exist for the same player and team.
 |---|---|
 | id | Primary key |
 | title | Short heading |
-| body | Plain text or safely rendered rich text |
+| body | Plain text |
 | created_by | Organizer user reference |
 | created_at | Creation timestamp |
 | updated_at | Last update timestamp |
@@ -167,7 +169,7 @@ Notifications cover direct events such as tier review, team invitations, join-re
 | used_at | Nullable consumption timestamp |
 | created_at | Creation timestamp |
 
-## Required constraints and transactions
+## Application invariants and transactions
 
 - A user may join the tournament once and register once.
 - A registration may belong to at most one team.
@@ -177,4 +179,6 @@ Notifications cover direct events such as tier review, team invitations, join-re
 - Team submission must validate the full roster and deadline inside a transaction.
 - Tier changes, member departures, and organizer repairs must revalidate affected submitted teams.
 - Invite codes and password-reset tokens are stored as hashes.
-- Foreign-key deletion behavior must preserve tournament history where practical and must not silently delete unrelated users.
+- Deleting a team cascades to its members, invites, and join requests. Other foreign keys use `restrict`.
+- Seven-member capacity, exactly five starters at submission, and tier caps are application checks, not database constraints.
+- UUID primary keys default to random UUIDs, except the integer singleton settings key. Timestamps use PostgreSQL timestamps with time zone.

@@ -242,7 +242,7 @@ export function PlayerDirectoryView({
   }, [query, source, tier]);
 
   return (
-    <main className='w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7'>
+    <main className='w-full px-[18px] py-[22px] desktop:px-[34px] desktop:py-7'>
       <div className='flex flex-col gap-6'>
         <div className='flex flex-wrap items-end justify-between gap-5'>
           <div>
@@ -367,7 +367,7 @@ export function PlayerDetailsView({
     player.id === (currentRegistrationId ?? (playerProfile === undefined ? player.id : undefined));
 
   return (
-    <main className='w-full px-[18px] py-[22px] desktop:ml-[244px] desktop:w-[calc(100%-244px)] desktop:px-[34px] desktop:py-7'>
+    <main className='w-full px-[18px] py-[22px] desktop:px-[34px] desktop:py-7'>
       <div className='flex flex-col gap-6'>
         <Link
           className='-mx-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm font-bold text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
