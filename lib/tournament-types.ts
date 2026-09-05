@@ -19,9 +19,16 @@ export type TournamentRegistrationData = {
   secondaryRole: TournamentRole;
 };
 
+export type AccountConnectionsData = {
+  email: string | null;
+  discordConnected: boolean;
+  discordEnabled: boolean;
+};
+
 export type TournamentMemberData = {
   id: string;
   registrationId: string;
+  isDeleted?: boolean;
   displayName: string;
   avatarUrl: string | null;
   riotName: string;
@@ -96,6 +103,7 @@ export type TournamentParticipantOption = {
 
 export type TournamentPlayerProfileData = {
   id: string;
+  isDeleted?: boolean;
   displayName: string;
   avatarUrl: string | null;
   riotName: string;

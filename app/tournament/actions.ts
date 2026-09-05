@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/db";
@@ -588,7 +588,13 @@ export async function respondToJoinRequest(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
-        .where(eq(playerRegistrations.id, request.registrationId))
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(playerRegistrations.id, request.registrationId),
+            isNull(users.deletedAt),
+          ),
+        )
         .limit(1);
       if (requester) {
         await tx.insert(notifications).values({
@@ -688,7 +694,13 @@ export async function inviteParticipant(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
-        .where(eq(playerRegistrations.id, invitedRegistrationId.data))
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(playerRegistrations.id, invitedRegistrationId.data),
+            isNull(users.deletedAt),
+          ),
+        )
         .limit(1);
       if (!target) {
         throw new TournamentActionError("NOT_FOUND", "That participant is not registered.");
@@ -793,7 +805,13 @@ export async function respondToTeamInvite(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
-        .where(eq(teamInvites.id, inviteId.data))
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(teamInvites.id, inviteId.data),
+            isNull(users.deletedAt),
+          ),
+        )
         .for("update")
         .limit(1);
       if (!invite || invite.status !== "pending") {
@@ -1063,6 +1081,7 @@ export async function transferTeamCaptaincy(
           and(
             eq(teamMembers.teamId, team.id),
             eq(teamMembers.registrationId, registrationId.data),
+            isNull(users.deletedAt),
           ),
         )
         .limit(1);
@@ -1627,7 +1646,13 @@ export async function approveRegistrationTier(
           tournamentParticipants,
           eq(playerRegistrations.participantId, tournamentParticipants.id),
         )
-        .where(eq(playerRegistrations.id, registrationId))
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(playerRegistrations.id, registrationId),
+            isNull(users.deletedAt),
+          ),
+        )
         .for("update")
         .limit(1);
       if (!registration) {

@@ -1,3 +1,4 @@
+import { discordErrorMessage } from "@/lib/discord-error";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -74,6 +75,12 @@ export default async function SignInPage({
             <AlertDescription className="text-warning">
               That Discord email already belongs to an email account. Sign in with your email and password for now.
             </AlertDescription>
+          </Alert>
+        ) : null}
+
+        {error && error !== "AccountLinkRequired" ? (
+          <Alert role="alert" className="rounded-md border-danger/30 bg-danger-soft text-danger">
+            <AlertDescription>{discordErrorMessage(error)}</AlertDescription>
           </Alert>
         ) : null}
 

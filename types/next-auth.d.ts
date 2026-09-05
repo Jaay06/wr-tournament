@@ -20,6 +20,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    linkSessionId?: string;
     role?: AccountRole;
     hasJoinedTournament?: boolean;
   }

@@ -6,7 +6,7 @@ Build a private, lightweight web app where a group of friends can register for o
 
 ## Product boundary
 
-The MVP supports one tournament at a time. It is invite-only and has no public tournament pages, searchable player profiles, league management, or multi-tournament administration.
+The MVP supports one tournament at a time. Tournament data is invite-only. Public informational pages exist at `/`, `/how-it-works`, `/rules`, and `/tiers`. The participant directory and player profiles are searchable or viewable only inside the private tournament. League management and multi-tournament administration remain out of scope.
 
 ## Roles
 
@@ -72,6 +72,8 @@ Captains may:
 - Accept or decline join requests.
 - Assign members as starters or substitutes.
 - Arrange five starter slots.
+- Rename a draft team and transfer captaincy to an existing member.
+- Delete a draft team only when the captain is its sole member.
 - Submit a valid roster before the deadline.
 
 A submitted roster must have:
@@ -84,7 +86,7 @@ A submitted roster must have:
 
 There is no cap on T3 or T4 players.
 
-Starter slots display Baron, Jungle, Mid, Dragon, and Support. Missing or duplicated role preferences produce a warning but do not block submission.
+Starter slots are Baron, Jungle, Mid, Dragon, and Support, with exactly one starter assigned to each. Missing or duplicate slot assignments block submission. Assigning a starter outside their primary and secondary preferences produces a warning. Each registration must select two different preferences.
 
 Submitting freezes the roster for participants. The organizer may unlock it or make a repair. Any change that makes a roster incomplete or invalid returns it to draft.
 
@@ -116,7 +118,7 @@ The app provides a simple announcement feed and in-app status notices. General c
 ## Out of scope for the MVP
 
 - Multiple tournaments, seasons, or leagues.
-- Public pages or public player profiles.
+- Public tournament records or public player profiles. Public informational pages are implemented.
 - Match scheduling, brackets, scores, standings, or results.
 - Waitlists, player drafts, or automated team balancing.
 - Rank screenshots, evidence uploads, smurf detection, appeals, or automated moderation.

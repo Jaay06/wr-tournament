@@ -22,6 +22,13 @@ const registrationRoute = dynamic<TournamentAppProps>(
     ),
   { loading: () => <RoomLoading />, ssr: false },
 );
+const accountRoute = dynamic<TournamentAppProps>(
+  () =>
+    import('./tournament-app-account-route').then(
+      ({ TournamentAccountRoute }) => TournamentAccountRoute,
+    ),
+  { loading: () => <RoomLoading />, ssr: false },
+);
 const dashboardRoute = dynamic<TournamentAppProps>(
   () =>
     import("./tournament-app-dashboard-route").then(
@@ -112,6 +119,7 @@ const routes: Record<TournamentView, TournamentRoute> = {
   invite: inviteRoute,
   registration: registrationRoute,
   profile: registrationRoute,
+  account: accountRoute,
   dashboard: dashboardRoute,
   teams: teamsRoute,
   "team-details": teamDetailsRoute,

@@ -6,6 +6,7 @@ const views: Record<string, TournamentView> = {
   invite: "invite",
   registration: "registration",
   profile: "profile",
+  account: "account",
   dashboard: "dashboard",
   builder: "builder",
   submitted: "submitted",

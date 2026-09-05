@@ -9,7 +9,6 @@ type RoomLoadingProps = {
 
 const participantNavigation = [
   'Overview',
-  'Profile',
   'My team',
   'Browse teams',
   'Announcements',

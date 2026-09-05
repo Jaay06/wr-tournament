@@ -32,7 +32,7 @@ async function main() {
     tournamentSettings,
     users,
   } = await import("../db/schema");
-  const { eq } = await import("drizzle-orm");
+  const { and, eq, isNull } = await import("drizzle-orm");
 
   const tournamentName = values.name?.trim() || "Rift Clash";
   const region = values.region?.trim() || "EU";
@@ -59,7 +59,7 @@ async function main() {
       const [existingOrganizer] = await tx
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, organizerEmail))
+        .where(and(eq(users.email, organizerEmail), isNull(users.deletedAt)))
         .limit(1);
 
       if (!existingOrganizer) {

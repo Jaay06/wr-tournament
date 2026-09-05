@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
@@ -45,6 +45,19 @@ function toRegistrationData(
   };
 }
 
+const DELETED_PLAYER_NAME = "Deleted player";
+const DELETED_PLAYER_TAG = "—";
+
+function userPresentation(user: typeof users.$inferSelect) {
+  const isDeleted = Boolean(user.deletedAt);
+
+  return {
+    isDeleted,
+    displayName: isDeleted ? DELETED_PLAYER_NAME : user.displayName,
+    avatarUrl: isDeleted ? null : user.avatarUrl,
+  };
+}
+
 export async function getRegistrationForParticipant(
   participantId: string,
 ): Promise<TournamentRegistrationData | null> {
@@ -62,14 +75,23 @@ function toMemberData(row: {
   registration: typeof playerRegistrations.$inferSelect;
   user: typeof users.$inferSelect;
 }): TournamentMemberData {
+  const presentedUser = userPresentation(row.user);
+
   return {
     id: row.member.id,
     registrationId: row.registration.id,
-    displayName: row.user.displayName,
-    avatarUrl: row.user.avatarUrl,
-    riotName: row.registration.riotName,
-    riotTag: row.registration.riotTag,
-    currentRank: row.registration.currentRank,
+    isDeleted: presentedUser.isDeleted,
+    displayName: presentedUser.displayName,
+    avatarUrl: presentedUser.avatarUrl,
+    riotName: presentedUser.isDeleted
+      ? DELETED_PLAYER_NAME
+      : row.registration.riotName,
+    riotTag: presentedUser.isDeleted
+      ? DELETED_PLAYER_TAG
+      : row.registration.riotTag,
+    currentRank: presentedUser.isDeleted
+      ? "Unavailable"
+      : row.registration.currentRank,
     approvedTier: row.registration.approvedTier,
     tierStatus: row.registration.tierStatus,
     primaryRole: row.registration.primaryRole,
@@ -117,7 +139,12 @@ export async function getTeamForRegistration(
         eq(playerRegistrations.participantId, tournamentParticipants.id),
       )
       .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(eq(teamJoinRequests.teamId, membership.teamId))
+      .where(
+        and(
+          eq(teamJoinRequests.teamId, membership.teamId),
+          isNull(users.deletedAt),
+        ),
+      )
       .orderBy(asc(teamJoinRequests.createdAt)),
     db
       .select({
@@ -139,7 +166,9 @@ export async function getTeamForRegistration(
         eq(playerRegistrations.participantId, tournamentParticipants.id),
       )
       .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(eq(teamInvites.teamId, membership.teamId))
+      .where(
+        and(eq(teamInvites.teamId, membership.teamId), isNull(users.deletedAt)),
+      )
       .orderBy(asc(teamInvites.createdAt)),
   ]);
 
@@ -258,7 +287,9 @@ export async function getTeamDirectory(): Promise<TournamentTeamSummary[]> {
       status: team.status,
       memberCount: members.length,
       captain: captain
-        ? `${captain.registration.riotName}#${captain.registration.riotTag}`
+        ? captain.user.deletedAt
+          ? DELETED_PLAYER_NAME
+          : `${captain.registration.riotName}#${captain.registration.riotTag}`
         : "No captain",
       tierCounts,
     };
@@ -308,6 +339,7 @@ export async function getParticipantDirectory(): Promise<TournamentParticipantOp
     )
     .innerJoin(users, eq(tournamentParticipants.userId, users.id))
     .leftJoin(teamMembers, eq(playerRegistrations.id, teamMembers.registrationId))
+    .where(isNull(users.deletedAt))
     .orderBy(asc(users.displayName));
 
   return rows;
@@ -318,13 +350,22 @@ function toPlayerProfileData(row: {
   user: typeof users.$inferSelect;
   team: typeof teams.$inferSelect | null;
 }): TournamentPlayerProfileData {
+  const presentedUser = userPresentation(row.user);
+
   return {
     id: row.registration.id,
-    displayName: row.user.displayName,
-    avatarUrl: row.user.avatarUrl,
-    riotName: row.registration.riotName,
-    riotTag: row.registration.riotTag,
-    currentRank: row.registration.currentRank,
+    isDeleted: presentedUser.isDeleted,
+    displayName: presentedUser.displayName,
+    avatarUrl: presentedUser.avatarUrl,
+    riotName: presentedUser.isDeleted
+      ? DELETED_PLAYER_NAME
+      : row.registration.riotName,
+    riotTag: presentedUser.isDeleted
+      ? DELETED_PLAYER_TAG
+      : row.registration.riotTag,
+    currentRank: presentedUser.isDeleted
+      ? "Unavailable"
+      : row.registration.currentRank,
     approvedTier: row.registration.approvedTier,
     tierStatus: row.registration.tierStatus,
     primaryRole: row.registration.primaryRole,
@@ -359,6 +400,7 @@ export async function getPlayerDirectory(): Promise<
       eq(playerRegistrations.id, teamMembers.registrationId),
     )
     .leftJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(isNull(users.deletedAt))
     .orderBy(asc(users.displayName));
 
   return rows.map(toPlayerProfileData);
@@ -418,6 +460,7 @@ export async function getPendingTeamInvitesForRegistration(
         eq(teamInvites.invitedRegistrationId, registrationId),
         eq(teamInvites.status, "pending"),
         eq(teams.status, "draft"),
+        isNull(users.deletedAt),
       ),
     )
     .orderBy(asc(teamInvites.createdAt));
@@ -448,7 +491,12 @@ export async function getTierReview(
       eq(playerRegistrations.participantId, tournamentParticipants.id),
     )
     .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-    .where(eq(playerRegistrations.tierStatus, "pending"))
+    .where(
+      and(
+        eq(playerRegistrations.tierStatus, "pending"),
+        isNull(users.deletedAt),
+      ),
+    )
     .orderBy(asc(playerRegistrations.createdAt));
 
   if (pendingRows.length === 0) {
@@ -568,8 +616,20 @@ export async function getAnnouncements(): Promise<TournamentAnnouncementData[]> 
 
 export async function getOrganizerOverviewData(): Promise<OrganizerOverviewData> {
   const [participantRows, registrationRows, pendingRows, pendingCountRows, teamRows] = await Promise.all([
-    db.select({ id: tournamentParticipants.id }).from(tournamentParticipants),
-    db.select({ id: playerRegistrations.id }).from(playerRegistrations),
+    db
+      .select({ id: tournamentParticipants.id })
+      .from(tournamentParticipants)
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(isNull(users.deletedAt)),
+    db
+      .select({ id: playerRegistrations.id })
+      .from(playerRegistrations)
+      .innerJoin(
+        tournamentParticipants,
+        eq(playerRegistrations.participantId, tournamentParticipants.id),
+      )
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(isNull(users.deletedAt)),
     db
       .select({
         id: playerRegistrations.id,
@@ -587,13 +647,28 @@ export async function getOrganizerOverviewData(): Promise<OrganizerOverviewData>
         eq(playerRegistrations.participantId, tournamentParticipants.id),
       )
       .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(eq(playerRegistrations.tierStatus, "pending"))
+      .where(
+        and(
+          eq(playerRegistrations.tierStatus, "pending"),
+          isNull(users.deletedAt),
+        ),
+      )
       .orderBy(asc(playerRegistrations.createdAt))
       .limit(6),
     db
       .select({ value: count() })
       .from(playerRegistrations)
-      .where(eq(playerRegistrations.tierStatus, "pending")),
+      .innerJoin(
+        tournamentParticipants,
+        eq(playerRegistrations.participantId, tournamentParticipants.id),
+      )
+      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+      .where(
+        and(
+          eq(playerRegistrations.tierStatus, "pending"),
+          isNull(users.deletedAt),
+        ),
+      ),
     db
       .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: users })
       .from(teams)

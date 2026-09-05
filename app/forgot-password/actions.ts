@@ -99,7 +99,13 @@ export async function requestPasswordReset(
       id: users.id,
     })
     .from(users)
-    .where(and(eq(users.email, parsed.data), isNotNull(users.passwordHash)))
+    .where(
+      and(
+        eq(users.email, parsed.data),
+        isNotNull(users.passwordHash),
+        isNull(users.deletedAt),
+      ),
+    )
     .limit(1);
 
   if (!user?.email) {

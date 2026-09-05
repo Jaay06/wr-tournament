@@ -22,9 +22,10 @@ For each registration, the organizer can:
 
 - Approve the self-assessed tier.
 - Choose a different approved tier.
-- Reopen review if more information is needed.
 
-The app records the approved tier and review time. It does not collect rank screenshots, investigation notes, smurf evidence, or appeal records.
+Manual reopening of tier review is documented intent but is not implemented. Keep it pending a scope decision.
+
+The app records the approved tier and updates the registration timestamp. A dedicated review time and reviewer are not stored; that remains a documentation-to-implementation gap. It does not collect rank screenshots, investigation notes, smurf evidence, or appeal records.
 
 If an approved tier changes, every affected team is revalidated. An invalid submitted team returns to draft and its captain is notified.
 
@@ -39,7 +40,7 @@ The organizer can inspect all teams and see:
 - Draft or submitted state.
 - Submission time.
 
-The organizer can unlock a submitted team or repair its membership and lineup. A repair must preserve one-team-per-player and seven-member capacity. The app revalidates the roster after every organizer change.
+The organizer can unlock a submitted team, add an unteamed registered player, remove a non-captain member, or repair its lineup. Removing the captain is rejected; participant captain transfer is available on draft teams before the deadline. A repair must preserve one-team-per-player and seven-member capacity. The app revalidates the roster after every organizer change.
 
 ## Announcements
 

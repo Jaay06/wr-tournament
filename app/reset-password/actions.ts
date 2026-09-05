@@ -44,11 +44,13 @@ export async function resetPassword(
     const [resetToken] = await tx
       .select({ userId: passwordResetTokens.userId })
       .from(passwordResetTokens)
+      .innerJoin(users, eq(passwordResetTokens.userId, users.id))
       .where(
         and(
           eq(passwordResetTokens.tokenHash, tokenHash),
           isNull(passwordResetTokens.usedAt),
           gt(passwordResetTokens.expiresAt, now),
+          isNull(users.deletedAt),
         ),
       )
       .for("update")

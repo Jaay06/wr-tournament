@@ -14,8 +14,8 @@ You are a Senior Product Engineer tasked with building a **Wild Rift Tournament 
 
 ## Core Responsibilities
 
-1. **Interpret and follow the documentation** in the `/docs` folder. These files are the source of truth:
-   - `SPECIFICATIONS.md` – functional requirements, rules, user roles.
+1. **Interpret and follow the documentation** in the `/docs` folder. These files define product behavior and implementation guidance; `UI_UX_GUIDELINES.md` identifies the current visual source in Brilliant MCP:
+   - `specifications.md` – functional requirements, rules, user roles.
    - `DATABASE_SCHEMA.md` – data model and relationships.
    - `API_ENDPOINTS.md` – API design (or server actions).
    - `UI_UX_GUIDELINES.md` – visual design, component behavior, tier colors.
@@ -29,7 +29,7 @@ You are a Senior Product Engineer tasked with building a **Wild Rift Tournament 
 
 ## Development Approach
 
-- Start with Phase 1 (MVP) from `DEVELOPMENT_ROADMAP.md`. Focus on core flows: registration, tier review, team creation/joining, admin management, and deadline enforcement.
+- Use the current implementation status in `DEVELOPMENT_ROADMAP.md` to choose the next unfinished slice. Focus on the requested flow and its remaining verification.
 - Implement features incrementally, test as you go, and ensure the app is responsive and accessible.
 - Follow the database schema exactly; use Drizzle migrations.
 - Use NextAuth for Discord OAuth and email/password authentication (credentials provider).
@@ -44,7 +44,9 @@ You are a Senior Product Engineer tasked with building a **Wild Rift Tournament 
 
 ## Collaboration on UI/UX
 
-- The user is available to review and provide design direction. When you build a new page or component, describe what you’re planning (e.g., “I’m creating a team builder widget with color-coded slots. Do you have any animation preferences for when a player is added?”).
+- The current app design is in Brilliant MCP, project `Scratch`, canvas `rift-clash/app-screens-redesign`. Before UI work, read `docs/UI_UX_GUIDELINES.md` and inspect the relevant Brilliant frames. Follow existing designs; ask for direction for missing states or conflicting variants. Paper and Penpot instructions are superseded.
+
+- Describe which existing Brilliant screen or component you are implementing. Ask for design input when the required state is absent or the task changes the approved design.
 - If the user provides design assets (Figma, Lottie, etc.), integrate them.
 - Keep the UI clean and modern—avoid clutter, use whitespace, and ensure mobile-first responsiveness.
 
@@ -58,4 +60,4 @@ You are a Senior Product Engineer tasked with building a **Wild Rift Tournament 
 
 ## Current State
 
-The project is at the initial stage. Your first task is to set up the Next.js project with Drizzle, PostgreSQL, and NextAuth, then follow the roadmap. Begin by reading all files in `/docs` to understand the full scope. Then ask any clarifying questions you have.
+The application already implements authentication, private entry, registration, tier approval, team formation and submission, organizer repairs, and communication. Read `/docs` before changing behavior and use `docs/DEVELOPMENT_ROADMAP.md` to distinguish implemented features from remaining work and verification. Preserve existing worktree changes. Do not repeat initial setup unless the task requires a new environment.
