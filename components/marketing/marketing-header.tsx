@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { ArrowRight, Menu, X } from 'lucide-react';
 
-import { auth } from '@/auth';
 import { RiftClashMark } from '@/components/brand/rift-clash-logo';
 import { buttonVariants } from '@/components/ui/button';
 import {
-  tournamentEntryFor,
+  publicEntry,
   type TournamentEntry,
 } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
@@ -28,11 +27,11 @@ const navItems: readonly {
   { label: 'Tiers', href: '/tiers', page: 'tiers' },
 ];
 
-export async function MarketingHeader({
+export function MarketingHeader({
   activePage,
   entry,
 }: MarketingHeaderProps) {
-  const resolvedEntry = entry ?? tournamentEntryFor(await auth());
+  const resolvedEntry = entry ?? publicEntry;
 
   return (
     <header className='border-b border-border bg-background/92'>

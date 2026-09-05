@@ -21,6 +21,14 @@ const signedOutEntry: TournamentEntry = {
   title: "Have the invite?",
 };
 
+export const publicEntry: TournamentEntry = {
+  href: "/tournament",
+  label: "Enter tournament",
+  description: "Open the private tournament room, then sign in or use your invite.",
+  status: "Private tournament data stays behind sign-in.",
+  title: "Have the invite?",
+};
+
 const inviteEntry: TournamentEntry = {
   href: "/invite",
   label: "Enter invite",

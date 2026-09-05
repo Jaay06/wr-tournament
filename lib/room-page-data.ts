@@ -11,12 +11,20 @@ export async function getRoomPageData(path: string, organizer = false) {
   if (!session?.user?.id) redirect(`/signin?callbackUrl=${encodeURIComponent(path)}`);
   if (organizer && session.user.role !== "organizer") redirect("/tournament");
 
-  const [participant] = await db.select({ id: tournamentParticipants.id })
-    .from(tournamentParticipants).where(eq(tournamentParticipants.userId, session.user.id)).limit(1);
-  if (!participant) redirect("/invite");
+  const [[participant], [settings]] = await Promise.all([
+    db
+      .select({ id: tournamentParticipants.id })
+      .from(tournamentParticipants)
+      .where(eq(tournamentParticipants.userId, session.user.id))
+      .limit(1),
+    db
+      .select()
+      .from(tournamentSettings)
+      .where(eq(tournamentSettings.id, 1))
+      .limit(1),
+  ]);
 
-  const [settings] = await db.select().from(tournamentSettings)
-    .where(eq(tournamentSettings.id, 1)).limit(1);
+  if (!participant) redirect("/invite");
   if (!settings) redirect("/invite");
   const deadlineState = formatDeadlineState(settings.registrationDeadline);
 

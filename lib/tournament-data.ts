@@ -93,13 +93,8 @@ export async function getTeamForRegistration(
     return null;
   }
 
-  const team = await getTeamDetails(membership.teamId);
-
-  if (!team) {
-    return null;
-  }
-
-  const [requestRows, inviteRows] = await Promise.all([
+  const [team, requestRows, inviteRows] = await Promise.all([
+    getTeamDetails(membership.teamId),
     db
       .select({
         id: teamJoinRequests.id,
@@ -122,7 +117,7 @@ export async function getTeamForRegistration(
         eq(playerRegistrations.participantId, tournamentParticipants.id),
       )
       .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(eq(teamJoinRequests.teamId, team.id))
+      .where(eq(teamJoinRequests.teamId, membership.teamId))
       .orderBy(asc(teamJoinRequests.createdAt)),
     db
       .select({
@@ -144,9 +139,13 @@ export async function getTeamForRegistration(
         eq(playerRegistrations.participantId, tournamentParticipants.id),
       )
       .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(eq(teamInvites.teamId, team.id))
+      .where(eq(teamInvites.teamId, membership.teamId))
       .orderBy(asc(teamInvites.createdAt)),
   ]);
+
+  if (!team) {
+    return null;
+  }
 
   return {
     ...team,

@@ -1,10 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { auth } from '@/auth';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { buttonVariants } from '@/components/ui/button';
 import { howItWorksSteps } from '@/lib/marketing-content';
-import { tournamentEntryFor } from '@/lib/tournament-entry';
+import { publicEntry } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -14,8 +13,8 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default async function HowItWorksPage() {
-  const entry = tournamentEntryFor(await auth());
+export default function HowItWorksPage() {
+  const entry = publicEntry;
   return (
     <div className='min-h-[100dvh] bg-background text-foreground'>
       <MarketingHeader activePage='how-it-works' entry={entry} />

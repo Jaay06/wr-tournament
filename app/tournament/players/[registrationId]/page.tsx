@@ -1,16 +1,12 @@
 import type { Metadata } from "next";
-import { eq } from "drizzle-orm";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
-import { auth } from "@/auth";
-import { TournamentApp } from "@/components/tournament/tournament-app";
-import { db } from "@/db";
-import { tournamentParticipants, tournamentSettings } from "@/db/schema";
+import { TournamentAppClient } from "@/components/tournament/tournament-app-client";
 import {
   getPlayerProfile,
   getRegistrationForParticipant,
 } from "@/lib/tournament-data";
-import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
+import { getRoomPageData } from "@/lib/room-page-data";
 import { teamIdSchema } from "@/lib/validation";
 
 export const metadata: Metadata = {
@@ -28,61 +24,25 @@ export default async function PlayerDetailsPage({
     notFound();
   }
 
-  const session = await auth();
+  const { participant, shell } = await getRoomPageData(
+    `/tournament/players/${registrationId}`,
+  );
 
-  if (!session?.user?.id) {
-    redirect(
-      `/signin?callbackUrl=${encodeURIComponent(`/tournament/players/${registrationId}`)}`,
-    );
-  }
-
-  const [participant] = await db
-    .select({ id: tournamentParticipants.id })
-    .from(tournamentParticipants)
-    .where(eq(tournamentParticipants.userId, session.user.id))
-    .limit(1);
-
-  if (!participant) {
-    redirect("/invite");
-  }
-
-  const [settings, currentRegistration, playerProfile] = await Promise.all([
-    db
-      .select({
-        name: tournamentSettings.name,
-        region: tournamentSettings.region,
-        registrationDeadline: tournamentSettings.registrationDeadline,
-      })
-      .from(tournamentSettings)
-      .where(eq(tournamentSettings.id, 1))
-      .limit(1)
-      .then(([value]) => value),
+  const [currentRegistration, playerProfile] = await Promise.all([
     getRegistrationForParticipant(participant.id),
     getPlayerProfile(registrationId),
   ]);
-
-  if (!settings) {
-    redirect("/invite");
-  }
 
   if (!playerProfile) {
     notFound();
   }
 
-  const deadlineState = formatDeadlineState(settings.registrationDeadline);
-
   return (
-    <TournamentApp
+    <TournamentAppClient
+      {...shell}
       currentRegistrationId={currentRegistration?.id}
-      deadline={formatDeadline(settings.registrationDeadline)}
-      deadlineRemaining={deadlineState.compactLabel}
-      deadlineStatus={deadlineState.status}
       playerProfile={playerProfile}
-      region={settings.region}
       registration={currentRegistration}
-      showSignOut
-      tournamentName={settings.name}
-      userName={session.user.name ?? "player"}
       view="player-details"
     />
   );

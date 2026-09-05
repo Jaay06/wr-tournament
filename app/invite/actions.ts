@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { auth, updateSession } from "@/auth";
 import { db } from "@/db";
 import { tournamentParticipants, tournamentSettings } from "@/db/schema";
 import { hashInviteCode, inviteCodesMatch } from "@/lib/tournament";
@@ -68,6 +68,7 @@ export async function joinTournament(
     .limit(1);
 
   if (existingParticipant) {
+    await updateSession({ user: { hasJoinedTournament: true } });
     redirect("/tournament");
   }
 
@@ -81,5 +82,6 @@ export async function joinTournament(
     }
   }
 
+  await updateSession({ user: { hasJoinedTournament: true } });
   redirect("/tournament/register");
 }
