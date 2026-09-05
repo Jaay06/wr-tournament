@@ -35,7 +35,7 @@ export const howItWorksSteps = [
   ['01', 'Sign in', 'Use Discord or your email and password.'],
   ['02', 'Enter the invite', 'Use the private code from the organizer.'],
   ['03', 'Register', 'Add your Riot ID, tier, and preferred roles.'],
-  ['04', 'Get approved', 'The organizer confirms the tier used for your roster.'],
-  ['05', 'Form a team', 'Build five starters and add optional substitutes.'],
+  ['04', 'Build the five', 'Build five starters and up to two substitutes. Pending players may join drafts.'],
+  ['05', 'Get tier approval', 'Every roster member needs organizer approval before submission.'],
   ['06', 'Submit the roster', 'Submit a valid team before the registration deadline.'],
 ] as const;
