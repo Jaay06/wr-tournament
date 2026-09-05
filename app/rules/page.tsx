@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 
-import { auth } from '@/auth';
 import { MarketingHeader } from '@/components/marketing/marketing-header';
 import { Badge } from '@/components/ui/badge';
-import { tournamentEntryFor } from '@/lib/tournament-entry';
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
 
@@ -56,12 +54,10 @@ const tierBadgeTones = {
   t2: 'border-tier-t2/20 bg-tier-t2/10 text-tier-t2',
 } as const;
 
-export default async function RulesPage() {
-  const entry = tournamentEntryFor(await auth());
-
+export default function RulesPage() {
   return (
     <div className='min-h-[100dvh] overflow-hidden bg-background text-foreground'>
-      <MarketingHeader activePage='rules' entry={entry} />
+      <MarketingHeader activePage='rules' />
 
       <main className='mx-auto w-full max-w-page px-12 py-14 max-tablet:px-5 max-tablet:py-9'>
         <div className='flex items-end justify-between gap-10 max-tablet:items-start max-tablet:flex-col max-tablet:gap-6'>

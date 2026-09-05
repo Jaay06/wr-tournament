@@ -104,7 +104,13 @@ if (discordEnabled) {
   );
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const {
+  handlers,
+  signIn,
+  signOut,
+  auth,
+  unstable_update: updateSession,
+} = NextAuth({
   pages: {
     signIn: '/signin',
   },
@@ -137,11 +143,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         .limit(1);
 
       if (existingDiscordUser) {
+        const participant = await getParticipantForUser(existingDiscordUser.id);
+
         user.id = existingDiscordUser.id;
         user.email = existingDiscordUser.email;
         user.image = existingDiscordUser.avatarUrl;
         user.name = existingDiscordUser.displayName;
         user.role = existingDiscordUser.role;
+        user.hasJoinedTournament = Boolean(participant);
         return true;
       }
 
@@ -183,23 +192,46 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       user.role = createdUser.role;
       return true;
     },
-    async jwt({ token }) {
+    async jwt({ token, user, trigger, session }) {
+      if (user?.id) {
+        token.sub = user.id;
+        token.name = user.name;
+        token.email = user.email ?? undefined;
+        token.picture = user.image ?? undefined;
+        token.role = user.role;
+        token.hasJoinedTournament = Boolean(user.hasJoinedTournament);
+        return token;
+      }
+
+      if (
+        trigger === "update" &&
+        typeof session?.user?.hasJoinedTournament === "boolean"
+      ) {
+        token.hasJoinedTournament = session.user.hasJoinedTournament;
+      }
+
       if (!token.sub) {
         return token;
       }
 
-      const user = await getUserForSession(token.sub);
+      // Existing tokens created before the session payload was made stable do
+      // not have the custom fields above. Hydrate them once, then reuse them.
+      if (token.role && typeof token.hasJoinedTournament === "boolean") {
+        return token;
+      }
 
-      if (!user) {
+      const sessionUser = await getUserForSession(token.sub);
+
+      if (!sessionUser) {
         return { ...token, sub: undefined };
       }
 
-      const participant = await getParticipantForUser(user.id);
+      const participant = await getParticipantForUser(sessionUser.id);
 
-      token.name = user.displayName;
-      token.email = user.email ?? undefined;
-      token.picture = user.avatarUrl ?? undefined;
-      token.role = user.role;
+      token.name = sessionUser.displayName;
+      token.email = sessionUser.email ?? undefined;
+      token.picture = sessionUser.avatarUrl ?? undefined;
+      token.role = sessionUser.role;
       token.hasJoinedTournament = Boolean(participant);
 
       return token;

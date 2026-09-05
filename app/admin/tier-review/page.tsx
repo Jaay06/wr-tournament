@@ -1,31 +1,14 @@
-import { eq } from "drizzle-orm";
+import { TournamentAppClient } from "@/components/tournament/tournament-app-client";
 import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
-import { TournamentApp } from "@/components/tournament/tournament-app";
-import { db } from "@/db";
-import { tournamentSettings } from "@/db/schema";
 import { getTierReview } from "@/lib/tournament-data";
-import { formatDeadline, formatDeadlineState } from "@/lib/tournament";
+import { getRoomPageData } from "@/lib/room-page-data";
 
 export default async function TierReviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ registration?: string | string[] }>;
 }) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    redirect("/signin?callbackUrl=%2Fadmin%2Ftier-review");
-  }
-
-  if (session.user.role !== "organizer") {
-    redirect("/tournament");
-  }
-
-  if (!session.user.hasJoinedTournament) {
-    redirect("/invite");
-  }
+  const { shell } = await getRoomPageData("/admin/tier-review", true);
 
   const params = await searchParams;
   const registrationId = Array.isArray(params.registration)
@@ -41,27 +24,11 @@ export default async function TierReviewPage({
     );
   }
 
-  const [settings] = await db
-    .select({
-      name: tournamentSettings.name,
-      region: tournamentSettings.region,
-      registrationDeadline: tournamentSettings.registrationDeadline,
-    })
-    .from(tournamentSettings)
-    .where(eq(tournamentSettings.id, 1))
-    .limit(1);
-  const deadlineState = formatDeadlineState(settings?.registrationDeadline);
-
   return (
-    <TournamentApp
-      deadline={formatDeadline(settings?.registrationDeadline)}
-      deadlineRemaining={deadlineState.compactLabel}
-      deadlineStatus={deadlineState.status}
-      region={settings?.region}
+    <TournamentAppClient
+      {...shell}
       showSignOut
       tierReview={review}
-      tournamentName={settings?.name}
-      userName={session.user.name ?? "organizer"}
       view="tier-review"
     />
   );
