@@ -1756,7 +1756,7 @@ function TeamRoomContent({
           </>
         )}
 
-        <div className='grid grid-cols-2 gap-4'>
+        <div className='grid grid-cols-1 gap-4 desktop:grid-cols-2'>
           <div className='contents'>
             <LineupEditor
               className='desktop:col-span-2'
@@ -2014,7 +2014,7 @@ function TeamRoomContent({
             ) : null}
           </div>
 
-          <aside className='flex flex-col gap-5 row-span-2 '>
+          <aside className='flex flex-col gap-5 desktop:row-span-2'>
             <Card className='p-5'>
               <Kicker>ROSTER VALIDATION</Kicker>
               <div
