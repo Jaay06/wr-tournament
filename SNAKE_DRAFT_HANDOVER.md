@@ -114,3 +114,9 @@ Completion criterion: reviewed designs and agreed policies are implemented with 
 ## Starting prompt for Luna
 
 Use GPT Luna with max reasoning. Read `SNAKE_DRAFT_HANDOVER.md` and current repository instructions. Use the confirmed behavior above and the existing Brilliant references. Design the captain snake-draft flow in Brilliant MCP using the contextual guidance from design-taste-frontend and the current Rift Clash visual language. Show desktop/mobile frames and state variants for review before implementation. Carry forward the user's decisions from the originating conversation; no product questions remain in this handoff. Continue on this planning PR's branch when implementation is authorized; preserve unrelated changes.
+
+## Shared live board audience
+
+The active captain sees player selection. Every other tournament participant, including waiting captains and the organizer, sees the shared live board. Organizer controls are permission-specific additions and are never exposed to ordinary participants. Waiting and participant views represent audience states of this shared board, not separate competing destinations.
+
+Canonical frames are `68ddb41f784e04d2`, named `Draft Board - Shared Live`, and `b3f3b8448676a171`, named `Draft Board - Shared Live - Mobile`. Verified previews are `/private/tmp/luna-shared-board-desktop.png` and `/private/tmp/luna-shared-board-mobile.png`.
