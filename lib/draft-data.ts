@@ -449,6 +449,7 @@ export async function startDraft({
         members.length !== 1 ||
         !captain ||
         captain.team.status !== "draft" ||
+        captain.user.deletedAt ||
         !captain.registration.approvedTier
       ) {
         throw new DraftActionError(
@@ -520,9 +521,7 @@ export async function startDraft({
     );
     const normalizedAt = new Date();
     if (normalized.completed) {
-      const incomplete = contextTeamSnapshots(context).some(
-        (team) => team.memberCount < 5,
-      );
+      const incomplete = (await markIncompleteTeams(tx, session.id, context)).length > 0;
       await tx
         .update(draftSessions)
         .set({
@@ -1241,6 +1240,7 @@ export async function getDraftSetupData() {
           members.length === 1 &&
           members[0].member.isCaptain &&
           members[0].team.status === "draft" &&
+          !captain.user.deletedAt &&
           Boolean(captain.registration.approvedTier),
       };
     })
