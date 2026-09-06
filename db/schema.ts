@@ -83,6 +83,9 @@ export const tournamentSettings = pgTable(
     region: text("region").notNull(),
     inviteCodeHash: text("invite_code_hash").notNull(),
     inviteEnabled: boolean("invite_enabled").default(true).notNull(),
+    teamRegistrationEnabled: boolean("team_registration_enabled")
+      .default(true)
+      .notNull(),
     registrationDeadline: timestamp("registration_deadline", {
       withTimezone: true,
     }),

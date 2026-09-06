@@ -116,7 +116,12 @@ import {
   teamCards,
   tierMeta,
 } from './tournament-app-shared';
-import type { Player, Role, Tier, TournamentAppProps } from './tournament-app-shared';
+import type {
+  Player,
+  Role,
+  Tier,
+  TournamentAppProps,
+} from './tournament-app-shared';
 import { TournamentAppRouteFrame } from './tournament-app-route-frame';
 import type {
   OrganizerOverviewData,
@@ -149,9 +154,11 @@ import {
 
 function CreateTeamView({
   deadlineStatus,
+  teamRegistrationEnabled = true,
   incomingInvites = [],
 }: {
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
   incomingInvites?: TournamentIncomingInviteData[];
 }) {
   const [state, formAction] = useActionState<TournamentActionState, FormData>(
@@ -163,14 +170,19 @@ function CreateTeamView({
     FormData
   >(respondToTeamInvite, {});
   const changesClosed = deadlineStatus === 'passed';
+  const creationBlocked = !teamRegistrationEnabled;
 
   return (
     <PageFrame>
       <div className='mx-auto flex max-w-2xl flex-col gap-6'>
         <SectionHeading
-          detail='Start a draft roster, become its captain, and invite friends to fill the seven available places.'
+          detail={
+            creationBlocked
+              ? 'New team creation is currently paused by the organizer. You can still accept invitations to join an existing team.'
+              : 'Start a draft roster, become its captain, and invite friends to fill the seven available places.'
+          }
           eyebrow='TEAM ROOM'
-          title='Create your team'
+          title={creationBlocked ? 'Team registration paused' : 'Create your team'}
         />
         {changesClosed ? (
           <Alert className='border-danger/30 bg-danger-soft text-danger'>
@@ -253,61 +265,84 @@ function CreateTeamView({
             ) : null}
           </Card>
         ) : null}
-        <Card className='p-5 desktop:p-6'>
-          <form action={formAction} className='flex flex-col gap-5'>
-            <fieldset className='contents' disabled={changesClosed}>
-              <Field>
-                <FieldLabel htmlFor='teamName'>Team name</FieldLabel>
-                <Input
-                  className='min-h-12 rounded-xl px-3.5 text-base'
-                  id='teamName'
-                  name='teamName'
-                  placeholder='Night Sentinels'
-                  required
-                />
-                <FieldDescription>
-                  You can rename a draft team later as captain.
-                </FieldDescription>
-              </Field>
-              {state.error ? (
-                <Alert aria-live='polite' variant='destructive'>
-                  <AlertDescription>{state.error}</AlertDescription>
-                </Alert>
-              ) : null}
-              {state.success ? (
-                <motion.div
-                  animate={{
-                    opacity: 1,
-                    transform: 'translateY(0px) scale(1)',
-                  }}
-                  aria-live='polite'
-                  className='rounded-xl'
-                  initial={{
-                    opacity: 0,
-                    transform: 'translateY(8px) scale(0.99)',
-                  }}
-                  transition={{ duration: 0.22, ease: easeOutExpo }}
-                >
-                  <Alert
-                    className='border-success/30 bg-success-soft text-success'
-                    aria-live='polite'
-                  >
-                    <AlertDescription className='text-success'>
-                      {state.success}
-                    </AlertDescription>
+        {creationBlocked ? (
+          <Card className='p-6 desktop:p-8'>
+            <div className='flex items-center gap-2'>
+              <StatusPill tone='warning'>REGISTRATION PAUSED</StatusPill>
+            </div>
+            <h2 className='mt-4 font-display text-2xl font-bold'>
+              Team creation is paused
+            </h2>
+            <p className='mt-2 text-sm leading-6 text-secondary-foreground'>
+              The tournament organizer has temporarily locked new team registrations. You cannot create a new team at this time, but you can still join an existing team if invited.
+            </p>
+            <div className='mt-6 flex flex-col gap-3 phone:flex-row'>
+              <ButtonLink href='/tournament/teams' variant='secondary'>
+                <Users size={16} /> Browse existing teams
+              </ButtonLink>
+            </div>
+          </Card>
+        ) : (
+          <Card className='p-5 desktop:p-6'>
+            <form action={formAction} className='flex flex-col gap-5'>
+              <fieldset className='contents' disabled={changesClosed}>
+                <Field>
+                  <FieldLabel htmlFor='teamName'>Team name</FieldLabel>
+                  <Input
+                    className='min-h-12 rounded-xl px-3.5 text-base'
+                    disabled={changesClosed}
+                    id='teamName'
+                    name='teamName'
+                    placeholder='Night Sentinels'
+                    required
+                  />
+                  <FieldDescription>
+                    You can rename a draft team later as captain.
+                  </FieldDescription>
+                </Field>
+                {state.error ? (
+                  <Alert aria-live='polite' variant='destructive'>
+                    <AlertDescription>{state.error}</AlertDescription>
                   </Alert>
-                  <ButtonLink className='mt-4' href='/tournament/team'>
-                    Open team room <ArrowRight size={16} />
-                  </ButtonLink>
-                </motion.div>
-              ) : (
-                <FormSubmitButton className='self-start bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover'>
-                  <Plus size={17} /> Create team
-                </FormSubmitButton>
-              )}
-            </fieldset>
-          </form>
-        </Card>
+                ) : null}
+                {state.success ? (
+                  <motion.div
+                    animate={{
+                      opacity: 1,
+                      transform: 'translateY(0px) scale(1)',
+                    }}
+                    aria-live='polite'
+                    className='rounded-xl'
+                    initial={{
+                      opacity: 0,
+                      transform: 'translateY(8px) scale(0.99)',
+                    }}
+                    transition={{ duration: 0.22, ease: easeOutExpo }}
+                  >
+                    <Alert
+                      className='border-success/30 bg-success-soft text-success'
+                      aria-live='polite'
+                    >
+                      <AlertDescription className='text-success'>
+                        {state.success}
+                      </AlertDescription>
+                    </Alert>
+                    <ButtonLink className='mt-4' href='/tournament/team'>
+                      Open team room <ArrowRight size={16} />
+                    </ButtonLink>
+                  </motion.div>
+                ) : (
+                  <FormSubmitButton
+                    disabled={changesClosed}
+                    className='self-start bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover'
+                  >
+                    <Plus size={17} /> Create team
+                  </FormSubmitButton>
+                )}
+              </fieldset>
+            </form>
+          </Card>
+        )}
       </div>
     </PageFrame>
   );
@@ -1428,6 +1463,7 @@ function TeamRoomView(props: {
   participants?: TournamentParticipantOption[];
   incomingInvites?: TournamentIncomingInviteData[];
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
 }) {
   if (props.team === null && props.registration === null) {
     return <RegistrationRequiredTeamView />;
@@ -1438,6 +1474,7 @@ function TeamRoomView(props: {
       <CreateTeamView
         deadlineStatus={props.deadlineStatus}
         incomingInvites={props.incomingInvites}
+        teamRegistrationEnabled={props.teamRegistrationEnabled}
       />
     );
   }
@@ -1451,12 +1488,14 @@ function TeamRoomContent({
   currentRegistrationId,
   participants,
   deadlineStatus,
+  teamRegistrationEnabled = true,
 }: {
   initialSubmitted?: boolean;
   team?: TournamentTeamData;
   currentRegistrationId?: string;
   participants?: TournamentParticipantOption[];
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
 }) {
   const preview = team === undefined;
   const [submitted, setSubmitted] = useState(
@@ -2096,10 +2135,19 @@ function TeamRoomContent({
               </div>
               {!isSubmitted && showCaptainControls ? (
                 <div className='mt-5 border-t border-border pt-5'>
+                  {!teamRegistrationEnabled ? (
+                    <Alert className='mb-3 border-warning/30 bg-warning-soft text-warning'>
+                      <AlertDescription className='text-warning'>
+                        The organizer has paused team submissions. You can continue
+                        updating your lineup, but final submission is temporarily closed.
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                   {preview ? (
                     <>
                       <Button
                         className='hidden min-h-11 w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex'
+                        disabled={!teamRegistrationEnabled}
                         onClick={submitPreviewTeam}
                         size='lg'
                         type='button'
@@ -2107,7 +2155,9 @@ function TeamRoomContent({
                         <ShieldCheck size={17} /> Submit team
                       </Button>
                       <p className='mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block'>
-                        Submission locks participant editing.
+                        {!teamRegistrationEnabled
+                          ? 'Submissions are currently paused.'
+                          : 'Submission locks participant editing.'}
                       </p>
                     </>
                   ) : (
@@ -2120,11 +2170,16 @@ function TeamRoomContent({
                         type='hidden'
                         value={actualTeam?.id ?? ''}
                       />
-                      <FormSubmitButton className='hidden w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex'>
+                      <FormSubmitButton
+                        disabled={!teamRegistrationEnabled}
+                        className='hidden w-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary-hover desktop:inline-flex'
+                      >
                         <ShieldCheck size={17} /> Submit team
                       </FormSubmitButton>
                       <p className='mt-3 mb-0 hidden text-center text-xs leading-5 text-muted-foreground desktop:block'>
-                        Submission locks participant editing.
+                        {!teamRegistrationEnabled
+                          ? 'Submissions are currently paused.'
+                          : 'Submission locks participant editing.'}
                       </p>
                     </form>
                   )}
@@ -2183,6 +2238,7 @@ export function TournamentTeamRoute(props: TournamentAppProps) {
         participants={participants}
         registration={registration}
         team={team}
+        teamRegistrationEnabled={props.teamRegistrationEnabled}
       />
     </TournamentAppRouteFrame>
   );

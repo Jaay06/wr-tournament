@@ -141,11 +141,13 @@ function BrowseTeamsView({
   registration,
   team,
   deadlineStatus,
+  teamRegistrationEnabled = true,
 }: {
   teams?: TournamentTeamSummary[];
   registration?: TournamentRegistrationData | null;
   team?: TournamentTeamData | null;
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'one' | 'two' | 'draft'>('all');
@@ -219,17 +221,19 @@ function BrowseTeamsView({
             >
               <Users size={16} /> Browse players
             </ButtonLink>
-            <ButtonLink
-              className='w-full phone:w-auto'
-              href={
-                preview || registration
-                  ? '/tournament/team'
-                  : '/tournament/register'
-              }
-            >
-              <Plus size={16} />{' '}
-              {preview || registration ? 'Create a team' : 'Complete profile'}
-            </ButtonLink>
+            {teamRegistrationEnabled ? (
+              <ButtonLink
+                className='w-full phone:w-auto'
+                href={
+                  preview || registration
+                    ? '/tournament/team'
+                    : '/tournament/register'
+                }
+              >
+                <Plus size={16} />{' '}
+                {preview || registration ? 'Create a team' : 'Complete profile'}
+              </ButtonLink>
+            ) : null}
           </div>
         </div>
 
@@ -560,6 +564,7 @@ export function TournamentTeamsRoute(props: TournamentAppProps) {
         registration={registration}
         team={team}
         teams={teams}
+        teamRegistrationEnabled={props.teamRegistrationEnabled}
       />
     </TournamentAppRouteFrame>
   );

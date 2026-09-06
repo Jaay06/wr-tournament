@@ -1,0 +1,1 @@
+ALTER TABLE "tournament_settings" ADD COLUMN "team_registration_enabled" boolean DEFAULT true NOT NULL;

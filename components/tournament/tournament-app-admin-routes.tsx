@@ -113,7 +113,12 @@ import {
   teamCards,
   tierMeta,
 } from './tournament-app-shared';
-import type { Player, Role, Tier, TournamentAppProps } from './tournament-app-shared';
+import type {
+  Player,
+  Role,
+  Tier,
+  TournamentAppProps,
+} from './tournament-app-shared';
 import { TournamentAppRouteFrame } from './tournament-app-route-frame';
 import type {
   OrganizerOverviewData,
