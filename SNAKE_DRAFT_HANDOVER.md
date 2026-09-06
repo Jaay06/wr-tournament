@@ -12,9 +12,11 @@ The user requested this new feature even though `docs/specifications.md` lists d
 
 ## Resolve before finalizing behavior
 
-Questions already presented to the user:
+Confirmed follow-up decision: drafting is an optional organizer-selected mode. Preserve the invitation and join-request flow when draft mode is inactive.
 
-- Does drafting replace invitations and join requests, or become an optional organizer-selected formation mode? Recommendation: optional mode.
+Questions presented to the user:
+
+- Formation mode: answered. Optional draft mode.
 - Do existing tier caps apply, counting captains, and do capped teams skip turns? Recommendation: preserve caps and advance tiers when no legal picks remain. Clarify whether each tier has one round or repeats until its eligible pool is exhausted.
 - Who selects captains and the initial order, and are turns timed? Recommendation: organizer chooses captains and order, with no timer initially.
 
