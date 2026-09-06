@@ -55,6 +55,8 @@ The design pass is complete for review on 2026-09-06. Existing canonical proposa
 
 Canvas: Brilliant project `Scratch`, canvas `rift-clash/app-screens-redesign`.
 
+The compact walkthrough map is rooted at `2e24db55e1344f79` (`START HERE - Player draft flow`) at the far-right overview area. It shows setup → active captain → next captain → completion, with a repeat loop and notes for timer expiry, pause/resume, organizer picks, and undo. The existing draft screens now have descriptive names for navigation.
+
 Final Brilliant frame roots:
 
 | Flow | Desktop root | Mobile root |
