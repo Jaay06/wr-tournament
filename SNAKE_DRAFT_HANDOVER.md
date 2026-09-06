@@ -1,6 +1,6 @@
 # Captain snake draft handover
 
-Status: planning PR. Intended owner: GPT Luna, model `gpt-5.6-luna`, reasoning effort `max`. Start with design in Brilliant MCP. This file prepares the handover; it does not mean a Luna task has been started or the feature implemented.
+Status: design pass complete; planning PR. Intended owner: GPT Luna, model `gpt-5.6-luna`, reasoning effort `max`. The Brilliant review artifacts are recorded below; the feature is not implemented.
 
 ## Confirmed request
 
@@ -57,6 +57,38 @@ Provisional design dials: `DESIGN_VARIANCE: 3`, `MOTION_INTENSITY: 3`, `VISUAL_D
 7. Export and visually inspect every proposed frame. Check clipping, contrast, long names, empty pools, small screens, and semantic tier labels. Present frame IDs and previews to the user with unresolved decisions attached to the affected states.
 
 Completion criterion: user has reviewed the concrete Brilliant flow and resolved missing design states before application UI implementation. This follows the repository's requirement to ask for direction on missing states and changed designs. Draft approval is separate from deployment or merge.
+
+## Design review artifacts
+
+The design pass is complete for review on 2026-09-06. No application implementation is included in this handover.
+
+Canvas: Brilliant project `Scratch`, canvas `rift-clash/app-screens-redesign`.
+
+Final Brilliant frame roots:
+
+| Flow | Desktop root | Mobile root |
+| --- | --- | --- |
+| Organizer setup | `82c545fa3269315d` | `65b340c7b7495ab3` |
+| Captain active turn | `ee33499bb76653b1` | `fd5f88ef5cd38b3c` |
+| Waiting captain | `e85c240646a63121` | `2220d0ab9c883a4c` |
+| Participant view | `1bac9c93f3f183e9` | `68252803aaeee732` |
+| Completed draft | `eb38caef2c36de82` | `8363d1c13103ba4d` |
+| Variable-team snake board (corrected) | `68ddb41f784e04d2` | `b3f3b8448676a171` |
+| Draft state gallery (corrected) | `96b1c099d9130cdc` | `57acfee01d2daab4` |
+
+The board uses six teams as a variable-count example. Each team keeps a readable minimum-width column inside a horizontally scrollable board; the round/path rail remains pinned, and `Jump to current pick` is available. The sample has picks 01–07 completed, pick 08 active for Team E / captain Kelechi, and pick 09 next for Team D. All six sample captain names are filled. Round labels and the footer path show forward/reverse direction, while tier phase remains a separate label from round.
+
+The corrected state gallery covers selected, waiting, rejected/stale, reconnecting with the last confirmed server state, no eligible players, tier transition, and incomplete roster. Its copy avoids promising local authority and does not invent a roster-completion policy. The separate canvas note `1171e8d436c3d85e` (`Draft board review notes`) contains design annotations and unresolved policy questions outside the simulated product UI.
+
+Inspected preview exports:
+
+- `/private/tmp/luna-snake-board-variable-desktop-final.png`
+- `/private/tmp/luna-snake-board-variable-mobile-final.png`
+- `/private/tmp/luna-state-gallery-desktop-final-corrected.png`
+- `/private/tmp/luna-state-gallery-mobile-final-corrected.png`
+- `/private/tmp/luna-snake-review-note-final.png`
+
+The open policy questions remain the ones listed above: tier caps and empty-pool behavior, roster size and completion, timer/expiry, pick undo/acceptance, and direction at tier boundaries. The frames keep those decisions out of the user flow until they are answered.
 
 ## Implementation plan after decisions and design review
 
