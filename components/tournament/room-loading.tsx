@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 
 type RoomLoadingProps = {
   organizer?: boolean;
+  stage?: 'data' | 'interface';
 };
 
 const participantNavigation = [
@@ -48,10 +49,12 @@ function LoadingPanel({
   );
 }
 
-export function RoomLoading({ organizer = false }: RoomLoadingProps) {
+export function RoomLoading({ organizer = false, stage = 'data' }: RoomLoadingProps) {
   const label = organizer
     ? 'Loading organizer control room'
     : 'Loading tournament room';
+  const completed = stage === 'data' ? 0 : 1;
+  const stageLabel = stage === 'data' ? 'Loading page data' : 'Loading page interface';
   const navigation = organizer ? organizerNavigation : participantNavigation;
 
   return (
@@ -61,7 +64,7 @@ export function RoomLoading({ organizer = false }: RoomLoadingProps) {
       className='min-h-[100dvh] bg-background text-foreground'
     >
       <span className='sr-only' role='status'>
-        {label}
+        {stageLabel}. {completed} of 2 steps complete.
       </span>
 
       <aside
@@ -166,7 +169,7 @@ export function RoomLoading({ organizer = false }: RoomLoadingProps) {
 
         <div className='w-full px-[18px] py-[22px] desktop:px-[34px] desktop:py-7'>
           <div className='mx-auto grid w-full max-w-page gap-5'>
-            <LoadingPanel className='border-primary/25 bg-card p-5 desktop:p-6'>
+            <div className='rounded-card border border-primary/25 bg-card p-5 desktop:p-6'>
               <div className='flex items-center gap-4'>
                 <div className='grid size-11 shrink-0 place-items-center rounded-xl bg-primary-soft'>
                   <RiftClashMark className='size-7' />
@@ -179,19 +182,40 @@ export function RoomLoading({ organizer = false }: RoomLoadingProps) {
                     Getting the room ready
                   </h1>
                   <p className='mt-1.5 mb-0 text-sm text-muted-foreground'>
-                    Syncing your roster, registration, and latest updates.
+                    {stage === 'data'
+                      ? 'Fetching the latest information for this page.'
+                      : 'Page data is ready. Opening the interface.'}
                   </p>
                 </div>
               </div>
               <div className='mt-6 flex items-center gap-3'>
-                <div className='h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-secondary'>
-                  <span className='room-loading-sheen block h-full w-2/5 rounded-full bg-primary' />
+                <div
+                  aria-label='Page loading'
+                  aria-valuemin={0}
+                  aria-valuemax={2}
+                  aria-valuenow={completed}
+                  aria-valuetext={`${completed} of 2 steps complete. ${stageLabel}.`}
+                  role='progressbar'
+                  className='h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-secondary'
+                >
+                  <span
+                    className='block h-full w-full origin-left rounded-full bg-primary transition-transform duration-200 ease-out motion-reduce:transition-none'
+                    style={{ transform: `scaleX(${completed / 2})` }}
+                  />
                 </div>
                 <span className='shrink-0 font-mono text-2xs font-semibold tracking-[0.12em] text-primary-muted'>
-                  LOADING
+                  {completed} OF 2 COMPLETE
                 </span>
               </div>
-            </LoadingPanel>
+              <ol className='mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted-foreground'>
+                <li className={stage === 'interface' ? 'text-success' : 'text-foreground'}>
+                  {stage === 'interface' ? '✓ Page data ready' : '1. Loading page data'}
+                </li>
+                <li className={stage === 'interface' ? 'text-foreground' : undefined}>
+                  {stage === 'interface' ? '2. Loading interface' : '2. Interface waiting'}
+                </li>
+              </ol>
+            </div>
 
             <div className='grid items-start gap-[18px] desktop:grid-cols-[minmax(0,1fr)_280px]'>
               <div className='grid gap-4'>

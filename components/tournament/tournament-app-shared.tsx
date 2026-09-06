@@ -76,11 +76,16 @@ export type TournamentAppProps = {
   deadline?: string;
   deadlineRemaining?: string;
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
   userName?: string;
   showSignOut?: boolean;
   registration?: TournamentRegistrationData | null;
   account?: AccountConnectionsData;
-  accountNotice?: 'linked' | 'already-connected' | 'expired' | { error: string };
+  accountNotice?:
+    | 'linked'
+    | 'already-connected'
+    | 'expired'
+    | { error: string };
   teams?: TournamentTeamSummary[];
   team?: TournamentTeamData | null;
   teamDetails?: TournamentTeamDetailData | null;
@@ -238,7 +243,13 @@ export const rosterPlayers: Player[] = [
   },
 ];
 
-export const starterSlots = ['Baron', 'Jungle', 'Mid', 'Dragon', 'Support'] as const;
+export const starterSlots = [
+  'Baron',
+  'Jungle',
+  'Mid',
+  'Dragon',
+  'Support',
+] as const;
 
 export function lineupDropTargetAtPoint(point: { x: number; y: number }) {
   const elements = document.elementsFromPoint(
@@ -337,7 +348,13 @@ export const stateSwapTransition = {
   bounce: 0,
 } as const;
 
-export function DashboardBrand({ href, organizer = false }: { href: string; organizer?: boolean }) {
+export function DashboardBrand({
+  href,
+  organizer = false,
+}: {
+  href: string;
+  organizer?: boolean;
+}) {
   return (
     <Link
       aria-label='Rift Clash home'
@@ -488,8 +505,11 @@ export function AppHeader({
           ? 'builder'
           : view === 'admin-teams'
             ? 'teams-admin'
-            : view === 'admin-announcements' ? 'announcements'
-              : view === 'admin-settings' ? 'settings' : view;
+            : view === 'admin-announcements'
+              ? 'announcements'
+              : view === 'admin-settings'
+                ? 'settings'
+                : view;
   const participantTierLabel = approvedTier
     ? `${approvedTier} APPROVED`
     : tierStatus === 'pending'
@@ -745,7 +765,13 @@ export function Kicker({
   );
 }
 
-export function RoleLabel({ role, className }: { role: Role; className?: string }) {
+export function RoleLabel({
+  role,
+  className,
+}: {
+  role: Role;
+  className?: string;
+}) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <RoleIcon className='size-4' roleName={role} />
@@ -754,7 +780,13 @@ export function RoleLabel({ role, className }: { role: Role; className?: string 
   );
 }
 
-export function RoleValue({ role, className }: { role: Role; className?: string }) {
+export function RoleValue({
+  role,
+  className,
+}: {
+  role: Role;
+  className?: string;
+}) {
   return (
     <span className={cn('inline-flex items-center gap-1.5', className)}>
       <RoleIcon className='size-3.5' roleName={role} />
@@ -916,10 +948,12 @@ export function ButtonLink({
 export function FormSubmitButton({
   children,
   className,
+  disabled = false,
   stateKey,
 }: {
   children: ReactNode;
   className?: string;
+  disabled?: boolean;
   stateKey?: string;
 }) {
   const { pending } = useFormStatus();
@@ -930,7 +964,7 @@ export function FormSubmitButton({
         'min-h-11 rounded-xl px-4 py-2.5 text-sm font-bold',
         className,
       )}
-      disabled={pending}
+      disabled={pending || disabled}
       size='lg'
       type='submit'
     >

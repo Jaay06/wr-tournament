@@ -44,6 +44,7 @@ A singleton row containing the active tournament configuration.
 | region | Organizer-selected Wild Rift region |
 | invite_code_hash | Hash of the current private invite code |
 | invite_enabled | Whether the current invite can be used |
+| team_registration_enabled | Boolean toggle to pause team creation and submission |
 | registration_deadline | Optional registration and team-submission deadline; null keeps registration open |
 | updated_by | Organizer user reference |
 | updated_at | Last update timestamp |

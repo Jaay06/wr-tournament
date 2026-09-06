@@ -234,6 +234,7 @@ function RevisedDashboardView({
   region,
   deadline,
   deadlineStatus,
+  teamRegistrationEnabled = true,
   userName,
   registration,
   team,
@@ -244,6 +245,7 @@ function RevisedDashboardView({
   deadline: string;
   deadlineRemaining?: string;
   deadlineStatus?: 'open' | 'upcoming' | 'passed';
+  teamRegistrationEnabled?: boolean;
   userName: string;
   registration?: TournamentRegistrationData | null;
   team?: TournamentTeamData | null;
@@ -378,7 +380,7 @@ function RevisedDashboardView({
       <div className="grid items-start gap-[18px] desktop:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="min-w-0 rounded-[14px] p-[18px] ring-0">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0"><Kicker>YOUR TEAM</Kicker><div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="m-0 truncate text-2xl font-bold">{hasTeam ? liveTeam?.name ?? 'Void Hunters' : 'No team yet'}</h2>{hasTeam && <span className="font-mono text-[9px] text-muted-foreground">{liveTeam?.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}</span>}</div><p className="mt-1 mb-0 text-sm text-muted-foreground">{hasTeam ? 'Captain ' + captainName + ' - ' + (teamMembers.length || 6) + ' of 7 members' : 'Create a team or browse draft rosters.'}</p></div>
+            <div className="min-w-0"><Kicker>YOUR TEAM</Kicker><div className="mt-2 flex flex-wrap items-center gap-2"><h2 className="m-0 truncate text-2xl font-bold">{hasTeam ? liveTeam?.name ?? 'Void Hunters' : 'No team yet'}</h2>{hasTeam && <span className="font-mono text-[9px] text-muted-foreground">{liveTeam?.status === 'submitted' ? 'SUBMITTED' : 'DRAFT'}</span>}</div><p className="mt-1 mb-0 text-sm text-muted-foreground">{hasTeam ? 'Captain ' + captainName + ' - ' + (teamMembers.length || 6) + ' of 7 members' : teamRegistrationEnabled ? 'Create a team or browse draft rosters.' : 'Team creation is currently paused. Browse existing rosters.'}</p></div>
             {hasTeam && <div className="shrink-0 text-right"><Kicker>STARTERS</Kicker><p className="mt-1 mb-0 text-xl font-semibold">{starterCount}<span className="text-xs text-muted-foreground"> / 5</span></p></div>}
           </div>
           {hasTeam ? <>
@@ -389,7 +391,7 @@ function RevisedDashboardView({
               <p className={cn('m-0 text-sm font-semibold', validationTone === 'danger' ? 'text-danger' : validationTone === 'warning' ? 'text-warning' : 'text-success')}>{validation?.blockingIssues.length ? validation.blockingIssues.length + ' blockers. Roster invalid.' : liveTeam?.status === 'submitted' ? 'Roster submitted.' : 'Roster valid.'}</p>
               <div className="grid w-full gap-2 phone:flex phone:w-auto"><ButtonLink className="h-11 min-h-11 text-sm" href="/tournament/team" variant="secondary">Open team room <ArrowRight size={15} /></ButtonLink><ButtonLink className="h-11 min-h-11 text-sm" href="/tournament/teams" variant="secondary">Browse teams</ButtonLink></div>
             </div>
-          </> : <div className="py-8"><p className="text-sm text-secondary-foreground">Find friends to fill the five starting roles.</p><div className="flex flex-wrap gap-2"><ButtonLink href={liveRegistration ? '/tournament/team' : '/tournament/register'}><Plus size={16} />{liveRegistration ? 'Create a team' : 'Complete profile'}</ButtonLink><ButtonLink href="/tournament/teams" variant="secondary">Browse teams</ButtonLink></div></div>}
+          </> : <div className="py-8"><p className="text-sm text-secondary-foreground">{teamRegistrationEnabled ? 'Find friends to fill the five starting roles.' : 'Team creation has been paused by the tournament organizer.'}</p><div className="flex flex-wrap gap-2">{teamRegistrationEnabled ? <ButtonLink href={liveRegistration ? '/tournament/team' : '/tournament/register'}><Plus size={16} />{liveRegistration ? 'Create a team' : 'Complete profile'}</ButtonLink> : null}<ButtonLink href="/tournament/teams" variant="secondary">Browse teams</ButtonLink></div></div>}
         </Card>
         <aside className="grid gap-4">
           <Card className="rounded-[14px] bg-secondary p-[18px] ring-0" id="notifications">
@@ -441,6 +443,7 @@ export function TournamentDashboardRoute(props: TournamentAppProps) {
         region={region}
         registration={registration}
         team={team}
+        teamRegistrationEnabled={props.teamRegistrationEnabled}
         tournamentName={tournamentName}
         userName={userName}
       />

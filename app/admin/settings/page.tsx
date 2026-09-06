@@ -8,6 +8,7 @@ export default async function OrganizerSettingsPage() {
     name: settings.name,
     region: settings.region,
     inviteEnabled: settings.inviteEnabled,
+    teamRegistrationEnabled: settings.teamRegistrationEnabled,
     registrationDeadline: toDateTimeLocalValue(settings.registrationDeadline),
   }} />;
 }

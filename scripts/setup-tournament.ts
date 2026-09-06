@@ -45,6 +45,7 @@ async function main() {
         .select({
           id: tournamentSettings.id,
           registrationDeadline: tournamentSettings.registrationDeadline,
+          teamRegistrationEnabled: tournamentSettings.teamRegistrationEnabled,
         })
         .from(tournamentSettings)
         .where(eq(tournamentSettings.id, 1))
@@ -85,6 +86,7 @@ async function main() {
         region,
         inviteCodeHash: hashInviteCode(inviteCode),
         inviteEnabled: true,
+        teamRegistrationEnabled: existingSettings?.teamRegistrationEnabled ?? true,
         registrationDeadline: existingSettings?.registrationDeadline ?? null,
         updatedBy: organizerId,
         updatedAt: new Date(),

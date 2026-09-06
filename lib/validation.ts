@@ -34,6 +34,7 @@ export const organizerSettingsSchema = z.object({
   region: z.string().trim().min(2).max(40),
   registrationDeadline: z.string().trim().max(64).optional(),
   inviteEnabled: z.boolean(),
+  teamRegistrationEnabled: z.boolean(),
 });
 
 export const playerRegistrationSchema = z

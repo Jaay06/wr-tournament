@@ -270,7 +270,10 @@ export async function createTeam(
   try {
     const teamId = await db.transaction(async (tx) => {
       const [settings] = await tx
-        .select({ registrationDeadline: tournamentSettings.registrationDeadline })
+        .select({
+          registrationDeadline: tournamentSettings.registrationDeadline,
+          teamRegistrationEnabled: tournamentSettings.teamRegistrationEnabled,
+        })
         .from(tournamentSettings)
         .where(eq(tournamentSettings.id, 1))
         .limit(1);
@@ -280,6 +283,9 @@ export async function createTeam(
       }
       if (deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
+      }
+      if (!settings.teamRegistrationEnabled) {
+        throw new TournamentActionError("TEAM_REGISTRATION_CLOSED", "The organizer has paused team creation.");
       }
 
       const [registration] = await tx
@@ -1496,12 +1502,18 @@ export async function submitTeam(
   try {
     const result = await db.transaction(async (tx) => {
       const [settings] = await tx
-        .select({ registrationDeadline: tournamentSettings.registrationDeadline })
+        .select({
+          registrationDeadline: tournamentSettings.registrationDeadline,
+          teamRegistrationEnabled: tournamentSettings.teamRegistrationEnabled,
+        })
         .from(tournamentSettings)
         .where(eq(tournamentSettings.id, 1))
         .limit(1);
       if (!settings || deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team submissions are closed because the deadline has passed.");
+      }
+      if (!settings.teamRegistrationEnabled) {
+        throw new TournamentActionError("TEAM_REGISTRATION_CLOSED", "The organizer has paused team submissions.");
       }
 
       const [captain] = await tx

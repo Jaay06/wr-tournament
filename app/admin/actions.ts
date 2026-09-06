@@ -143,6 +143,8 @@ export async function updateTournamentSettings(
     registrationDeadline:
       formString(formData, "registrationDeadline")?.trim() || undefined,
     inviteEnabled: formString(formData, "inviteEnabled") === "on",
+    teamRegistrationEnabled:
+      formString(formData, "teamRegistrationEnabled") === "on",
   });
 
   if (!parsed.success) {
@@ -175,6 +177,7 @@ export async function updateTournamentSettings(
       name: parsed.data.name,
       region: parsed.data.region,
       inviteEnabled: parsed.data.inviteEnabled,
+      teamRegistrationEnabled: parsed.data.teamRegistrationEnabled,
       registrationDeadline,
       updatedBy: access.userId,
       updatedAt: new Date(),

@@ -49,6 +49,7 @@ export async function getRoomPageData(path: string, organizer = false) {
       deadline: formatDeadline(settings.registrationDeadline),
       deadlineRemaining: deadlineState.compactLabel,
       deadlineStatus: deadlineState.status,
+      teamRegistrationEnabled: settings.teamRegistrationEnabled,
       showSignOut: true,
     },
   };
