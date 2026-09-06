@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# OpenNext and Wrangler build/runtime state
+/.open-next/
+/.wrangler/
+
 # production
 /build
 

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 
@@ -111,7 +110,9 @@ export default async function InvitePage({
 
         <p className="m-0 text-center text-sm text-muted-foreground">
           Signed in as <span className="font-semibold text-foreground">{session.user.name ?? session.user.email}</span>{" "}
-          · <Link className="font-semibold text-primary-muted hover:text-primary" href="/">Leave</Link>
+          · {/* A full document navigation avoids the broken RSC transition on the Cloudflare runtime. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a className="font-semibold text-primary-muted hover:text-primary" href="/">Leave</a>
         </p>
       </div>
     </EntryShell>

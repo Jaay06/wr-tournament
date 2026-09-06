@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { Check, KeyRound, UserRoundCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -44,13 +43,15 @@ export function EntryShell({
     <div className="entry-shell min-h-[100dvh] bg-background text-foreground">
       <main className="mx-auto grid min-h-[100dvh] w-full max-w-[1440px] tablet:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
         <section className="flex min-h-[100dvh] flex-col px-5 py-6 phone:px-8 tablet:px-[clamp(40px,6vw,84px)] tablet:py-9">
-          <Link
+          {/* A full document navigation avoids the broken RSC transition on the Cloudflare runtime. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a
             aria-label="Rift Clash home"
             className="flex w-fit items-center gap-2.5 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted"
             href="/"
           >
             <RiftClashMark className="size-7" /><span><span className="block text-sm font-bold">RIFT CLASH</span><span className="block font-mono text-[8px] tracking-[0.15em] text-muted-foreground">PRIVATE WILD RIFT</span></span>
-          </Link>
+          </a>
 
           <div className="my-auto w-full max-w-[470px] py-10">
             <p className="m-0 font-mono text-2xs font-semibold tracking-[0.18em] text-primary-muted">
