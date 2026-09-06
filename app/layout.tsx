@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import type { ReactNode } from 'react';
 import { Inter_Tight, JetBrains_Mono, Space_Grotesk } from 'next/font/google';
 import { getSiteUrl, siteConfig } from '@/lib/site';
 import './globals.css';
@@ -54,7 +55,7 @@ export const viewport: Viewport = {
   themeColor: '#070B18',
 };
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang='en'

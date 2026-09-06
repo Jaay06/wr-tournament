@@ -43,6 +43,7 @@ import type {
   TournamentIncomingInviteData,
   TierReviewData,
   OrganizerOverviewData,
+  DraftBoardData,
 } from '@/lib/tournament-types';
 import type { LineupDropTarget } from '@/lib/tournament-rules';
 
@@ -63,7 +64,9 @@ export type TournamentView =
   | 'admin-teams'
   | 'announcements'
   | 'admin-announcements'
-  | 'admin-settings';
+  | 'admin-settings'
+  | 'draft'
+  | 'admin-draft';
 
 export type Tier = 'T1' | 'T2' | 'T3' | 'T4';
 export type Role = 'Baron' | 'Jungle' | 'Mid' | 'Dragon' | 'Support';
@@ -100,6 +103,18 @@ export type TournamentAppProps = {
   announcements?: TournamentAnnouncementData[];
   incomingInvites?: TournamentIncomingInviteData[];
   settings?: RoomSettings;
+  draft?: DraftBoardData | null;
+  draftSetupTeams?: Array<{
+    id: string;
+    name: string;
+    status: 'draft' | 'submitted';
+    captainRegistrationId: string;
+    captainName: string;
+    captainRiotId: string;
+    memberCount: number;
+    approved: boolean;
+    eligible: boolean;
+  }>;
 };
 
 export type Player = {

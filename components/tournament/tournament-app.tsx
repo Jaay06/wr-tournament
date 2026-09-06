@@ -18,6 +18,7 @@ import { TournamentRegistrationRoute } from './tournament-app-registration-route
 import { TournamentTeamDetailsRoute } from './tournament-app-team-details-route';
 import { TournamentTeamRoute } from './tournament-app-team-route';
 import { TournamentTeamsRoute } from './tournament-app-teams-route';
+import { TournamentDraftRoute, TournamentAdminDraftRoute } from './tournament-app-draft-route';
 import type { TournamentAppProps } from './tournament-app-shared';
 
 export type {
@@ -59,5 +60,9 @@ export function TournamentApp(props: TournamentAppProps) {
       return <TournamentAdminAnnouncementsRoute {...props} />;
     case 'admin-settings':
       return <TournamentAdminSettingsRoute {...props} />;
+    case 'draft':
+      return <TournamentDraftRoute {...props} />;
+    case 'admin-draft':
+      return <TournamentAdminDraftRoute {...props} />;
   }
 }
