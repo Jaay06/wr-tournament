@@ -37,6 +37,21 @@ export const notificationStatus = pgEnum("notification_status", [
   "unread",
   "read",
 ]);
+export const draftStatus = pgEnum("draft_status", [
+  "active",
+  "paused",
+  "completed",
+  "needs_repair",
+]);
+export const draftPickSource = pgEnum("draft_pick_source", [
+  "captain",
+  "organizer",
+  "auto",
+]);
+export const draftDirection = pgEnum("draft_direction", [
+  "forward",
+  "reverse",
+]);
 
 const timestamps = {
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -294,6 +309,184 @@ export const passwordResetTokens = pgTable(
   (table) => [
     uniqueIndex("password_reset_tokens_hash_unique").on(table.tokenHash),
     index("password_reset_tokens_user_idx").on(table.userId),
+  ],
+);
+
+/**
+ * A live captain snake draft. The session row is the authoritative scheduler
+ * cursor. Every mutation that can affect a locked team or player must lock
+ * this row before it changes roster data.
+ */
+export const draftSessions = pgTable(
+  "draft_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    status: draftStatus("status").default("active").notNull(),
+    currentTier: tier("current_tier").default("T1").notNull(),
+    currentRound: integer("current_round").default(1).notNull(),
+    currentTierRound: integer("current_tier_round").default(1).notNull(),
+    currentTeamIndex: integer("current_team_index").default(0).notNull(),
+    direction: draftDirection("direction").default("forward").notNull(),
+    turnNumber: integer("turn_number").default(1).notNull(),
+    version: integer("version").default(1).notNull(),
+    turnStartedAt: timestamp("turn_started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    turnEndsAt: timestamp("turn_ends_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    pausedRemainingSeconds: integer("paused_remaining_seconds"),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("draft_sessions_live_unique")
+      .on(table.status)
+      .where(sql`${table.status} in ('active', 'paused', 'needs_repair')`),
+    check("draft_sessions_round_check", sql`${table.currentRound} > 0`),
+    check(
+      "draft_sessions_tier_round_check",
+      sql`${table.currentTierRound} > 0`,
+    ),
+    check(
+      "draft_sessions_team_index_check",
+      sql`${table.currentTeamIndex} >= 0`,
+    ),
+    check("draft_sessions_turn_check", sql`${table.turnNumber} > 0`),
+    check("draft_sessions_version_check", sql`${table.version} > 0`),
+  ],
+);
+
+/** Teams are snapshotted in their randomized turn order at draft start. */
+export const draftSessionTeams = pgTable(
+  "draft_session_teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => draftSessions.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "restrict" }),
+    orderIndex: integer("order_index").notNull(),
+    captainRegistrationId: uuid("captain_registration_id")
+      .notNull()
+      .references(() => playerRegistrations.id, { onDelete: "restrict" }),
+    initialMemberCount: integer("initial_member_count").default(1).notNull(),
+    incomplete: boolean("incomplete").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("draft_session_teams_session_team_unique").on(
+      table.sessionId,
+      table.teamId,
+    ),
+    uniqueIndex("draft_session_teams_session_order_unique").on(
+      table.sessionId,
+      table.orderIndex,
+    ),
+    uniqueIndex("draft_session_teams_session_captain_unique").on(
+      table.sessionId,
+      table.captainRegistrationId,
+    ),
+    check("draft_session_teams_order_check", sql`${table.orderIndex} >= 0`),
+    check(
+      "draft_session_teams_member_count_check",
+      sql`${table.initialMemberCount} = 1`,
+    ),
+  ],
+);
+
+/** Approved, unteamed players frozen into the pool when the draft starts. */
+export const draftPoolPlayers = pgTable(
+  "draft_pool_players",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => draftSessions.id, { onDelete: "cascade" }),
+    registrationId: uuid("registration_id")
+      .notNull()
+      .references(() => playerRegistrations.id, { onDelete: "restrict" }),
+    tier: tier("tier").notNull(),
+    available: boolean("available").default(true).notNull(),
+    pickedAt: timestamp("picked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("draft_pool_players_session_registration_unique").on(
+      table.sessionId,
+      table.registrationId,
+    ),
+    index("draft_pool_players_available_tier_idx").on(
+      table.sessionId,
+      table.available,
+      table.tier,
+    ),
+  ],
+);
+
+export const draftPicks = pgTable(
+  "draft_picks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => draftSessions.id, { onDelete: "cascade" }),
+    turnNumber: integer("turn_number").notNull(),
+    round: integer("round").notNull(),
+    tier: tier("tier").notNull(),
+    direction: draftDirection("direction").notNull(),
+    previousTier: tier("previous_tier").notNull(),
+    previousRound: integer("previous_round").notNull(),
+    previousTierRound: integer("previous_tier_round").notNull(),
+    previousTeamIndex: integer("previous_team_index").notNull(),
+    previousDirection: draftDirection("previous_direction").notNull(),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "restrict" }),
+    captainRegistrationId: uuid("captain_registration_id")
+      .notNull()
+      .references(() => playerRegistrations.id, { onDelete: "restrict" }),
+    registrationId: uuid("registration_id")
+      .notNull()
+      .references(() => playerRegistrations.id, { onDelete: "restrict" }),
+    source: draftPickSource("source").notNull(),
+    requestKey: text("request_key"),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    committedAt: timestamp("committed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("draft_picks_session_turn_live_unique")
+      .on(table.sessionId, table.turnNumber)
+      .where(sql`${table.undoneAt} is null`),
+    uniqueIndex("draft_picks_session_player_live_unique")
+      .on(table.sessionId, table.registrationId)
+      .where(sql`${table.undoneAt} is null`),
+    uniqueIndex("draft_picks_session_request_key_unique")
+      .on(table.sessionId, table.requestKey)
+      .where(sql`${table.requestKey} is not null`),
+    index("draft_picks_session_committed_idx").on(
+      table.sessionId,
+      table.committedAt,
+    ),
+    check("draft_picks_turn_check", sql`${table.turnNumber} > 0`),
+    check("draft_picks_round_check", sql`${table.round} > 0`),
   ],
 );
 

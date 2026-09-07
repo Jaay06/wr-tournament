@@ -17,6 +17,11 @@ import {
   users,
 } from "@/db/schema";
 import { validateRoster } from "@/lib/tournament-rules";
+import {
+  assertDraftRegistrationUnlocked,
+  assertDraftTeamUnlocked,
+  DraftActionError,
+} from "@/lib/draft-data";
 import type { TournamentRegistrationData } from "@/lib/tournament-types";
 import {
   lineupSchema,
@@ -131,6 +136,10 @@ export async function savePlayerRegistration(
         .where(eq(playerRegistrations.participantId, participant.id))
         .limit(1);
 
+      if (existing) {
+        await assertDraftRegistrationUnlocked(tx, existing.id);
+      }
+
       const tierChanged = Boolean(
         existing &&
           (existing.currentRank !== parsed.data.currentRank ||
@@ -238,6 +247,9 @@ export async function savePlayerRegistration(
       registration: savedRegistration,
     };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -302,6 +314,8 @@ export async function createTeam(
         throw new TournamentActionError("REGISTRATION_REQUIRED", "Complete your player registration before creating a team.");
       }
 
+      await assertDraftRegistrationUnlocked(tx, registration.id);
+
       const [existingMembership] = await tx
         .select({ id: teamMembers.id })
         .from(teamMembers)
@@ -331,6 +345,9 @@ export async function createTeam(
     revalidateTournamentPages();
     return { success: "Team created.", teamId };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -369,6 +386,8 @@ export async function requestToJoinTeam(
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
 
+      await assertDraftTeamUnlocked(tx, parsedTeamId.data);
+
       const [registration] = await tx
         .select({ id: playerRegistrations.id })
         .from(playerRegistrations)
@@ -381,6 +400,7 @@ export async function requestToJoinTeam(
       if (!registration) {
         throw new TournamentActionError("REGISTRATION_REQUIRED", "Complete your player registration before joining a team.");
       }
+      await assertDraftRegistrationUnlocked(tx, registration.id);
 
       const [team] = await tx
         .select({ id: teams.id, status: teams.status })
@@ -456,6 +476,9 @@ export async function requestToJoinTeam(
       }
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -514,6 +537,8 @@ export async function respondToJoinRequest(
       if (!request || request.status !== "pending") {
         throw new TournamentActionError("NOT_FOUND", "That join request is no longer pending.");
       }
+      await assertDraftTeamUnlocked(tx, request.teamId);
+      await assertDraftRegistrationUnlocked(tx, request.registrationId);
       if (request.teamStatus !== "draft") {
         throw new TournamentActionError("CONFLICT", "Submitted teams cannot resolve join requests.");
       }
@@ -614,6 +639,9 @@ export async function respondToJoinRequest(
       }
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -654,6 +682,9 @@ export async function inviteParticipant(
       if (!settings || deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
+
+      await assertDraftTeamUnlocked(tx, teamId.data);
+      await assertDraftRegistrationUnlocked(tx, invitedRegistrationId.data);
 
       const [captain] = await tx
         .select({ registrationId: teamMembers.registrationId, teamStatus: teams.status })
@@ -753,6 +784,9 @@ export async function inviteParticipant(
       }
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -823,6 +857,8 @@ export async function respondToTeamInvite(
       if (!invite || invite.status !== "pending") {
         throw new TournamentActionError("NOT_FOUND", "That invitation is no longer pending.");
       }
+      await assertDraftTeamUnlocked(tx, invite.teamId);
+      await assertDraftRegistrationUnlocked(tx, invite.invitedRegistrationId);
       if (invite.invitedUserId !== session.user.id) {
         throw new TournamentActionError("FORBIDDEN", "That invitation belongs to another participant.");
       }
@@ -904,6 +940,9 @@ export async function respondToTeamInvite(
       }
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -941,6 +980,7 @@ export async function renameTeam(
       if (!settings || deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [captain] = await tx
         .select({ teamStatus: teams.status })
         .from(teamMembers)
@@ -973,6 +1013,9 @@ export async function renameTeam(
         .where(eq(teams.id, teamId.data));
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1015,6 +1058,8 @@ export async function transferTeamCaptaincy(
           "Team changes are closed because the deadline has passed.",
         );
       }
+
+      await assertDraftTeamUnlocked(tx, teamId.data);
 
       const [team] = await tx
         .select({ id: teams.id, name: teams.name, status: teams.status })
@@ -1122,6 +1167,9 @@ export async function transferTeamCaptaincy(
     revalidateTournamentPages();
     return { success: `Captaincy transferred to ${nextCaptainName}.` };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1156,6 +1204,8 @@ export async function deleteTeam(
           "Team changes are closed because the deadline has passed.",
         );
       }
+
+      await assertDraftTeamUnlocked(tx, teamId.data);
 
       const [team] = await tx
         .select({ id: teams.id, status: teams.status })
@@ -1216,6 +1266,9 @@ export async function deleteTeam(
     revalidateTournamentPages();
     return { success: "Team deleted." };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1246,6 +1299,7 @@ export async function leaveTeam(
       if (!settings || deadlinePassed(settings.registrationDeadline)) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [team] = await tx
         .select({ id: teams.id, status: teams.status })
         .from(teams)
@@ -1297,6 +1351,9 @@ export async function leaveTeam(
         .where(eq(teams.id, teamId.data));
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1393,6 +1450,8 @@ export async function updateTeamLineup(
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
 
+      await assertDraftTeamUnlocked(tx, teamId.data);
+
       const [captain] = await tx
         .select({ registrationId: teamMembers.registrationId, teamStatus: teams.status })
         .from(teamMembers)
@@ -1475,6 +1534,9 @@ export async function updateTeamLineup(
         .where(eq(teams.id, teamId.data));
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1515,6 +1577,8 @@ export async function submitTeam(
       if (!settings.teamRegistrationEnabled) {
         throw new TournamentActionError("TEAM_REGISTRATION_CLOSED", "The organizer has paused team submissions.");
       }
+
+      await assertDraftTeamUnlocked(tx, teamId.data);
 
       const [captain] = await tx
         .select({ teamStatus: teams.status })
@@ -1608,6 +1672,9 @@ export async function submitTeam(
       warnings: result.warnings,
     };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }
@@ -1670,6 +1737,8 @@ export async function approveRegistrationTier(
       if (!registration) {
         throw new TournamentActionError("NOT_FOUND", "That registration could not be found.");
       }
+
+      await assertDraftRegistrationUnlocked(tx, registration.id);
 
       await tx
         .update(playerRegistrations)
@@ -1751,6 +1820,9 @@ export async function approveRegistrationTier(
       });
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof TournamentActionError) {
       return { code: error.code, error: error.message };
     }

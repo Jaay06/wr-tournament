@@ -9,6 +9,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Swords,
   UserRoundCheck,
   Users,
 } from 'lucide-react';
@@ -74,6 +75,7 @@ function getActiveKey(view: TournamentView) {
   if (view === 'admin-teams') return 'teams-admin';
   if (view === 'admin-announcements') return 'announcements';
   if (view === 'admin-settings') return 'settings';
+  if (view === 'admin-draft') return 'admin-draft';
   return view;
 }
 
@@ -111,6 +113,7 @@ export function TournamentAppShell({
       href: '/tournament/announcements',
       icon: MessageSquareText,
     },
+    { key: 'draft', label: 'Draft room', href: '/tournament/draft', icon: Swords },
   ];
   const organizerItems: NavigationItem[] = [
     { key: 'admin', label: 'Overview', href: '/admin', icon: ShieldCheck },
@@ -133,6 +136,7 @@ export function TournamentAppShell({
       href: '/admin/settings',
       icon: Settings,
     },
+    { key: 'admin-draft', label: 'Draft setup', href: '/admin/draft', icon: Swords },
   ];
   const items = organizer ? organizerItems : participantItems;
   const activeKey = getActiveKey(view);

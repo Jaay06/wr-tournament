@@ -114,6 +114,20 @@ const adminSettingsRoute = dynamic<TournamentAppProps>(
     ),
   { loading: () => <RoomLoading organizer stage="interface" />, ssr: false },
 );
+const draftRoute = dynamic<TournamentAppProps>(
+  () =>
+    import('./tournament-app-draft-route').then(
+      ({ TournamentDraftRoute }) => TournamentDraftRoute,
+    ),
+  { loading: () => <RoomLoading stage='interface' />, ssr: false },
+);
+const adminDraftRoute = dynamic<TournamentAppProps>(
+  () =>
+    import('./tournament-app-draft-route').then(
+      ({ TournamentAdminDraftRoute }) => TournamentAdminDraftRoute,
+    ),
+  { loading: () => <RoomLoading organizer stage='interface' />, ssr: false },
+);
 
 const routes: Record<TournamentView, TournamentRoute> = {
   invite: inviteRoute,
@@ -133,6 +147,8 @@ const routes: Record<TournamentView, TournamentRoute> = {
   announcements: announcementsRoute,
   "admin-announcements": adminAnnouncementsRoute,
   "admin-settings": adminSettingsRoute,
+  draft: draftRoute,
+  "admin-draft": adminDraftRoute,
 };
 
 export function TournamentAppClient(props: TournamentAppProps) {

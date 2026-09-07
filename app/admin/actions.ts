@@ -25,6 +25,11 @@ import {
   shouldReopenSubmittedTeam,
   validateRoster,
 } from "@/lib/tournament-rules";
+import {
+  assertDraftRegistrationUnlocked,
+  assertDraftTeamUnlocked,
+  DraftActionError,
+} from "@/lib/draft-data";
 import type { TournamentMemberData } from "@/lib/tournament-types";
 import {
   announcementSchema,
@@ -363,6 +368,7 @@ export async function unlockSubmittedTeam(
 
   try {
     await db.transaction(async (tx) => {
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [team] = await tx
         .select({ id: teams.id, name: teams.name, status: teams.status })
         .from(teams)
@@ -403,6 +409,9 @@ export async function unlockSubmittedTeam(
       }
     });
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof AdminTeamActionError) {
       return { code: error.code, error: error.message };
     }
@@ -437,6 +446,7 @@ export async function organizerUpdateTeamLineup(
 
   try {
     const result = await db.transaction(async (tx) => {
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [team] = await tx
         .select({ id: teams.id, status: teams.status, name: teams.name })
         .from(teams)
@@ -585,6 +595,9 @@ export async function organizerUpdateTeamLineup(
       warnings: result.validation.warnings,
     };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof AdminTeamActionError) {
       return {
         code: error.code,
@@ -614,6 +627,7 @@ export async function addTeamMember(
 
   try {
     const result = await db.transaction(async (tx) => {
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [team] = await tx
         .select({ id: teams.id, name: teams.name, status: teams.status })
         .from(teams)
@@ -653,6 +667,7 @@ export async function addTeamMember(
       if (!target) {
         throw new AdminTeamActionError("NOT_FOUND", "That participant is not registered.");
       }
+      await assertDraftRegistrationUnlocked(tx, target.id);
 
       const [otherTeam] = await tx
         .select({ teamId: teamMembers.teamId })
@@ -764,6 +779,9 @@ export async function addTeamMember(
       warnings: result.warnings,
     };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof AdminTeamActionError) {
       return { code: error.code, error: error.message };
     }
@@ -793,6 +811,7 @@ export async function removeTeamMember(
 
   try {
     const result = await db.transaction(async (tx) => {
+      await assertDraftTeamUnlocked(tx, teamId.data);
       const [membership] = await tx
         .select({
           member: teamMembers,
@@ -927,6 +946,9 @@ export async function removeTeamMember(
       warnings: result.validation.warnings,
     };
   } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
     if (error instanceof AdminTeamActionError) {
       return { code: error.code, error: error.message };
     }
