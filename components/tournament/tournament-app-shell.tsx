@@ -12,13 +12,11 @@ import {
   Swords,
   UserRoundCheck,
   Users,
+  UserGroup,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import {
-  Avatar as ShadcnAvatar,
-  AvatarFallback,
-} from '@/components/ui/avatar';
+import { Avatar as ShadcnAvatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sidebar,
   SidebarContent,
@@ -38,8 +36,15 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Badge } from '@/components/ui/badge';
-import { ClientSignOutButton, DashboardBrand, StatusPill } from './tournament-app-shared';
-import type { TournamentAppProps, TournamentView } from './tournament-app-shared';
+import {
+  ClientSignOutButton,
+  DashboardBrand,
+  StatusPill,
+} from './tournament-app-shared';
+import type {
+  TournamentAppProps,
+  TournamentView,
+} from './tournament-app-shared';
 import { cn } from '@/lib/utils';
 
 type TournamentAppShellProps = TournamentAppProps & {
@@ -105,6 +110,12 @@ export function TournamentAppShell({
       key: 'teams',
       label: 'Browse teams',
       href: '/tournament/teams',
+      icon: UserGroup,
+    },
+    {
+      key: 'players',
+      label: 'Browse players',
+      href: '/tournament/players',
       icon: Search,
     },
     {
@@ -113,7 +124,12 @@ export function TournamentAppShell({
       href: '/tournament/announcements',
       icon: MessageSquareText,
     },
-    { key: 'draft', label: 'Draft room', href: '/tournament/draft', icon: Swords },
+    {
+      key: 'draft',
+      label: 'Draft room',
+      href: '/tournament/draft',
+      icon: Swords,
+    },
   ];
   const organizerItems: NavigationItem[] = [
     { key: 'admin', label: 'Overview', href: '/admin', icon: ShieldCheck },
@@ -136,7 +152,12 @@ export function TournamentAppShell({
       href: '/admin/settings',
       icon: Settings,
     },
-    { key: 'admin-draft', label: 'Draft setup', href: '/admin/draft', icon: Swords },
+    {
+      key: 'admin-draft',
+      label: 'Draft setup',
+      href: '/admin/draft',
+      icon: Swords,
+    },
   ];
   const items = organizer ? organizerItems : participantItems;
   const activeKey = getActiveKey(view);
@@ -260,7 +281,9 @@ export function TournamentAppShell({
                   <SidebarMenuSub className='mx-3.5 mt-1 border-white/10 px-2.5'>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                        aria-current={activeKey === 'profile' ? 'page' : undefined}
+                        aria-current={
+                          activeKey === 'profile' ? 'page' : undefined
+                        }
                         isActive={activeKey === 'profile'}
                         render={<Link href='/tournament/profile' />}
                       >
@@ -270,7 +293,9 @@ export function TournamentAppShell({
                     </SidebarMenuSubItem>
                     <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                        aria-current={activeKey === 'account' ? 'page' : undefined}
+                        aria-current={
+                          activeKey === 'account' ? 'page' : undefined
+                        }
                         isActive={activeKey === 'account'}
                         render={<Link href='/tournament/account' />}
                       >
@@ -286,10 +311,7 @@ export function TournamentAppShell({
 
           {showSignOut ? (
             <div className='px-2'>
-              <ClientSignOutButton
-                compact={teamRoom}
-                iconOnly={teamRoom}
-              />
+              <ClientSignOutButton compact={teamRoom} iconOnly={teamRoom} />
             </div>
           ) : null}
         </SidebarFooter>

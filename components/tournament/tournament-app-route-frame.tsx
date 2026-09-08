@@ -39,7 +39,7 @@ export function TournamentAppRouteFrame({
     <MotionConfig reducedMotion='user'>
       <TooltipProvider delay={0}>
         <SidebarProvider
-          className='min-h-[100dvh] bg-background text-foreground'
+          className='min-h-dvh bg-background text-foreground'
           data-application-frame
         >
           <TournamentAppShell
