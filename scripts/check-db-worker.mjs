@@ -63,9 +63,10 @@ async function main() {
     bundle: true,
     write: false,
     format: 'esm',
-    platform: 'browser',
-    conditions: ['workerd', 'worker', 'browser'],
+    platform: 'node',
+    conditions: ['workerd'],
     external: ['node:*'],
+    banner: { js: 'import { createRequire } from "node:module"; const require = createRequire("/worker.js");' },
     // Keep the bundled credential in memory; never write this build to disk.
     define: {
       'process.env.DATABASE_URL': JSON.stringify(process.env.DATABASE_URL),
