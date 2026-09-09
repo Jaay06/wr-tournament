@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { createDraftPoller } from '@/lib/draft-poll-client';
 import { draftDirectionLabel, draftRoundLabel } from '@/lib/snake-draft';
 import type {
   DraftBoardData,
@@ -69,10 +70,24 @@ function formatSeconds(seconds: number) {
 
 function useDraftClock(board: DraftBoardData | null) {
   const [now, setNow] = useState(() => Date.now());
+  const active = board?.status === 'active';
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
+    if (!active) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const sync = () => {
+      clearInterval(timer);
+      if (document.visibilityState === 'visible') {
+        setNow(Date.now());
+        timer = setInterval(() => setNow(Date.now()), 1000);
+      }
+    };
+    sync();
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', sync);
+    };
+  }, [active]);
 
   if (!board) return 0;
   if (board.status === 'paused') return board.pausedRemainingSeconds ?? 0;
@@ -83,49 +98,30 @@ function useDraftClock(board: DraftBoardData | null) {
   );
 }
 
-function useDraftRefresh(
-  initialBoard: DraftBoardData | null | undefined,
-  onBoard: (board: DraftBoardData | null) => void,
-) {
-  const router = useRouter();
-
-  useEffect(() => {
-    onBoard(initialBoard ?? null);
-  }, [initialBoard, onBoard]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function refresh() {
-      try {
-        const response = await fetch('/api/tournament/draft', {
-          cache: 'no-store',
-          headers: { Accept: 'application/json' },
-        });
-        if (!response.ok) return;
-        const next = (await response.json()) as DraftBoardData;
-        if (!cancelled) onBoard(next);
-      } catch {
-        // The next interval or a user action can resync the board.
-      }
-    }
-    const interval = window.setInterval(refresh, 5000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-    };
-  }, [onBoard]);
-
-  return async function refreshNow() {
-    try {
-      const response = await fetch('/api/tournament/draft', {
-        cache: 'no-store',
-        headers: { Accept: 'application/json' },
-      });
-      if (response.ok) onBoard((await response.json()) as DraftBoardData);
-    } catch {
-      router.refresh();
-    }
-  };
+function useDraftRefresh(initialBoard: DraftBoardData | null | undefined) {
+  const [snapshot, setSnapshot] = useState({ source: initialBoard, board: initialBoard ?? null });
+  // A server refresh supplies a new source. Adjust during render rather than
+  // painting the old board and triggering a second render from an effect.
+  if (snapshot.source !== initialBoard) {
+    setSnapshot({ source: initialBoard, board: initialBoard ?? null });
+  }
+  const poller = useMemo(() => createDraftPoller({
+    onBoard(next) {
+      setSnapshot(current => current.source === initialBoard
+        ? { source: initialBoard, board: next } : current);
+    },
+    isVisible: () => document.visibilityState === 'visible' && navigator.onLine,
+    subscribe(onVisible) {
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('online', onVisible);
+      return () => {
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('online', onVisible);
+      };
+    },
+  }), [initialBoard]);
+  useEffect(() => poller.start(), [poller]);
+  return { board: snapshot.board, refresh: poller.refresh };
 }
 
 function DraftStatusPill({ status }: { status: DraftStatus }) {
@@ -345,10 +341,11 @@ function DraftPickSurface({
       if (result.success) {
         setSelected(null);
         setRequestKey(crypto.randomUUID());
+        await onRefresh();
       }
       return result;
     },
-    [pickServerAction],
+    [pickServerAction, onRefresh],
   );
   const [pickState, pickAction] = useActionState<DraftActionState, FormData>(
     pickActionHandler,
@@ -368,10 +365,6 @@ function DraftPickSurface({
     [board.currentTier, board.players, search],
   );
   const timer = useDraftClock(board);
-
-  useEffect(() => {
-    if (pickState.success) void onRefresh();
-  }, [onRefresh, pickState.success]);
 
   return (
     <div className='grid gap-4 desktop:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]'>
@@ -754,30 +747,30 @@ function OrganizerControls({
   board: DraftBoardData;
   onRefresh: () => Promise<void>;
 }) {
-  const [pauseState, pauseAction] = useActionState<DraftActionState, FormData>(
-    pauseCaptainDraft,
-    {},
+  const runAndRefresh = useCallback(
+    async (
+      action: (state: DraftActionState, data: FormData) => Promise<DraftActionState>,
+      state: DraftActionState,
+      data: FormData,
+    ) => {
+      const result = await action(state, data);
+      if (result.success) await onRefresh();
+      return result;
+    },
+    [onRefresh],
   );
-  const [resumeState, resumeAction] = useActionState<
-    DraftActionState,
-    FormData
-  >(resumeCaptainDraft, {});
+  const [pauseState, pauseAction] = useActionState<DraftActionState, FormData>(
+    (state, data) => runAndRefresh(pauseCaptainDraft, state, data), {},
+  );
+  const [resumeState, resumeAction] = useActionState<DraftActionState, FormData>(
+    (state, data) => runAndRefresh(resumeCaptainDraft, state, data), {},
+  );
   const [timerState, timerAction] = useActionState<DraftActionState, FormData>(
-    adjustCaptainDraftTimer,
-    {},
+    (state, data) => runAndRefresh(adjustCaptainDraftTimer, state, data), {},
   );
   const [undoState, undoAction] = useActionState<DraftActionState, FormData>(
-    undoCaptainDraftPick,
-    {},
+    (state, data) => runAndRefresh(undoCaptainDraftPick, state, data), {},
   );
-  const anySuccess =
-    pauseState.success ||
-    resumeState.success ||
-    timerState.success ||
-    undoState.success;
-  useEffect(() => {
-    if (anySuccess) void onRefresh();
-  }, [anySuccess, onRefresh]);
 
   return (
     <SharedCard className='border-primary/20 bg-card p-4 desktop:p-5'>
@@ -886,14 +879,15 @@ function DraftSetup({
 }: {
   teams: NonNullable<TournamentAppProps['draftSetupTeams']>;
 }) {
+  const router = useRouter();
   const [state, formAction] = useActionState<DraftActionState, FormData>(
-    startCaptainDraft,
+    async (previous, data) => {
+      const result = await startCaptainDraft(previous, data);
+      if (result.success) router.refresh();
+      return result;
+    },
     {},
   );
-  const router = useRouter();
-  useEffect(() => {
-    if (state.success) router.refresh();
-  }, [router, state.success]);
   const eligible = teams.filter((team) => team.eligible);
 
   return (
@@ -1050,14 +1044,7 @@ function DraftRoom({
   props: TournamentAppProps;
   organizer: boolean;
 }) {
-  const [board, setBoard] = useState<DraftBoardData | null>(
-    props.draft ?? null,
-  );
-  const onBoard = useMemo(
-    () => (next: DraftBoardData | null) => setBoard(next),
-    [],
-  );
-  const refresh = useDraftRefresh(props.draft, onBoard);
+  const { board, refresh } = useDraftRefresh(props.draft);
 
   if (!board) {
     if (organizer) return <DraftSetup teams={props.draftSetupTeams ?? []} />;

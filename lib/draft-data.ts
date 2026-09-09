@@ -61,10 +61,14 @@ export class DraftActionError extends Error {
 }
 
 type SessionRow = typeof draftSessions.$inferSelect;
+const draftUserFields = {
+  id: users.id, displayName: users.displayName, avatarUrl: users.avatarUrl, deletedAt: users.deletedAt,
+};
+type DraftUser = Pick<typeof users.$inferSelect, keyof typeof draftUserFields>;
 type MemberRow = {
   member: typeof teamMembers.$inferSelect;
   registration: typeof playerRegistrations.$inferSelect;
-  user: typeof users.$inferSelect;
+  user: DraftUser;
 };
 
 type DraftContext = {
@@ -76,7 +80,7 @@ type DraftContext = {
   poolRows: Array<{
     pool: typeof draftPoolPlayers.$inferSelect;
     registration: typeof playerRegistrations.$inferSelect;
-    user: typeof users.$inferSelect;
+    user: DraftUser;
   }>;
 };
 
@@ -191,7 +195,7 @@ async function loadContext(
   const teamIds = sessionTeams.map(({ team }) => team.id);
   const memberRows = teamIds.length
     ? await executor
-        .select({ member: teamMembers, registration: playerRegistrations, user: users })
+        .select({ member: teamMembers, registration: playerRegistrations, user: draftUserFields })
         .from(teamMembers)
         .innerJoin(
           playerRegistrations,
@@ -207,7 +211,7 @@ async function loadContext(
     : [];
 
   const poolRows = await executor
-    .select({ pool: draftPoolPlayers, registration: playerRegistrations, user: users })
+    .select({ pool: draftPoolPlayers, registration: playerRegistrations, user: draftUserFields })
     .from(draftPoolPlayers)
     .innerJoin(
       playerRegistrations,
@@ -419,7 +423,7 @@ export async function startDraft({
     }
 
     const rows = await tx
-      .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: users })
+      .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: draftUserFields })
       .from(teams)
       .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
       .innerJoin(
@@ -462,7 +466,7 @@ export async function startDraft({
 
     const lockedCaptainIds = captainTeams.map(({ captain }) => captain.registration.id);
     const poolRows = await tx
-      .select({ registration: playerRegistrations, user: users })
+      .select({ registration: playerRegistrations, user: draftUserFields })
       .from(playerRegistrations)
       .innerJoin(
         tournamentParticipants,
@@ -1082,12 +1086,18 @@ export async function getDraftBoardData(
   userId: string,
   options: { reconcileExpired?: boolean; isOrganizer?: boolean } = {},
 ): Promise<DraftBoardData | null> {
+  let session = await getLatestSession(db);
+  if (!session) return null;
   if (options.reconcileExpired ?? true) {
-    await reconcileExpiredDraft();
-    await reconcileDraftRepair();
+    if (session.status === "active" && session.turnEndsAt.getTime() <= Date.now()) {
+      await reconcileExpiredDraft(session.id);
+      session = await getLatestSession(db);
+    } else if (session.status === "needs_repair") {
+      await reconcileDraftRepair();
+      session = await getLatestSession(db);
+    }
   }
 
-  const session = await getLatestSession(db);
   if (!session) return null;
   const context = await loadContext(db, session.id);
   const teamDataRows = context.sessionTeams.map((row) =>
@@ -1099,7 +1109,7 @@ export async function getDraftBoardData(
       pick: draftPicks,
       team: teams,
       registration: playerRegistrations,
-      user: users,
+      user: draftUserFields,
     })
     .from(draftPicks)
     .innerJoin(teams, eq(draftPicks.teamId, teams.id))
@@ -1201,7 +1211,7 @@ export async function getDraftBoardData(
 
 export async function getDraftSetupData() {
   const rows = await db
-    .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: users })
+    .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: draftUserFields })
     .from(teams)
     .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
     .innerJoin(
