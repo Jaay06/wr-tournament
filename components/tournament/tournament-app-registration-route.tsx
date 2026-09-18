@@ -649,7 +649,7 @@ function RegistrationView({
                   ))}
                 </div>
                 <p className='m-0 border-t border-border bg-secondary px-5 py-4 text-xs leading-5 text-muted-foreground'>
-                  Tier limits apply to the full roster, including substitutes:
+                  Tier limits apply to the five starters:
                   at most one T1 and two T2 players.
                 </p>
               </Card>

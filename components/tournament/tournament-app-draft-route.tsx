@@ -21,6 +21,7 @@ import {
   Pause,
   Play,
   Search,
+  RotateCcw,
   Swords,
   Undo2,
   Users,
@@ -32,6 +33,7 @@ import {
   pauseCaptainDraft,
   pickDraftPlayer,
   resumeCaptainDraft,
+  restartCaptainDraft,
   startCaptainDraft,
   undoCaptainDraftPick,
   type DraftActionState,
@@ -40,6 +42,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
+import { draftTeamName, draftTeamSizes } from '@/lib/draft-setup';
 import { cn } from '@/lib/utils';
 import { createDraftPoller } from '@/lib/draft-poll-client';
 import { draftDirectionLabel, draftRoundLabel } from '@/lib/snake-draft';
@@ -141,7 +150,7 @@ function EmptyDraftRoom({ organizer = false }: { organizer?: boolean }) {
         <SectionHeading
           detail={
             organizer
-              ? 'Select captain-only teams to freeze their order and begin the shared live board.'
+              ? 'Choose captains to create balanced teams and begin the shared draft.'
               : 'The organizer will publish the shared board here when the captain draft begins.'
           }
           eyebrow={
@@ -519,7 +528,7 @@ function RosterSnapshot({
             <div className='flex items-center justify-between gap-3'>
               <p className='m-0 truncate text-sm font-semibold'>{team.name}</p>
               <span className='shrink-0 font-mono text-[10px] text-muted-foreground'>
-                {team.memberCount} / 5
+                {team.memberCount} / {team.targetMemberCount}
               </span>
             </div>
             <div className='mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground'>
@@ -538,7 +547,7 @@ function RosterSnapshot({
         ))}
       </div>
       <p className='mt-5 mb-0 border-t border-border pt-4 text-xs leading-5 text-muted-foreground'>
-        Five players per team, including the captain. Full teams skip turns.
+        At least six players per team, including the captain. Full teams skip turns.
       </p>
       <AnimatePresence initial={false} mode='wait'>
         {board.status === 'active' ? (
@@ -743,9 +752,11 @@ function DraftBoard({
 function OrganizerControls({
   board,
   onRefresh,
+  onRebuild,
 }: {
   board: DraftBoardData;
   onRefresh: () => Promise<void>;
+  onRebuild: () => void;
 }) {
   const runAndRefresh = useCallback(
     async (
@@ -770,6 +781,15 @@ function OrganizerControls({
   );
   const [undoState, undoAction] = useActionState<DraftActionState, FormData>(
     (state, data) => runAndRefresh(undoCaptainDraftPick, state, data), {},
+  );
+
+  const [restartOpen, setRestartOpen] = useState(false);
+  const [restartState, restartAction, restarting] = useActionState<DraftActionState, FormData>(
+    async (state, data) => {
+      const result = await runAndRefresh(restartCaptainDraft, state, data);
+      setRestartOpen(false);
+      return result;
+    }, {},
   );
 
   return (
@@ -847,7 +867,38 @@ function OrganizerControls({
             <Undo2 size={14} /> Undo latest
           </Button>
         </form>
+        <Button type='button' variant='secondary' size='sm' onClick={onRebuild}>
+          Set up new teams
+        </Button>
+        <AlertDialog open={restartOpen} onOpenChange={setRestartOpen}>
+          <AlertDialogTrigger render={<Button type='button' size='sm' variant='secondary' disabled={restarting}
+            className='min-h-10 gap-2 border border-danger/30 bg-danger-soft text-xs text-danger hover:bg-danger-soft/70' />}>
+            <RotateCcw size={14} /> Restart draft
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Restart this draft?</AlertDialogTitle>
+              <AlertDialogDescription>
+                All picks will be cleared and drafted players returned to the pool.
+                Captains and team order stay the same. Submitted rosters will be unlocked.
+                The draft will pause with a fresh 60-second timer until you resume it.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={restarting}>Keep draft</AlertDialogCancel>
+              <form action={restartAction}>
+                <input name='sessionId' type='hidden' value={board.id} />
+                <input name='expectedVersion' type='hidden' value={board.version} />
+                <AlertDialogAction type='submit' variant='destructive' disabled={restarting}>
+                  {restarting ? 'Restarting…' : 'Restart draft'}
+                </AlertDialogAction>
+              </form>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
+      {restartState.error && <p role='alert' className='mt-3 text-xs text-danger'>{restartState.error}</p>}
+      {restartState.success && <p role='status' className='mt-3 text-xs text-success'>{restartState.success}</p>}
       {pauseState.error ||
       resumeState.error ||
       timerState.error ||
@@ -875,149 +926,111 @@ function OrganizerControls({
 }
 
 function DraftSetup({
-  teams,
+  players,
+  previousDraft,
+  onCancel,
+  onStarted,
 }: {
-  teams: NonNullable<TournamentAppProps['draftSetupTeams']>;
+  players: NonNullable<TournamentAppProps['draftSetupPlayers']>;
+  previousDraft?: DraftBoardData;
+  onCancel?: () => void;
+  onStarted?: () => void;
 }) {
   const router = useRouter();
-  const [state, formAction] = useActionState<DraftActionState, FormData>(
+  const [captains, setCaptains] = useState<Record<number, string>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [state, formAction, pending] = useActionState<DraftActionState, FormData>(
     async (previous, data) => {
       const result = await startCaptainDraft(previous, data);
-      if (result.success) router.refresh();
+      setConfirmOpen(false);
+      if (result.success) {
+        onStarted?.();
+        router.refresh();
+      }
       return result;
-    },
-    {},
+    }, {},
   );
-  const eligible = teams.filter((team) => team.eligible);
+  const sizes = draftTeamSizes(players.length);
+  const ready = sizes.length > 0 && sizes.every((_, index) =>
+    players.some((player) => player.id === captains[index]),
+  ) && new Set(sizes.map((_, index) => captains[index])).size === sizes.length;
 
   return (
     <PageFrame>
       <div className='mx-auto max-w-6xl'>
         <SectionHeading
-          detail='Draft mode is optional. Existing invites and join requests stay available when it is off.'
+          detail='Teams are created from all approved players, including players already on a roster.'
           eyebrow='TEAM FORMATION'
-          title='Choose how teams will form.'
+          title='Choose your captains.'
         />
-        <form
-          action={formAction}
-          className='mt-7 grid gap-4 desktop:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'
-        >
+        {onCancel && <Button type='button' variant='secondary' className='mt-4' onClick={onCancel}>Back to draft</Button>}
+        <form action={formAction} id='start-captain-draft' className='mt-7 grid gap-4 desktop:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]'>
+          {previousDraft && <>
+            <input type='hidden' name='sessionId' value={previousDraft.id} />
+            <input type='hidden' name='expectedVersion' value={previousDraft.version} />
+          </>}
           <SharedCard className='p-5 desktop:p-6'>
-            <div className='flex items-start justify-between gap-3'>
-              <div>
-                <Kicker className='text-primary-muted'>
-                  CAPTAINS / RANDOM ORDER
-                </Kicker>
-                <p className='mt-2 mb-0 text-base font-semibold'>
-                  Captain snake draft
-                </p>
-                <p className='mt-1 mb-0 text-sm leading-6 text-secondary-foreground'>
-                  Select draft teams. The organizer locks these rosters and the
-                  approved unteamed pool when the draft starts.
-                </p>
-              </div>
-              <Swords
-                aria-hidden='true'
-                className='shrink-0 text-primary'
-                size={20}
-              />
-            </div>
-            <div className='mt-5 flex flex-col gap-2.5'>
-              {teams.map((team) => (
-                <label
-                  className={cn(
-                    'flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-3 transition-colors',
-                    team.eligible
-                      ? 'border-border bg-secondary hover:border-primary/50'
-                      : 'cursor-not-allowed border-border/60 bg-secondary/50 opacity-60',
-                  )}
-                  key={team.id}
-                >
-                  <input
-                    className='size-4 accent-primary'
-                    disabled={!team.eligible}
-                    name='teamId'
-                    type='checkbox'
-                    value={team.id}
-                  />
-                  <span className='min-w-0 flex-1'>
-                    <span className='block truncate text-sm font-semibold'>
-                      {team.name}
-                    </span>
-                    <span className='mt-1 block text-xs text-muted-foreground'>
-                      {team.captainName} · {team.memberCount} member
-                      {team.memberCount === 1 ? '' : 's'}
-                      {team.eligible
-                        ? ''
-                        : ' · captain-only, approved team required'}
-                    </span>
-                  </span>
-                  {team.eligible ? (
-                    <Badge className='border border-success/30 bg-success-soft text-2xs text-success'>
-                      READY
-                    </Badge>
-                  ) : (
-                    <Badge className='border border-border bg-background text-2xs text-muted-foreground'>
-                      LOCKED OUT
-                    </Badge>
-                  )}
-                </label>
-              ))}
-              {teams.length === 0 ? (
-                <div className='rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground'>
-                  Create captain-only teams before starting a draft.
+            <Kicker className='text-primary-muted'>AUTOMATIC TEAMS</Kicker>
+            <p className='mt-2 text-base font-semibold'>
+              {players.length} approved players · {sizes.length} teams
+            </p>
+            <p className='mt-1 text-sm leading-6 text-secondary-foreground'>
+              Select one captain per team. Each roster has at least six players,
+              including its captain. Extra players are distributed evenly.
+            </p>
+            <div className='mt-5 flex flex-col gap-4'>
+              {sizes.map((_, index) => (
+                <div key={index} className='rounded-xl border border-border bg-secondary p-4'>
+                  <label htmlFor={`captain-${index}`} className='mb-2 block text-sm font-semibold'>
+                    {draftTeamName(index)} · {Math.min(...sizes)}{Math.max(...sizes) !== Math.min(...sizes) ? `–${Math.max(...sizes)}` : ''} players
+                  </label>
+                  <NativeSelect id={`captain-${index}`} name='captainId' required
+                    value={captains[index] ?? ''} disabled={pending}
+                    onChange={(event) => setCaptains((current) => ({ ...current, [index]: event.target.value }))}>
+                    <NativeSelectOption value='' disabled>Choose captain</NativeSelectOption>
+                    {players.map((player) => (
+                      <NativeSelectOption key={player.id} value={player.id}
+                        disabled={sizes.some((_, other) => other !== index && captains[other] === player.id)}>
+                        {player.displayName} · {player.riotId} · {player.approvedTier}
+                      </NativeSelectOption>
+                    ))}
+                  </NativeSelect>
                 </div>
-              ) : null}
+              ))}
+              {!sizes.length && <p className='text-sm text-muted-foreground'>Approve at least six players to create a team.</p>}
             </div>
-            <div className='mt-5 flex items-center justify-between gap-3 border-t border-border pt-4'>
-              <p className='m-0 text-xs text-muted-foreground'>
-                {eligible.length} captain-only team
-                {eligible.length === 1 ? '' : 's'} ready.
-              </p>
-              <Button
-                className='min-h-11 bg-primary text-primary-foreground hover:bg-primary-hover'
-                disabled={eligible.length === 0}
-                size='lg'
-                type='submit'
-              >
-                <Play size={16} /> Start draft
-              </Button>
+            <div className='mt-5 border-t border-border pt-4'>
+              <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <AlertDialogTrigger render={<Button type='button' disabled={!ready || pending} />}>
+                  <Play size={16} /> Create teams and start draft
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Replace teams and start draft?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Existing teams, rosters, draft history, invitations and join requests will be replaced.
+                      All {players.length} approved players will enter {sizes.length} new teams.
+                      Pending players keep their registrations but remain unassigned.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction type='submit' form='start-captain-draft' name='confirmRebuild' value='yes' disabled={pending}>
+                      {pending ? 'Starting…' : 'Create teams and start'}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-            {state.error ? (
-              <Alert aria-live='polite' className='mt-4' variant='destructive'>
-                <AlertDescription>{state.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {state.success ? (
-              <Alert
-                aria-live='polite'
-                className='mt-4 border-success/30 bg-success-soft text-success'
-              >
-                <AlertDescription className='text-success'>
-                  {state.success}
-                </AlertDescription>
-              </Alert>
-            ) : null}
+            {state.error && <Alert aria-live='polite' className='mt-4' variant='destructive'><AlertDescription>{state.error}</AlertDescription></Alert>}
           </SharedCard>
           <SharedCard className='p-5 desktop:p-6'>
             <Kicker className='text-primary-muted'>DRAFT RULES</Kicker>
             <div className='mt-4 flex flex-col gap-3'>
-              <RuleLine
-                title='Tier sequence'
-                detail='T1 once · T2 twice · T3 → T4 until pools are exhausted'
-              />
-              <RuleLine
-                title='Roster caps'
-                detail='1 T1 + 2 T2 · five players including the captain'
-              />
-              <RuleLine
-                title='Turn timer'
-                detail='60 seconds · pause · ± time · server auto-pick'
-              />
-              <div className='rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-xs leading-5 text-danger'>
-                T4 exhaustion ends the draft and flags incomplete teams for
-                organizer repair.
-              </div>
+              <RuleLine title='Picking order' detail='Random captain order. The snake reverses each round, drafting T1 through T4 until everyone is assigned.' />
+              <RuleLine title='Starting lineup' detail='Five starters: at most one T1 and two T2 players. All remaining players are substitutes.' />
+              <RuleLine title='Team names' detail='Teams start as Team A, Team B and so on. Captains can rename their team after the draft finishes.' />
+              <RuleLine title='Turn timer' detail='60 seconds per pick. The organizer can pause, adjust time or restart.' />
             </div>
           </SharedCard>
         </form>
@@ -1045,9 +1058,15 @@ function DraftRoom({
   organizer: boolean;
 }) {
   const { board, refresh } = useDraftRefresh(props.draft);
+  const [rebuilding, setRebuilding] = useState(false);
+
+  if (organizer && rebuilding && board) {
+    return <DraftSetup players={props.draftSetupPlayers ?? []} previousDraft={board}
+      onCancel={() => setRebuilding(false)} onStarted={() => { setRebuilding(false); void refresh(); }} />;
+  }
 
   if (!board) {
-    if (organizer) return <DraftSetup teams={props.draftSetupTeams ?? []} />;
+    if (organizer) return <DraftSetup players={props.draftSetupPlayers ?? []} />;
     return <EmptyDraftRoom />;
   }
 
@@ -1102,11 +1121,8 @@ function DraftRoom({
             </motion.div>
           )}
         </AnimatePresence>
-        {organizer &&
-        (board.status === 'active' ||
-          board.status === 'paused' ||
-          board.viewer.canUndo) ? (
-          <OrganizerControls board={board} onRefresh={refresh} />
+        {organizer ? (
+          <OrganizerControls board={board} onRefresh={refresh} onRebuild={() => setRebuilding(true)} />
         ) : null}
         {board.status === 'needs_repair' ? (
           <Alert className='border-danger/30 bg-danger-soft text-danger'>

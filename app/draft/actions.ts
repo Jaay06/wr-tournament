@@ -12,6 +12,7 @@ import {
   DraftActionError,
   pauseDraft,
   resumeDraft,
+  restartDraft,
   startDraft,
   undoLatestDraftPick,
 } from "@/lib/draft-data";
@@ -102,24 +103,53 @@ export async function startCaptainDraft(
   const access = await getOrganizerAccess();
   if ("error" in access) return access;
 
-  const selectedTeamIds = formData
-    .getAll("teamId")
+  if (formString(formData, "confirmRebuild") !== "yes") {
+    return { code: "VALIDATION_ERROR", error: "Confirm that the draft will replace the existing teams." };
+  }
+  const rawCaptainIds = formData.getAll("captainId");
+  const captainIds = rawCaptainIds
     .flatMap((value) => (typeof value === "string" ? [parseUuid(value)] : []))
     .filter((id): id is string => Boolean(id));
-  if (selectedTeamIds.length === 0) {
-    return { code: "VALIDATION_ERROR", error: "Choose at least one captain-only team." };
+  if (captainIds.length === 0 || captainIds.length !== rawCaptainIds.length) {
+    return { code: "VALIDATION_ERROR", error: "Choose the team captains." };
   }
 
+  const replacingId = formString(formData, "sessionId");
+  const replacingVersion = parseExpectedVersion(formData);
+  if (replacingId && (!parseUuid(replacingId) || replacingVersion === undefined)) {
+    return { code: "VALIDATION_ERROR", error: "Refresh the draft before rebuilding teams." };
+  }
   try {
     const result = await startDraft({
       organizerId: access.userId,
-      teamIds: selectedTeamIds,
+      captainIds,
+      replaceSession: replacingId && replacingVersion !== undefined ? { id: replacingId, version: replacingVersion } : undefined,
     });
     revalidateDraftPages();
     return {
       success: `Draft started with ${result.teamCount} team${result.teamCount === 1 ? "" : "s"}.`,
       sessionId: result.sessionId,
     };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+export async function restartCaptainDraft(
+  _previousState: DraftActionState,
+  formData: FormData,
+): Promise<DraftActionState> {
+  const access = await getOrganizerAccess();
+  if ("error" in access) return access;
+  const sessionId = parseUuid(formString(formData, "sessionId"));
+  const expectedVersion = parseExpectedVersion(formData);
+  if (!sessionId || expectedVersion === undefined) {
+    return { code: "VALIDATION_ERROR", error: "Refresh the draft before restarting it." };
+  }
+  try {
+    await restartDraft(sessionId, expectedVersion);
+    revalidateDraftPages();
+    return { success: "Draft restarted and paused. Resume when the captains are ready." };
   } catch (error) {
     return actionError(error);
   }

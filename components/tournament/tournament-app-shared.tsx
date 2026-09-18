@@ -44,6 +44,7 @@ import type {
   TierReviewData,
   OrganizerOverviewData,
   DraftBoardData,
+  DraftSetupPlayer,
 } from '@/lib/tournament-types';
 import type { LineupDropTarget } from '@/lib/tournament-rules';
 
@@ -104,17 +105,7 @@ export type TournamentAppProps = {
   incomingInvites?: TournamentIncomingInviteData[];
   settings?: RoomSettings;
   draft?: DraftBoardData | null;
-  draftSetupTeams?: Array<{
-    id: string;
-    name: string;
-    status: 'draft' | 'submitted';
-    captainRegistrationId: string;
-    captainName: string;
-    captainRiotId: string;
-    memberCount: number;
-    approved: boolean;
-    eligible: boolean;
-  }>;
+  draftSetupPlayers?: DraftSetupPlayer[];
 };
 
 export type Player = {

@@ -16,10 +16,11 @@ import {
   tournamentSettings,
   users,
 } from "@/db/schema";
-import { validateRoster } from "@/lib/tournament-rules";
+import { MAX_TEAM_MEMBERS, validateRoster } from "@/lib/tournament-rules";
 import {
   assertDraftRegistrationUnlocked,
   assertDraftTeamUnlocked,
+  getTeamDraftStatus,
   DraftActionError,
 } from "@/lib/draft-data";
 import type { TournamentRegistrationData } from "@/lib/tournament-types";
@@ -430,8 +431,8 @@ export async function requestToJoinTeam(
       if (currentMembership) {
         throw new TournamentActionError("ALREADY_ON_TEAM", "You can only belong to one team.");
       }
-      if (members.length >= 7) {
-        throw new TournamentActionError("TEAM_FULL", "That team already has seven members.");
+      if (members.length >= MAX_TEAM_MEMBERS) {
+        throw new TournamentActionError("TEAM_FULL", `That team already has ${MAX_TEAM_MEMBERS} members.`);
       }
 
       const [pending] = await tx
@@ -570,8 +571,8 @@ export async function respondToJoinRequest(
           .select({ registrationId: teamMembers.registrationId })
           .from(teamMembers)
           .where(eq(teamMembers.teamId, request.teamId));
-        if (members.length >= 7) {
-          throw new TournamentActionError("TEAM_FULL", "The team reached seven members before this request was accepted.");
+        if (members.length >= MAX_TEAM_MEMBERS) {
+          throw new TournamentActionError("TEAM_FULL", `The team reached ${MAX_TEAM_MEMBERS} members before this request was accepted.`);
         }
         if (members.some((member) => member.registrationId === request.registrationId)) {
           throw new TournamentActionError("ALREADY_ON_TEAM", "That player is already on the team.");
@@ -717,8 +718,8 @@ export async function inviteParticipant(
         .select({ registrationId: teamMembers.registrationId })
         .from(teamMembers)
         .where(eq(teamMembers.teamId, teamId.data));
-      if (members.length >= 7) {
-        throw new TournamentActionError("TEAM_FULL", "Your team already has seven members.");
+      if (members.length >= MAX_TEAM_MEMBERS) {
+        throw new TournamentActionError("TEAM_FULL", `Your team already has ${MAX_TEAM_MEMBERS} members.`);
       }
       if (members.some((member) => member.registrationId === invitedRegistrationId.data)) {
         throw new TournamentActionError("ALREADY_ON_TEAM", "That player is already on your team.");
@@ -884,8 +885,8 @@ export async function respondToTeamInvite(
           .select({ registrationId: teamMembers.registrationId })
           .from(teamMembers)
           .where(eq(teamMembers.teamId, invite.teamId));
-        if (members.length >= 7) {
-          throw new TournamentActionError("TEAM_FULL", "That team reached seven members before you accepted.");
+        if (members.length >= MAX_TEAM_MEMBERS) {
+          throw new TournamentActionError("TEAM_FULL", `That team reached ${MAX_TEAM_MEMBERS} members before you accepted.`);
         }
 
         await tx.insert(teamMembers).values({
@@ -977,10 +978,14 @@ export async function renameTeam(
         .from(tournamentSettings)
         .where(eq(tournamentSettings.id, 1))
         .limit(1);
-      if (!settings || deadlinePassed(settings.registrationDeadline)) {
+      await assertDraftTeamUnlocked(tx, teamId.data);
+      const draftStatus = await getTeamDraftStatus(tx, teamId.data);
+      if (draftStatus && draftStatus !== "completed") {
+        throw new TournamentActionError("DRAFT_LOCKED", "Rename your team after the draft is complete.");
+      }
+      if (!settings || (draftStatus !== "completed" && deadlinePassed(settings.registrationDeadline))) {
         throw new TournamentActionError("DEADLINE_PASSED", "Team changes are closed because the deadline has passed.");
       }
-      await assertDraftTeamUnlocked(tx, teamId.data);
       const [captain] = await tx
         .select({ teamStatus: teams.status })
         .from(teamMembers)
@@ -1004,7 +1009,7 @@ export async function renameTeam(
       if (!captain) {
         throw new TournamentActionError("NOT_TEAM_CAPTAIN", "Only the team captain can rename this team.");
       }
-      if (captain.teamStatus !== "draft") {
+      if (captain.teamStatus !== "draft" && draftStatus !== "completed") {
         throw new TournamentActionError("CONFLICT", "Submitted teams are locked for participants.");
       }
       await tx
@@ -1495,8 +1500,8 @@ export async function updateTeamLineup(
 
       const starters = lineup.data.filter((entry) => entry.lineupPosition === "starter");
       const substitutes = lineup.data.filter((entry) => entry.lineupPosition === "substitute");
-      if (starters.length > 5 || substitutes.length > 2) {
-        throw new TournamentActionError("ROSTER_INVALID", "A team can have five starters and up to two substitutes.");
+      if (starters.length > 5 || members.length > MAX_TEAM_MEMBERS) {
+        throw new TournamentActionError("ROSTER_INVALID", `A team can have five starters and up to ${MAX_TEAM_MEMBERS - 5} substitutes.`);
       }
       if (
         starters.some((entry) => !entry.starterRole) ||

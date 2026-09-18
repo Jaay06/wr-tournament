@@ -10,6 +10,7 @@ import {
   roleMatchesPreferences,
   shouldReopenSubmittedTeam,
   validateRoster,
+  starterRoles,
 } from "./tournament-rules";
 import {
   callbackPathFromAuthCookie,
@@ -19,6 +20,26 @@ import {
 import { inviteCodeSchema } from "./validation";
 
 const now = new Date("2026-08-30T12:00:00.000Z");
+
+test("larger rosters keep tier caps on starters only", () => {
+  const starters = starterRoles.map((role) => ({
+    displayName: role, approvedTier: "T3" as const,
+    lineupPosition: "starter" as const, starterRole: role,
+    primaryRole: role, secondaryRole: "Mid" as const,
+  }));
+  const substitutes = Array.from({ length: 4 }, (_, index) => ({
+    displayName: `Sub ${index}`, approvedTier: "T1" as const,
+    lineupPosition: "substitute" as const, starterRole: null,
+    primaryRole: "Support" as const, secondaryRole: "Mid" as const,
+  }));
+  assert.equal(validateRoster([...starters, ...substitutes]).valid, true);
+  assert.equal(validateRoster(starters).valid, false, "five players are below the minimum");
+  const invalid = validateRoster([
+    ...starters.map((player, index) => ({ ...player, approvedTier: index < 2 ? "T1" as const : player.approvedTier })),
+    ...substitutes,
+  ]);
+  assert.ok(invalid.blockingIssues.some((issue) => issue.includes("starting lineup has 2 T1")));
+});
 
 test("formatDeadlineState reports an open deadline", () => {
   assert.deepEqual(formatDeadlineState(null, now), {
@@ -217,7 +238,7 @@ test("moving a starter onto another starter role swaps their roles", () => {
   );
 });
 
-test("a starter can use an open substitute slot but cannot overfill the bench", () => {
+test("a starter can move to the bench even with two existing substitutes", () => {
   const assignments = [
     {
       registrationId: "baron",
@@ -248,7 +269,7 @@ test("a starter can use an open substitute slot but cannot overfill the bench", 
       "baron",
       { kind: "substitute" },
     )[0].lineupPosition,
-    "starter",
+    "substitute",
   );
 });
 

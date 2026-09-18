@@ -250,7 +250,7 @@ function TeamCard({
             </Badge>
           </div>
           <p className="mt-2 mb-0 text-sm text-secondary-foreground">
-            {team.members.length} / 7 members · captain {team.members.find((member) => member.isCaptain)?.displayName ?? "not assigned"}
+            {team.members.length} members · captain {team.members.find((member) => member.isCaptain)?.displayName ?? "not assigned"}
             {team.submittedAt
               ? ` · submitted ${new Date(team.submittedAt).toLocaleString("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
               : " · draft roster"}
@@ -503,7 +503,7 @@ export function OrganizerTeamManager({
                         </span>
                       </span>
                       <span className="mt-1 block text-[11px] text-muted-foreground">
-                        {team.members.length} / 7 members. Captain {team.members.find((member) => member.isCaptain)?.displayName ?? "not assigned"}
+                        {team.members.length} members. Captain {team.members.find((member) => member.isCaptain)?.displayName ?? "not assigned"}
                       </span>
                     </button>
                   );

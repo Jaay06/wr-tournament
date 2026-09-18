@@ -22,6 +22,7 @@ import {
   hashInviteCode,
 } from "@/lib/tournament";
 import {
+  MAX_TEAM_MEMBERS,
   shouldReopenSubmittedTeam,
   validateRoster,
 } from "@/lib/tournament-rules";
@@ -489,10 +490,10 @@ export async function organizerUpdateTeamLineup(
       const substitutes = lineup.filter(
         (entry) => entry.lineupPosition === "substitute",
       );
-      if (starters.length > 5 || substitutes.length > 2) {
+      if (starters.length > 5 || memberIds.size > MAX_TEAM_MEMBERS) {
         throw new AdminTeamActionError(
           "ROSTER_INVALID",
-          "A team can have five starters and up to two substitutes.",
+          `A team can have five starters and up to ${MAX_TEAM_MEMBERS - 5} substitutes.`,
         );
       }
       if (
@@ -642,8 +643,8 @@ export async function addTeamMember(
         .select({ registrationId: teamMembers.registrationId })
         .from(teamMembers)
         .where(eq(teamMembers.teamId, team.id));
-      if (members.length >= 7) {
-        throw new AdminTeamActionError("TEAM_FULL", "A team can have no more than seven members.");
+      if (members.length >= MAX_TEAM_MEMBERS) {
+        throw new AdminTeamActionError("TEAM_FULL", `A team can have no more than ${MAX_TEAM_MEMBERS} members.`);
       }
       if (members.some((member) => member.registrationId === registrationId.data)) {
         throw new AdminTeamActionError("ALREADY_ON_TEAM", "That player is already on this team.");

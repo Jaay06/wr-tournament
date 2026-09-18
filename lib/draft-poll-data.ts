@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import { db } from "@/db";
+import { MIN_DRAFT_TEAM_SIZE } from "@/lib/draft-setup";
 
 export type DraftPollState = {
   user_id: string;
@@ -23,7 +24,7 @@ export async function getDraftPollState(userId: string, executor: Pick<typeof db
           select 1 from draft_session_teams dst
           left join team_members tm on tm.team_id = dst.team_id
           where dst.session_id = s.id
-          group by dst.id having count(tm.id) < 5
+          group by dst.id having count(tm.id) < ${MIN_DRAFT_TEAM_SIZE}
         )), false
       ) as needs_reconciliation,
       case when s.id is not null and p.id is not null then md5(concat_ws('|',

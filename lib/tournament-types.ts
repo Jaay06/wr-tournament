@@ -44,6 +44,7 @@ export type TournamentMemberData = {
 };
 
 export type TournamentTeamDetailData = {
+  draftStatus?: DraftStatus | null;
   id: string;
   name: string;
   status: "draft" | "submitted";
@@ -203,6 +204,13 @@ export type DraftPlayerData = {
   available: boolean;
 };
 
+export type DraftSetupPlayer = {
+  id: string;
+  displayName: string;
+  riotId: string;
+  approvedTier: TournamentTier | null;
+};
+
 export type DraftTeamData = {
   id: string;
   name: string;
@@ -211,6 +219,7 @@ export type DraftTeamData = {
   captainName: string;
   captainRiotId: string;
   memberCount: number;
+  targetMemberCount: number;
   tierCounts: Record<TournamentTier, number>;
   incomplete: boolean;
   members: TournamentMemberData[];

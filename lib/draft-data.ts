@@ -23,6 +23,7 @@ import {
   users,
 } from "@/db/schema";
 import { db } from "@/db";
+import { draftTeamName, draftTeamSizes, MIN_DRAFT_TEAM_SIZE } from "@/lib/draft-setup";
 import {
   canDraftTeamReceive,
   nextDraftCursorAfterPick,
@@ -98,19 +99,10 @@ function cursorFromSession(session: SessionRow): DraftCursor {
   };
 }
 
-function cursorChanged(a: DraftCursor, b: DraftCursor) {
-  return (
-    a.tier !== b.tier ||
-    a.tierRound !== b.tierRound ||
-    a.round !== b.round ||
-    a.teamIndex !== b.teamIndex ||
-    a.direction !== b.direction
-  );
-}
-
 function toTeamSnapshot(
   teamId: string,
   memberRows: MemberRow[],
+  targetMemberCount: number,
 ): DraftTeamSnapshot {
   const tierCounts: Record<TournamentTier, number> = {
     T1: 0,
@@ -128,15 +120,22 @@ function toTeamSnapshot(
   return {
     teamId,
     memberCount: memberRows.length,
+    targetMemberCount,
     tierCounts,
   };
 }
 
 function contextTeamSnapshots(context: DraftContext) {
-  return context.sessionTeams.map(({ sessionTeam }) =>
+  // The original pool and captain snapshots keep capacities stable after picks.
+  const playerCount = context.poolRows.length + context.sessionTeams.reduce(
+    (sum, { sessionTeam }) => sum + sessionTeam.initialMemberCount, 0,
+  );
+  const teamCount = context.sessionTeams.length;
+  return context.sessionTeams.map(({ sessionTeam }, index) =>
     toTeamSnapshot(
       sessionTeam.teamId,
       context.memberRows.filter((row) => row.member.teamId === sessionTeam.teamId),
+      Math.floor(playerCount / teamCount) + (index < playerCount % teamCount ? 1 : 0),
     ),
   );
 }
@@ -252,6 +251,7 @@ function memberData(row: MemberRow): TournamentMemberData {
 function teamData(
   row: { sessionTeam: typeof draftSessionTeams.$inferSelect; team: typeof teams.$inferSelect },
   memberRows: MemberRow[],
+  snapshot: DraftTeamSnapshot,
 ): DraftTeamData {
   const members = memberRows
     .filter((member) => member.member.teamId === row.team.id)
@@ -261,7 +261,6 @@ function teamData(
       member.member.teamId === row.team.id &&
       member.member.registrationId === row.sessionTeam.captainRegistrationId,
   );
-  const snapshot = toTeamSnapshot(row.team.id, memberRows.filter((member) => member.member.teamId === row.team.id));
 
   return {
     id: row.team.id,
@@ -274,7 +273,8 @@ function teamData(
       : "Unknown",
     memberCount: snapshot.memberCount,
     tierCounts: snapshot.tierCounts,
-    incomplete: snapshot.memberCount < 5,
+    targetMemberCount: snapshot.targetMemberCount,
+    incomplete: snapshot.memberCount < MIN_DRAFT_TEAM_SIZE,
     members,
   };
 }
@@ -303,7 +303,7 @@ async function markIncompleteTeams(
 ) {
   const snapshots = contextTeamSnapshots(context);
   const incompleteTeamIds = snapshots
-    .filter((team) => team.memberCount < 5)
+    .filter((team) => team.memberCount < MIN_DRAFT_TEAM_SIZE)
     .map((team) => team.teamId);
 
   for (const { sessionTeam } of context.sessionTeams) {
@@ -395,10 +395,12 @@ export async function assertDraftRegistrationUnlocked(
 
 export async function startDraft({
   organizerId,
-  teamIds,
+  captainIds,
+  replaceSession,
 }: {
   organizerId: string;
-  teamIds: string[];
+  captainIds: string[];
+  replaceSession?: { id: string; version: number };
 }) {
   return db.transaction(async (tx) => {
     const activeSession = await getLiveSession(tx, true);
@@ -413,84 +415,47 @@ export async function startDraft({
         "The tournament has not been set up yet.",
       );
     }
-    if (activeSession) {
-      throw new DraftActionError("DRAFT_ALREADY_ACTIVE", "A captain draft is already active.");
+    const [latest] = await tx.select().from(draftSessions)
+      .orderBy(desc(draftSessions.createdAt)).for("update").limit(1);
+    if (latest && (!replaceSession || latest.id !== replaceSession.id || latest.version !== replaceSession.version)) {
+      throw new DraftActionError("CONFLICT", "The draft changed. Return to the board and review it before rebuilding teams.");
     }
-
-    const selectedIds = [...new Set(teamIds)];
-    if (selectedIds.length === 0) {
-      throw new DraftActionError("VALIDATION_ERROR", "Choose at least one captain-only team.");
+    if (!latest && replaceSession) {
+      throw new DraftActionError("CONFLICT", "That draft no longer exists. Refresh the setup.");
     }
-
-    const rows = await tx
-      .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: draftUserFields })
-      .from(teams)
-      .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
-      .innerJoin(
-        playerRegistrations,
-        eq(teamMembers.registrationId, playerRegistrations.id),
-      )
-      .innerJoin(
-        tournamentParticipants,
-        eq(playerRegistrations.participantId, tournamentParticipants.id),
-      )
-      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(inArray(teams.id, selectedIds))
-      .orderBy(asc(teams.createdAt), asc(teamMembers.joinedAt))
-      .for("update");
-
-    const byTeam = new Map<string, typeof rows>();
-    for (const row of rows) {
-      const current = byTeam.get(row.team.id) ?? [];
-      current.push(row);
-      byTeam.set(row.team.id, current);
+    if (activeSession && activeSession.id !== latest?.id) {
+      throw new DraftActionError("DRAFT_ALREADY_ACTIVE", "Another captain draft is still active.");
     }
-
-    const captainTeams = selectedIds.map((teamId) => {
-      const members = byTeam.get(teamId) ?? [];
-      const [captain] = members.filter(({ member }) => member.isCaptain);
-      if (
-        members.length !== 1 ||
-        !captain ||
-        captain.team.status !== "draft" ||
-        captain.user.deletedAt ||
-        !captain.registration.approvedTier
-      ) {
-        throw new DraftActionError(
-          "TEAM_NOT_ELIGIBLE",
-          "Only draft teams with one approved playing captain can enter the draft.",
-        );
-      }
-      return { teamId, captain };
+    const candidates = await loadDraftCandidates(tx, true);
+    const sizes = draftTeamSizes(candidates.length);
+    const selectedIds = [...new Set(captainIds)];
+    if (sizes.length === 0 || selectedIds.length !== sizes.length || selectedIds.length !== captainIds.length) {
+      throw new DraftActionError("VALIDATION_ERROR", `Choose exactly ${sizes.length} different captains for ${candidates.length} approved players. At least six players are required.`);
+    }
+    const captains = selectedIds.map((id) => {
+      const candidate = candidates.find(({ registration }) => registration.id === id);
+      if (!candidate) throw new DraftActionError("PLAYER_UNAVAILABLE", "Every captain must be an approved, active player. Refresh the setup.");
+      return candidate;
     });
 
-    const lockedCaptainIds = captainTeams.map(({ captain }) => captain.registration.id);
-    const poolRows = await tx
-      .select({ registration: playerRegistrations, user: draftUserFields })
-      .from(playerRegistrations)
-      .innerJoin(
-        tournamentParticipants,
-        eq(playerRegistrations.participantId, tournamentParticipants.id),
-      )
-      .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-      .where(
-        and(
-          eq(playerRegistrations.tierStatus, "approved"),
-          isNull(users.deletedAt),
-        ),
-      );
-    const currentTeamPlayers = await tx
-      .select({ registrationId: teamMembers.registrationId })
-      .from(teamMembers)
-      .for("update");
-    const currentTeamPlayerIds = new Set(
-      currentTeamPlayers.map(({ registrationId }) => registrationId),
-    );
-    const pool = poolRows.filter(
-      ({ registration }) =>
-        !currentTeamPlayerIds.has(registration.id) &&
-        !lockedCaptainIds.includes(registration.id),
-    );
+    // Start is a confirmed rebuild. Team cascades clear old memberships,
+    // invitations and requests; registrations are preserved.
+    // A rebuild also replaces draft history referencing those teams.
+    await tx.delete(draftSessions);
+    await tx.delete(teams);
+    const captainTeams = [];
+    for (const [index, captain] of captains.entries()) {
+      const [team] = await tx.insert(teams).values({ name: draftTeamName(index) }).returning();
+      await tx.insert(teamMembers).values({
+        teamId: team.id,
+        registrationId: captain.registration.id,
+        isCaptain: true,
+        lineupPosition: "starter",
+        starterRole: captain.registration.primaryRole,
+      });
+      captainTeams.push({ teamId: team.id, captain });
+    }
+    const pool = candidates.filter(({ registration }) => !selectedIds.includes(registration.id));
 
     const [session] = await tx
       .insert(draftSessions)
@@ -535,7 +500,7 @@ export async function startDraft({
           updatedAt: normalizedAt,
         })
         .where(eq(draftSessions.id, session.id));
-    } else if (cursorChanged(cursorFromSession(session), normalized.cursor)) {
+    } else {
       await tx
         .update(draftSessions)
         .set({
@@ -572,7 +537,7 @@ async function chooseRandomPlayer(
     ({ pool }) =>
       pool.available &&
       pool.tier === session.currentTier &&
-      canDraftTeamReceive(currentTeam, session.currentTier),
+      canDraftTeamReceive(currentTeam),
   );
   if (eligible.length === 0) {
     throw new DraftActionError("NO_ELIGIBLE_PLAYERS", "No eligible player remains for this turn.");
@@ -618,16 +583,16 @@ async function commitPickLocked(
 
   if (options.requestKey) {
     const [existing] = await tx
-      .select({ id: draftPicks.id, registrationId: draftPicks.registrationId })
+      .select({ id: draftPicks.id, undoneAt: draftPicks.undoneAt })
       .from(draftPicks)
       .where(
         and(
           eq(draftPicks.sessionId, session.id),
           eq(draftPicks.requestKey, options.requestKey),
-          isNull(draftPicks.undoneAt),
         ),
       )
       .limit(1);
+    if (existing?.undoneAt) throw new DraftActionError("STALE_DRAFT", "That pick was cleared. Refresh before picking again.");
     if (existing) return { pickId: existing.id, replayed: true };
   }
 
@@ -775,16 +740,16 @@ export async function commitDraftPick({
     if (!session) throw new DraftActionError("NOT_FOUND", "That draft no longer exists.");
     if (requestKey) {
       const [existing] = await tx
-        .select({ id: draftPicks.id })
+        .select({ id: draftPicks.id, undoneAt: draftPicks.undoneAt })
         .from(draftPicks)
         .where(
           and(
             eq(draftPicks.sessionId, session.id),
             eq(draftPicks.requestKey, requestKey),
-            isNull(draftPicks.undoneAt),
           ),
         )
         .limit(1);
+      if (existing?.undoneAt) throw new DraftActionError("STALE_DRAFT", "That pick was cleared. Refresh before picking again.");
       if (existing) return { pickId: existing.id, replayed: true };
     }
     if (expectedVersion !== undefined && expectedVersion !== session.version) {
@@ -880,6 +845,77 @@ export async function pauseDraft(sessionId: string) {
       })
       .where(eq(draftSessions.id, session.id));
     return { remainingSeconds: remaining };
+  });
+}
+
+/** Reset under the same session lock used by picks and timer reconciliation. */
+export async function restartDraft(sessionId: string, expectedVersion: number) {
+  return db.transaction(async (tx) => {
+    await getLiveSession(tx, true);
+    const [session] = await tx.select().from(draftSessions)
+      .where(eq(draftSessions.id, sessionId)).for("update").limit(1);
+    const latest = await getLatestSession(tx);
+    if (!session || latest?.id !== session.id || session.version !== expectedVersion) {
+      throw new DraftActionError("CONFLICT", "The draft changed. Refresh it before restarting.");
+    }
+    const context = await loadContext(tx, session.id);
+    const teamIds = context.sessionTeams.map(({ team }) => team.id);
+    const poolIds = context.poolRows.map(({ pool }) => pool.registrationId);
+    if (!teamIds.length) throw new DraftActionError("DRAFT_INVALID", "This draft has no teams to restart.");
+    if (draftTeamSizes(poolIds.length + teamIds.length).length !== teamIds.length) {
+      throw new DraftActionError("DRAFT_INVALID", "This draft uses the previous team sizes. Use Set up new teams to create rosters with at least six players.");
+    }
+    for (const { sessionTeam } of context.sessionTeams) {
+      const captain = context.memberRows.find(({ member }) =>
+        member.teamId === sessionTeam.teamId && member.isCaptain &&
+        member.registrationId === sessionTeam.captainRegistrationId,
+      );
+      if (!captain || captain.user.deletedAt || !captain.registration.approvedTier) {
+        throw new DraftActionError("DRAFT_INVALID", "Restore the original approved captains before restarting.");
+      }
+    }
+    if (context.memberRows.some(({ member }) => !member.isCaptain && !poolIds.includes(member.registrationId))) {
+      throw new DraftActionError("CONFLICT", "Remove players added outside this draft before restarting.");
+    }
+    const poolMemberships = poolIds.length ? await tx.select().from(teamMembers)
+      .where(inArray(teamMembers.registrationId, poolIds)).for("update") : [];
+    if (poolMemberships.some((member) => !teamIds.includes(member.teamId) || member.isCaptain)) {
+      throw new DraftActionError("CONFLICT", "A drafted player moved to another roster or became captain. Repair that membership before restarting.");
+    }
+    if (context.poolRows.some(({ registration, user }) => user.deletedAt || !registration.approvedTier)) {
+      throw new DraftActionError("DRAFT_INVALID", "Every player in this draft must have an active account and an approved tier before restarting.");
+    }
+    const now = new Date();
+    await tx.delete(teamMembers).where(and(inArray(teamMembers.teamId, teamIds), eq(teamMembers.isCaptain, false)));
+    await tx.update(teams).set({ status: "draft", submittedAt: null, updatedAt: now }).where(inArray(teams.id, teamIds));
+    // Keep pick history and request keys so retried pre-restart picks cannot be replayed.
+    await tx.update(draftPicks).set({ undoneAt: now })
+      .where(and(eq(draftPicks.sessionId, session.id), isNull(draftPicks.undoneAt)));
+    for (const { pool, registration } of context.poolRows) {
+      await tx.update(draftPoolPlayers).set({ available: true, pickedAt: null, tier: registration.approvedTier as TournamentTier })
+        .where(eq(draftPoolPlayers.id, pool.id));
+    }
+    const nextContext = await loadContext(tx, session.id);
+    const normalized = normalizeDraftCursor(
+      { tier: "T1", tierRound: 1, round: 1, teamIndex: 0, direction: "forward" },
+      contextTeamSnapshots(nextContext), contextPoolSnapshots(nextContext),
+    );
+    await markIncompleteTeams(tx, session.id, nextContext);
+    await tx.update(draftSessions).set({
+      status: "paused",
+      currentTier: normalized.cursor.tier,
+      currentRound: normalized.cursor.round,
+      currentTierRound: normalized.cursor.tierRound,
+      currentTeamIndex: normalized.cursor.teamIndex,
+      direction: normalized.cursor.direction,
+      turnNumber: 1,
+      pausedRemainingSeconds: TURN_SECONDS,
+      turnStartedAt: now,
+      turnEndsAt: now,
+      completedAt: null,
+      version: session.version + 1,
+      updatedAt: now,
+    }).where(eq(draftSessions.id, session.id));
   });
 }
 
@@ -1100,8 +1136,9 @@ export async function getDraftBoardData(
 
   if (!session) return null;
   const context = await loadContext(db, session.id);
-  const teamDataRows = context.sessionTeams.map((row) =>
-    teamData(row, context.memberRows),
+  const snapshots = contextTeamSnapshots(context);
+  const teamDataRows = context.sessionTeams.map((row, index) =>
+    teamData(row, context.memberRows, snapshots[index]),
   );
   const poolData = context.poolRows.map(playerData);
   const pickRows = await db
@@ -1153,7 +1190,7 @@ export async function getDraftBoardData(
     .limit(1);
   const currentTeam = context.sessionTeams[session.currentTeamIndex];
   const currentTeamData = currentTeam
-    ? teamData(currentTeam, context.memberRows)
+    ? teamDataRows[session.currentTeamIndex]
     : null;
   const currentCaptain = currentTeam
     ? context.memberRows.find(
@@ -1209,50 +1246,32 @@ export async function getDraftBoardData(
   };
 }
 
-export async function getDraftSetupData() {
-  const rows = await db
-    .select({ team: teams, member: teamMembers, registration: playerRegistrations, user: draftUserFields })
-    .from(teams)
-    .innerJoin(teamMembers, eq(teams.id, teamMembers.teamId))
-    .innerJoin(
-      playerRegistrations,
-      eq(teamMembers.registrationId, playerRegistrations.id),
-    )
-    .innerJoin(
-      tournamentParticipants,
-      eq(playerRegistrations.participantId, tournamentParticipants.id),
-    )
+async function loadDraftCandidates(executor: DraftExecutor, lock = false) {
+  const query = executor
+    .select({ registration: playerRegistrations, user: draftUserFields })
+    .from(playerRegistrations)
+    .innerJoin(tournamentParticipants, eq(playerRegistrations.participantId, tournamentParticipants.id))
     .innerJoin(users, eq(tournamentParticipants.userId, users.id))
-    .orderBy(asc(teams.createdAt), asc(teamMembers.joinedAt));
+    .where(and(eq(playerRegistrations.tierStatus, "approved"), isNull(users.deletedAt)))
+    .orderBy(asc(playerRegistrations.riotName));
+  return lock ? query.for("update") : query;
+}
 
-  const byTeam = new Map<string, typeof rows>();
-  for (const row of rows) {
-    const current = byTeam.get(row.team.id) ?? [];
-    current.push(row);
-    byTeam.set(row.team.id, current);
-  }
-  return [...byTeam.values()]
-    .map((members) => {
-      const captain = members.find(({ member }) => member.isCaptain);
-      if (!captain) return null;
-      return {
-        id: members[0].team.id,
-        name: members[0].team.name,
-        status: members[0].team.status,
-        captainRegistrationId: captain.registration.id,
-        captainName: captain.user.deletedAt ? DELETED_PLAYER_NAME : captain.user.displayName,
-        captainRiotId: captain.user.deletedAt
-          ? `${DELETED_PLAYER_NAME}#${DELETED_PLAYER_TAG}`
-          : `${captain.registration.riotName}#${captain.registration.riotTag}`,
-        memberCount: members.length,
-        approved: Boolean(captain.registration.approvedTier),
-        eligible:
-          members.length === 1 &&
-          members[0].member.isCaptain &&
-          members[0].team.status === "draft" &&
-          !captain.user.deletedAt &&
-          Boolean(captain.registration.approvedTier),
-      };
-    })
-    .filter((team): team is NonNullable<typeof team> => Boolean(team));
+export async function getDraftSetupData() {
+  const candidates = await loadDraftCandidates(db);
+  return candidates.map(({ registration, user }) => ({
+    id: registration.id,
+    displayName: user.displayName,
+    riotId: `${registration.riotName}#${registration.riotTag}`,
+    approvedTier: registration.approvedTier,
+  }));
+}
+
+export async function getTeamDraftStatus(executor: DraftExecutor, teamId: string) {
+  const [draft] = await executor.select({ status: draftSessions.status })
+    .from(draftSessionTeams)
+    .innerJoin(draftSessions, eq(draftSessionTeams.sessionId, draftSessions.id))
+    .where(eq(draftSessionTeams.teamId, teamId))
+    .orderBy(desc(draftSessions.createdAt)).limit(1);
+  return draft?.status ?? null;
 }
