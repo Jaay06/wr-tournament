@@ -64,6 +64,21 @@ const playerDetailsRoute = dynamic<TournamentAppProps>(
     ),
   { loading: () => <RoomLoading stage="interface" />, ssr: false },
 );
+const adminPlayersRoute = dynamic<TournamentAppProps>(
+  () =>
+    import("./tournament-app-player-routes").then(
+      ({ TournamentAdminPlayersRoute }) => TournamentAdminPlayersRoute,
+    ),
+  { loading: () => <RoomLoading organizer stage="interface" />, ssr: false },
+);
+const adminPlayerDetailsRoute = dynamic<TournamentAppProps>(
+  () =>
+    import("./tournament-app-player-routes").then(
+      ({ TournamentAdminPlayerDetailsRoute }) =>
+        TournamentAdminPlayerDetailsRoute,
+    ),
+  { loading: () => <RoomLoading organizer stage="interface" />, ssr: false },
+);
 const teamRoute = dynamic<TournamentAppProps>(
   () =>
     import("./tournament-app-team-route").then(
@@ -144,6 +159,8 @@ const routes: Record<TournamentView, TournamentRoute> = {
   admin: adminRoute,
   "tier-review": tierReviewRoute,
   "admin-teams": adminTeamsRoute,
+  "admin-players": adminPlayersRoute,
+  "admin-player-details": adminPlayerDetailsRoute,
   announcements: announcementsRoute,
   "admin-announcements": adminAnnouncementsRoute,
   "admin-settings": adminSettingsRoute,

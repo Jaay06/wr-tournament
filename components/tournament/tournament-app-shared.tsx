@@ -63,6 +63,8 @@ export type TournamentView =
   | 'admin'
   | 'tier-review'
   | 'admin-teams'
+  | 'admin-players'
+  | 'admin-player-details'
   | 'announcements'
   | 'admin-announcements'
   | 'admin-settings'

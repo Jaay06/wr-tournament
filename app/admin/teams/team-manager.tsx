@@ -8,6 +8,7 @@ import { Check, LockKeyhole, ShieldCheck, Trash2, Wrench } from "lucide-react";
 
 import {
   addTeamMember,
+  deleteTeamAsOrganizer,
   organizerUpdateTeamLineup,
   removeTeamMember,
   unlockSubmittedTeam,
@@ -145,6 +146,64 @@ function RemoveMemberDialog({
   );
 }
 
+function DeleteTeamDialog({
+  deleteAction,
+  memberCount,
+  pending,
+  teamId,
+  teamName,
+}: {
+  deleteAction: (formData: FormData) => void;
+  memberCount: number;
+  pending: boolean;
+  teamId: string;
+  teamName: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <AlertDialog
+      onOpenChange={(value) => {
+        if (!pending) setOpen(value);
+      }}
+      open={open}
+    >
+      <AlertDialogTrigger
+        render={
+          <Button
+            className="border border-danger/30 bg-danger-soft text-danger hover:bg-danger/15"
+            disabled={pending}
+            size="lg"
+            type="button"
+            variant="outline"
+          />
+        }
+      >
+        <Trash2 size={16} /> Delete team
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {teamName}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the team, its {memberCount}{" "}
+            {memberCount === 1 ? "member" : "members"}, pending invitations,
+            and join requests. The players will be free to join another team.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Keep team</AlertDialogCancel>
+          <form action={deleteAction} onSubmit={() => setOpen(false)}>
+            <input name="teamId" type="hidden" value={teamId} />
+            <AlertDialogAction disabled={pending} type="submit" variant="destructive">
+              {pending ? "Deleting..." : "Delete team"}
+            </AlertDialogAction>
+          </form>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 function TeamCard({
   participants,
   team,
@@ -169,6 +228,10 @@ function TeamCard({
     unlockSubmittedTeam,
     {},
   );
+  const [deleteState, deleteAction, deletePending] = useActionState<
+    TeamAdminState,
+    FormData
+  >(deleteTeamAsOrganizer, {});
 
   const lineupByRegistration = useMemo(
     () => new Map(lineup.map((entry) => [entry.registrationId, entry])),
@@ -264,18 +327,28 @@ function TeamCard({
           </div>
         </div>
 
-        {statusIsSubmitted ? (
-          <div className="flex min-w-52 flex-col items-end gap-2">
-            <form action={unlockAction}>
-              <input name="teamId" type="hidden" value={team.id} />
-              <SubmitButton className="border border-warning/30 bg-warning-soft text-warning hover:bg-warning/15">
-                <LockKeyhole size={16} /> Unlock team
-              </SubmitButton>
-            </form>
-            {unlockState.error ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-danger">{unlockState.error}</p> : null}
-            {unlockState.success ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-success">{unlockState.success}</p> : null}
+        <div className="flex min-w-52 flex-col items-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            {statusIsSubmitted ? (
+              <form action={unlockAction}>
+                <input name="teamId" type="hidden" value={team.id} />
+                <SubmitButton className="border border-warning/30 bg-warning-soft text-warning hover:bg-warning/15">
+                  <LockKeyhole size={16} /> Unlock team
+                </SubmitButton>
+              </form>
+            ) : null}
+            <DeleteTeamDialog
+              deleteAction={deleteAction}
+              memberCount={team.members.length}
+              pending={deletePending}
+              teamId={team.id}
+              teamName={team.name}
+            />
           </div>
-        ) : null}
+          {unlockState.error ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-danger">{unlockState.error}</p> : null}
+          {unlockState.success ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-success">{unlockState.success}</p> : null}
+          {deleteState.error ? <p aria-live="polite" className="m-0 max-w-64 text-right text-xs text-danger">{deleteState.error}</p> : null}
+        </div>
       </div>
 
       <div className="mt-5 grid gap-5">

@@ -19,6 +19,7 @@ const organizerNavigation = [
   'Overview',
   'Tier review',
   'Teams',
+  'Players',
   'Announcements',
   'Settings',
 ];

@@ -82,6 +82,7 @@ function revalidateTournamentPages() {
   revalidatePath("/admin");
   revalidatePath("/admin/settings");
   revalidatePath("/admin/announcements");
+  revalidatePath("/admin/players");
   revalidatePath("/tournament/announcements");
   revalidatePath("/admin/teams");
   revalidatePath("/invite");
@@ -89,6 +90,7 @@ function revalidateTournamentPages() {
   revalidatePath("/tournament/register");
   revalidatePath("/tournament/team");
   revalidatePath("/tournament/teams");
+  revalidatePath("/tournament/players");
 }
 
 type OrganizerAccess = {
@@ -421,6 +423,83 @@ export async function unlockSubmittedTeam(
 
   revalidateTournamentPages();
   return { success: "Team unlocked for editing." };
+}
+
+export async function deleteTeamAsOrganizer(
+  _previousState: TeamAdminState,
+  formData: FormData,
+): Promise<TeamAdminState> {
+  void _previousState;
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
+
+  const teamId = teamIdSchema.safeParse(formString(formData, "teamId"));
+  if (!teamId.success) {
+    return { code: "VALIDATION_ERROR", error: "That team could not be found." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await assertDraftTeamUnlocked(tx, teamId.data);
+
+      const [team] = await tx
+        .select({ id: teams.id, name: teams.name })
+        .from(teams)
+        .where(eq(teams.id, teamId.data))
+        .for("update")
+        .limit(1);
+      if (!team) {
+        throw new AdminTeamActionError("NOT_FOUND", "That team no longer exists.");
+      }
+
+      const members = await tx
+        .select({ userId: tournamentParticipants.userId })
+        .from(teamMembers)
+        .innerJoin(
+          playerRegistrations,
+          eq(teamMembers.registrationId, playerRegistrations.id),
+        )
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(eq(teamMembers.teamId, team.id), isNull(users.deletedAt)),
+        );
+
+      const recipients = [
+        ...new Set(
+          members
+            .map(({ userId }) => userId)
+            .filter((userId) => userId !== access.userId),
+        ),
+      ];
+      if (recipients.length > 0) {
+        await tx.insert(notifications).values(
+          recipients.map((userId) => ({
+            userId,
+            type: "team_deleted",
+            message: `${access.displayName} deleted ${team.name}. You can now join another team.`,
+          })),
+        );
+      }
+
+      await tx.delete(teams).where(eq(teams.id, team.id));
+    });
+  } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
+    if (error instanceof AdminTeamActionError) {
+      return { code: error.code, error: error.message };
+    }
+    throw error;
+  }
+
+  revalidateTournamentPages();
+  return { success: "Team deleted." };
 }
 
 export async function organizerUpdateTeamLineup(
