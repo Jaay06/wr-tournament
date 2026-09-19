@@ -208,13 +208,17 @@ function PlayerCard({
 
 export function PlayerDirectoryView({
   currentRegistrationId,
+  organizer = false,
   players,
 }: {
   currentRegistrationId?: string;
+  organizer?: boolean;
   players?: TournamentPlayerProfileData[];
 }) {
   const source = players ?? previewPlayers;
   const currentId = currentRegistrationId ?? (players === undefined ? source[0]?.id : undefined);
+  const playersHref = organizer ? '/admin/players' : '/tournament/players';
+  const teamsHref = organizer ? '/admin/teams' : '/tournament/teams';
   const [query, setQuery] = useState('');
   const [tier, setTier] = useState<'all' | 'pending' | TournamentTier>('all');
   const visiblePlayers = useMemo(() => {
@@ -259,7 +263,7 @@ export function PlayerDirectoryView({
               buttonVariants({ size: 'lg', variant: 'secondary' }),
               'min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold phone:w-auto',
             )}
-            href='/tournament/teams'
+            href={teamsHref}
           >
             <Swords size={16} /> Browse teams
           </Link>
@@ -315,7 +319,7 @@ export function PlayerDirectoryView({
                 href={
                   players === undefined
                     ? '/ui-preview?screen=player-details'
-                    : `/tournament/players/${player.id}`
+                    : `${playersHref}/${player.id}`
                 }
                 isCurrentPlayer={player.id === currentId}
                 key={player.id}
@@ -327,10 +331,10 @@ export function PlayerDirectoryView({
             <table className='w-full table-fixed text-left text-sm'>
               <thead className='bg-secondary font-mono text-2xs font-medium uppercase tracking-wider text-muted-foreground'><tr><th className='w-[28%] px-5 py-4'>Player</th><th className='w-[17%] px-3 py-4'>Current rank</th><th className='w-[15%] px-3 py-4'>Approved tier</th><th className='w-[24%] px-3 py-4'>Role preference</th><th className='px-3 py-4'>Team</th></tr></thead>
               <tbody>{visiblePlayers.map(player => <tr className='border-t border-border/50 hover:bg-secondary/50' key={player.id}>
-                <td className='px-5 py-4'><Link className='flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-primary' href={players === undefined ? '/ui-preview?screen=player-details' : `/tournament/players/${player.id}`}><PlayerAvatar className='size-8 shrink-0 text-xs' player={player} /><span className='min-w-0'><span className='block truncate font-semibold'>{player.displayName}{player.id === currentId ? ' (you)' : ''}</span><span className='mt-1 block truncate text-xs text-muted-foreground'>{player.riotName}#{player.riotTag}</span></span></Link></td>
+                <td className='px-5 py-4'><Link className='flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-primary' href={players === undefined ? '/ui-preview?screen=player-details' : `${playersHref}/${player.id}`}><PlayerAvatar className='size-8 shrink-0 text-xs' player={player} /><span className='min-w-0'><span className='block truncate font-semibold'>{player.displayName}{player.id === currentId ? ' (you)' : ''}</span><span className='mt-1 block truncate text-xs text-muted-foreground'>{player.riotName}#{player.riotTag}</span></span></Link></td>
                 <td className='px-3 py-4 text-secondary-foreground'>{player.currentRank}</td><td className='px-3 py-4'><TierBadge player={player} /></td>
                 <td className='px-3 py-4'><span className='flex flex-wrap items-center gap-1.5 text-xs text-secondary-foreground'><RoleIcon className='size-4 text-role-icon' roleName={player.primaryRole} />{player.primaryRole}<span className='text-muted-foreground'>/</span><RoleIcon className='size-4 text-role-icon' roleName={player.secondaryRole} />{player.secondaryRole}</span></td>
-                <td className='px-3 py-4'>{player.team ? <Link className='text-xs hover:text-primary' href={`/tournament/teams/${player.team.id}`}>{player.team.name}</Link> : <span className='text-xs text-success'>Open</span>}</td>
+                <td className='px-3 py-4'>{player.team ? <Link className='text-xs hover:text-primary' href={organizer ? teamsHref : `${teamsHref}/${player.team.id}`}>{player.team.name}</Link> : <span className='text-xs text-success'>Open</span>}</td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -357,12 +361,18 @@ export function PlayerDirectoryView({
 
 export function PlayerDetailsView({
   currentRegistrationId,
+  organizer = false,
   playerProfile,
 }: {
   currentRegistrationId?: string;
+  organizer?: boolean;
   playerProfile?: TournamentPlayerProfileData | null;
 }) {
   const player = playerProfile ?? previewPlayers[0];
+  const playersHref = organizer ? '/admin/players' : '/tournament/players';
+  const teamHref = organizer
+    ? '/admin/teams'
+    : `/tournament/teams/${player.team?.id}`;
   const isCurrentPlayer =
     player.id === (currentRegistrationId ?? (playerProfile === undefined ? player.id : undefined));
 
@@ -371,7 +381,7 @@ export function PlayerDetailsView({
       <div className='flex flex-col gap-6'>
         <Link
           className='-mx-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-lg px-2 text-sm font-bold text-secondary-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-muted'
-          href='/tournament/players'
+          href={playersHref}
         >
           <ArrowLeft size={16} /> Back to players
         </Link>
@@ -430,7 +440,7 @@ export function PlayerDetailsView({
               </dl>
 
               <div className='mt-7 flex flex-col gap-3'>
-                {isCurrentPlayer ? (
+                {isCurrentPlayer && !organizer ? (
                   <Link
                     className={cn(
                       buttonVariants({ size: 'lg' }),
@@ -447,7 +457,7 @@ export function PlayerDetailsView({
                       buttonVariants({ size: 'lg', variant: 'secondary' }),
                       'min-h-11 rounded-xl px-4 py-2.5 text-sm font-bold',
                     )}
-                    href={`/tournament/teams/${player.team.id}`}
+                    href={teamHref}
                   >
                     <Users size={16} /> View team
                   </Link>

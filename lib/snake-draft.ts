@@ -15,6 +15,7 @@ export type DraftCursor = {
 export type DraftTeamSnapshot = {
   teamId: string;
   memberCount: number;
+  targetMemberCount: number;
   tierCounts: Record<TournamentTier, number>;
 };
 
@@ -45,20 +46,11 @@ export function draftTierIndex(tier: TournamentTier) {
   return draftTiers.indexOf(tier);
 }
 
-export function draftTierRoundLimit(tier: TournamentTier) {
-  if (tier === "T1") return 1;
-  if (tier === "T2") return 2;
-  return Number.POSITIVE_INFINITY;
-}
-
 export function canDraftTeamReceive(
   team: DraftTeamSnapshot,
-  tier: TournamentTier,
 ) {
-  if (team.memberCount >= 5) return false;
-  if (tier === "T1" && team.tierCounts.T1 >= 1) return false;
-  if (tier === "T2" && team.tierCounts.T2 >= 2) return false;
-  return true;
+  // Tier limits apply when the captain chooses the five starters.
+  return team.memberCount < team.targetMemberCount;
 }
 
 export function hasEligibleDraftPlayer(
@@ -67,7 +59,7 @@ export function hasEligibleDraftPlayer(
   pool: readonly DraftPoolSnapshot[],
 ) {
   return (
-    canDraftTeamReceive(team, tier) &&
+    canDraftTeamReceive(team) &&
     pool.some((player) => player.available && player.tier === tier)
   );
 }
@@ -133,7 +125,7 @@ function moveToNextTier(cursor: DraftCursor): DraftTransition {
 /**
  * Resolve the next playable turn from a persisted cursor.
  *
- * Full teams and tier caps are skipped. When an entire tier has no legal
+ * Full teams are skipped. When an entire tier has no legal
  * destination, the cursor walks the rest of that snake round before moving
  * to the next tier. This preserves endpoint turns at round boundaries even
  * when a tier empties halfway through a round.
@@ -153,54 +145,28 @@ export function normalizeDraftCursor(
       (player) => player.available && player.tier === next.tier,
     );
     const anyEligibleTeam = teams.some((team) =>
-      canDraftTeamReceive(team, next.tier),
+      canDraftTeamReceive(team),
     );
-
-    // The cursor is persisted as the next turn. A pick that ends a fixed
-    // length tier (T1 or T2) advances the snake endpoint before arriving
-    // here, so move to the next tier before exposing another turn from the
-    // completed phase.
-    if (next.tierRound > draftTierRoundLimit(next.tier)) {
-      const transition = moveToNextTier(next);
-      if (transition.completed) return transition;
-      next = transition.cursor;
-      continue;
-    }
 
     if (currentTierPlayers.length === 0 || !anyEligibleTeam) {
       const advanced = advancePosition(next, teams.length);
       next = advanced.cursor;
 
       if (advanced.completedRound) {
-        const tierLimitReached = next.tierRound > draftTierRoundLimit(next.tier);
-        if (
-          tierLimitReached ||
-          currentTierPlayers.length === 0 ||
-          !anyEligibleTeam
-        ) {
-          const transition = moveToNextTier(next);
-          if (transition.completed) return transition;
-          next = transition.cursor;
-        }
+        const transition = moveToNextTier(next);
+        if (transition.completed) return transition;
+        next = transition.cursor;
       }
       continue;
     }
 
     const currentTeam = teams[next.teamIndex];
-    if (currentTeam && canDraftTeamReceive(currentTeam, next.tier)) {
+    if (currentTeam && canDraftTeamReceive(currentTeam)) {
       return { cursor: next, completed: false };
     }
 
     const advanced = advancePosition(next, teams.length);
     next = advanced.cursor;
-    if (advanced.completedRound) {
-      const tierLimitReached = next.tierRound > draftTierRoundLimit(next.tier);
-      if (tierLimitReached) {
-        const transition = moveToNextTier(next);
-        if (transition.completed) return transition;
-        next = transition.cursor;
-      }
-    }
   }
 
   return { cursor: next, completed: true };
@@ -217,7 +183,7 @@ export function nextDraftCursorAfterPick(
     (player) => player.available && player.tier === cursor.tier,
   );
   const anyEligibleTeam = teams.some((team) =>
-    canDraftTeamReceive(team, cursor.tier),
+    canDraftTeamReceive(team),
   );
 
   // A pick at the end of a round already completed the skipped positions.
@@ -225,9 +191,7 @@ export function nextDraftCursorAfterPick(
   // repeated endpoint team (D, then D again in a four-team snake).
   if (
     advanced.completedRound &&
-    (advanced.cursor.tierRound > draftTierRoundLimit(cursor.tier) ||
-      !tierPlayersRemain ||
-      !anyEligibleTeam)
+    (!tierPlayersRemain || !anyEligibleTeam)
   ) {
     const transition = moveToNextTier(advanced.cursor);
     if (transition.completed) return transition;
@@ -242,7 +206,5 @@ export function draftDirectionLabel(direction: DraftDirection) {
 }
 
 export function draftRoundLabel(cursor: Pick<DraftCursor, "tier" | "tierRound">) {
-  const limit = draftTierRoundLimit(cursor.tier);
-  if (!Number.isFinite(limit)) return `${cursor.tier} round ${cursor.tierRound}`;
-  return `${cursor.tier} round ${cursor.tierRound} of ${limit}`;
+  return `${cursor.tier} round ${cursor.tierRound}`;
 }

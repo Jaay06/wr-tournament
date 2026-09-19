@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { cache } from 'react';
 import { getAccountLinkSession } from '@/lib/account-link-session';
 import NextAuth from 'next-auth';
 import type { Provider } from 'next-auth/providers';
@@ -40,8 +41,10 @@ async function getUserForSession(userId: string) {
       displayName: users.displayName,
       avatarUrl: users.avatarUrl,
       role: users.role,
+      participantId: tournamentParticipants.id,
     })
     .from(users)
+    .leftJoin(tournamentParticipants, eq(tournamentParticipants.userId, users.id))
     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
     .limit(1);
 
@@ -119,11 +122,11 @@ if (discordEnabled) {
   );
 }
 
-export const {
+const {
   handlers,
   signIn,
   signOut,
-  auth,
+  auth: readAuth,
   unstable_update: updateSession,
 } = NextAuth({
   pages: {
@@ -299,14 +302,12 @@ export const {
         return { ...token, sub: undefined };
       }
 
-      const participant = await getParticipantForUser(sessionUser.id);
-
       token.sub = sessionUser.id;
       token.name = sessionUser.displayName;
       token.email = sessionUser.email ?? undefined;
       token.picture = sessionUser.avatarUrl ?? undefined;
       token.role = sessionUser.role;
-      token.hasJoinedTournament = Boolean(participant);
+      token.hasJoinedTournament = Boolean(sessionUser.participantId);
 
       return token;
     },
@@ -326,3 +327,8 @@ export const {
     },
   },
 });
+
+// Layouts and pages share one verification within a server render. React's
+// cache is request-scoped; account and role checks run again on the next one.
+export const auth = cache(() => readAuth());
+export { handlers, signIn, signOut, updateSession };

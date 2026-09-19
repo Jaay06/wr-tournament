@@ -4,7 +4,7 @@ import { getRoomPageData } from "@/lib/room-page-data";
 
 export default async function AdminDraftPage() {
   const { shell, userId } = await getRoomPageData("/admin/draft", true);
-  const [draft, draftSetupTeams] = await Promise.all([
+  const [draft, draftSetupPlayers] = await Promise.all([
     getDraftBoardData(userId, { isOrganizer: true }),
     getDraftSetupData(),
   ]);
@@ -13,7 +13,7 @@ export default async function AdminDraftPage() {
     <TournamentAppClient
       {...shell}
       draft={draft}
-      draftSetupTeams={draftSetupTeams}
+      draftSetupPlayers={draftSetupPlayers}
       registration={null}
       view="admin-draft"
     />

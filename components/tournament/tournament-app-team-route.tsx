@@ -179,7 +179,7 @@ function CreateTeamView({
           detail={
             creationBlocked
               ? 'New team creation is currently paused by the organizer. You can still accept invitations to join an existing team.'
-              : 'Start a draft roster, become its captain, and invite friends to fill the seven available places.'
+              : 'Start a roster, become its captain, and invite friends to fill your team.'
           }
           eyebrow='TEAM ROOM'
           title={creationBlocked ? 'Team registration paused' : 'Create your team'}
@@ -510,7 +510,7 @@ function LineupMoveMenu({
               </button>
             );
           })}
-          {assignment.lineupPosition === 'starter' && substitutes.length < 2 ? (
+          {assignment.lineupPosition === 'starter' ? (
             <button
               className='flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left text-secondary-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out-quad hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring active:scale-[0.99] motion-reduce:active:scale-100'
               onClick={() => choose({ kind: 'substitute' })}
@@ -528,7 +528,7 @@ function LineupMoveMenu({
               </span>
             </button>
           ) : null}
-          {assignment.lineupPosition === 'starter' && substitutes.length === 2
+          {assignment.lineupPosition === 'starter' && substitutes.length > 0
             ? substitutes.map((substitute) => (
                 <button
                   className='flex min-h-10 w-full items-center justify-between gap-3 rounded-lg px-2.5 text-left text-secondary-foreground transition-[background-color,border-color,color,transform] duration-150 ease-out-quad hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring active:scale-[0.99] motion-reduce:active:scale-100'
@@ -1223,12 +1223,12 @@ function LineupEditor({
               <div className='flex shrink-0 items-center justify-between gap-4 desktop:w-[112px] desktop:flex-col desktop:items-start desktop:justify-center desktop:gap-0'>
                 <Kicker>SUBSTITUTES</Kicker>
                 <span className='text-[11px] text-muted-foreground'>
-                  {substitutes.length} / 2 slots
+                  {substitutes.length} players
                 </span>
               </div>
-              <div className='flex min-w-0 flex-1 flex-col gap-2 tablet:flex-row'>
+              <div className='flex min-w-0 flex-1 flex-col gap-2 tablet:flex-row tablet:flex-wrap'>
                 {substitutes.map(renderSubstitute)}
-                {substitutes.length < 2 ? (
+                {canEdit ? (
                   <div
                     className={cn(
                       'flex min-h-[52px] min-w-0 flex-1 select-none items-center gap-2 rounded-[10px] border border-border-strong bg-background/15 px-2.5 text-sm font-semibold text-secondary-foreground transition-[background-color,border-color,color,transform] duration-200 ease-out-quad',
@@ -1523,7 +1523,11 @@ function TeamRoomContent({
   const [renameState, renameAction] = useActionState<
     TournamentActionState,
     FormData
-  >(renameTeam, {});
+  >(async (previous, data) => {
+    const result = await renameTeam(previous, data);
+    if (result.success) setRenaming(false);
+    return result;
+  }, {});
   const actualTeam = team;
   const liveMembers = actualTeam?.members ?? [];
   const displayedMembers = lineupDraft
@@ -1579,7 +1583,7 @@ function TeamRoomContent({
   );
   const changesClosed = deadlineStatus === 'passed';
   const showCaptainControls = (preview || isCaptain) && !changesClosed;
-  const canRename = preview || (isCaptain && !changesClosed);
+  const canRename = preview || (isCaptain && (actualTeam?.draftStatus === 'completed' || (!actualTeam?.draftStatus && !changesClosed && !isSubmitted)));
   const inviteOptions = participants
     ? availableTournamentParticipants(
         participants,
@@ -1643,27 +1647,75 @@ function TeamRoomContent({
               >
                 Review request
               </ButtonLink>
-              {canRename ? (
-                <Button
-                  className='min-h-10 rounded-lg border border-border-strong bg-transparent px-3 py-2.5 text-xs font-bold text-secondary-foreground hover:bg-secondary'
-                  onClick={() => setRenaming((current) => !current)}
-                  size='lg'
-                  type='button'
-                  variant='outline'
-                >
-                  {renaming ? (
-                    'Cancel'
-                  ) : (
-                    <>
-                      Rename <span className='hidden desktop:inline'>team</span>
-                    </>
-                  )}
-                </Button>
-              ) : null}
             </div>
+          ) : null}
+          {canRename ? (
+            <Button
+              className='min-h-10 rounded-lg border border-border-strong bg-transparent px-3 py-2.5 text-xs font-bold text-secondary-foreground hover:bg-secondary'
+              onClick={() => setRenaming((current) => !current)}
+              size='lg'
+              type='button'
+              variant='outline'
+            >
+              {renaming ? (
+                'Cancel'
+              ) : (
+                <>
+                  Rename <span className='hidden desktop:inline'>team</span>
+                </>
+              )}
+            </Button>
           ) : null}
         </div>
 
+        {renaming && canRename ? (
+          <form
+            action={renameAction}
+            className='mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-secondary p-4 tablet:flex-row tablet:items-end'
+            onSubmit={
+              preview
+                ? (event) => {
+                    event.preventDefault();
+                    setRenaming(false);
+                  }
+                : undefined
+            }
+          >
+            <input
+              name='teamId'
+              type='hidden'
+              value={actualTeam?.id ?? 'preview-team'}
+            />
+            <Field className='min-w-0 flex-1'>
+              <FieldLabel htmlFor='team-name'>Team name</FieldLabel>
+              <Input
+                defaultValue={teamName}
+                id='team-name'
+                maxLength={60}
+                name='teamName'
+                required
+              />
+            </Field>
+            <FormSubmitButton className='bg-primary text-primary-foreground hover:bg-primary-hover'>
+              Save name
+            </FormSubmitButton>
+          </form>
+        ) : null}
+        {renameState.error ? (
+          <Alert aria-live='polite' className='mt-4' variant='destructive'>
+            <AlertDescription>{renameState.error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {renameState.success ? (
+          <Alert
+            aria-live='polite'
+            className='mt-4 border-success/30 bg-success-soft text-success'
+          >
+            <AlertDescription className='text-success'>
+              {renameState.success}
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {isSubmitted ? (
           <motion.div
             animate={{ opacity: 1, transform: 'translateY(0px) scale(1)' }}
@@ -1719,7 +1771,7 @@ function TeamRoomContent({
                 </div>
                 <div>
                   <Kicker>SUBSTITUTES</Kicker>
-                  <p className='mt-1 font-semibold'>{substituteCount} / 2</p>
+                  <p className='mt-1 font-semibold'>{substituteCount}</p>
                 </div>
                 <div>
                   <Kicker>STATUS</Kicker>
@@ -1739,59 +1791,12 @@ function TeamRoomContent({
             {changesClosed ? (
               <Alert className='mt-4 border-danger/30 bg-danger-soft text-danger'>
                 <AlertDescription className='text-danger'>
-                  Team changes are closed because the registration deadline has
+                  Roster changes are closed because the registration deadline has
                   passed.
                 </AlertDescription>
               </Alert>
             ) : null}
-            {renaming && canRename && !renameState.success ? (
-              <form
-                action={renameAction}
-                className='mt-4 flex flex-col gap-3 rounded-2xl border border-border bg-secondary p-4 tablet:flex-row tablet:items-end'
-                onSubmit={
-                  preview
-                    ? (event) => {
-                        event.preventDefault();
-                        setRenaming(false);
-                      }
-                    : undefined
-                }
-              >
-                <input
-                  name='teamId'
-                  type='hidden'
-                  value={actualTeam?.id ?? 'preview-team'}
-                />
-                <Field className='min-w-0 flex-1'>
-                  <FieldLabel htmlFor='team-name'>Team name</FieldLabel>
-                  <Input
-                    defaultValue={teamName}
-                    id='team-name'
-                    maxLength={60}
-                    name='teamName'
-                    required
-                  />
-                </Field>
-                <FormSubmitButton className='bg-primary text-primary-foreground hover:bg-primary-hover'>
-                  Save name
-                </FormSubmitButton>
-              </form>
-            ) : null}
-            {renameState.error ? (
-              <Alert aria-live='polite' className='mt-4' variant='destructive'>
-                <AlertDescription>{renameState.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {renameState.success ? (
-              <Alert
-                aria-live='polite'
-                className='mt-4 border-success/30 bg-success-soft text-success'
-              >
-                <AlertDescription className='text-success'>
-                  {renameState.success}
-                </AlertDescription>
-              </Alert>
-            ) : null}
+
           </>
         )}
 

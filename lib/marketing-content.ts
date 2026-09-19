@@ -2,13 +2,13 @@ export const tiers = [
   {
     tier: 'T1',
     range: 'Sovereign to Challenger',
-    detail: 'Organizer-approved. Maximum one across the full roster.',
+    detail: 'Organizer-approved. Maximum one in the starting lineup.',
     tone: 'gold',
   },
   {
     tier: 'T2',
     range: 'Grandmaster to Master',
-    detail: 'High-ranked core. Maximum two across the full roster.',
+    detail: 'High-ranked core. Maximum two in the starting lineup.',
     tone: 'silver',
   },
   {
@@ -35,7 +35,7 @@ export const howItWorksSteps = [
   ['01', 'Sign in', 'Use Discord or your email and password.'],
   ['02', 'Enter the invite', 'Use the private code from the organizer.'],
   ['03', 'Register', 'Add your Riot ID, tier, and preferred roles.'],
-  ['04', 'Build the five', 'Build five starters and up to two substitutes. Pending players may join drafts.'],
+  ['04', 'Build the five', 'Build a roster of at least six players. Choose five starters and keep the rest as substitutes.'],
   ['05', 'Get tier approval', 'Every roster member needs organizer approval before submission.'],
   ['06', 'Submit the roster', 'Submit a valid team before the registration deadline.'],
 ] as const;

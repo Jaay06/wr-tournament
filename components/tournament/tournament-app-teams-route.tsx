@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
+import { MAX_TEAM_MEMBERS } from '@/lib/tournament-rules';
 import Link from 'next/link';
 import {
   AnimatePresence,
@@ -16,7 +17,7 @@ import type {
   ReactNode,
 } from 'react';
 import { useActionState } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   AlertTriangle,
@@ -171,12 +172,12 @@ function BrowseTeamsView({
       id: team.id,
       name: team.name,
       captain: team.captain,
-      members: `${team.memberCount} / 7`,
+      members: `${team.memberCount} players`,
       state:
         team.status === 'submitted'
           ? ('SUBMITTED' as const)
           : ('DRAFT' as const),
-      eligible: team.status === 'draft' && team.memberCount < 7,
+      eligible: team.status === 'draft' && team.memberCount < MAX_TEAM_MEMBERS,
       openSlots: Math.max(0, 7 - team.memberCount),
       tiers: team.tierCounts,
     }));
@@ -514,7 +515,7 @@ function BrowseTeamsView({
                               : 'Complete registration first.'
                           : team.state === 'SUBMITTED'
                             ? 'The captain already submitted this roster.'
-                            : 'This roster already has seven members.'}
+                            : 'This roster is full.'}
                       </p>
                     </div>
                   )}

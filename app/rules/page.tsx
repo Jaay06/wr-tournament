@@ -20,21 +20,21 @@ export const metadata: Metadata = {
 
 const teamRules = [
   {
-    badge: '5-7',
+    badge: '6+',
     title: 'Five starters',
-    description: 'Build five starter slots and add up to two substitutes.',
+    description: 'At least six players per team. Choose five starters; the remaining players are substitutes.',
     tone: 'neutral',
   },
   {
     badge: 'T1',
     title: 'Maximum one T1',
-    description: 'The cap covers both starters and substitutes.',
+    description: 'The cap applies to the five starters.',
     tone: 't1',
   },
   {
     badge: 'T2',
     title: 'Maximum two T2',
-    description: 'T3 and T4 have no roster cap.',
+    description: 'At most two T2 starters. T3 and T4 have no tier limit.',
     tone: 't2',
   },
 ] as const;

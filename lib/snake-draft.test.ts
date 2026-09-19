@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { draftTeamSizes } from "./draft-setup";
 
 import {
   nextDraftCursorAfterPick,
@@ -13,6 +14,7 @@ function teams(count: number): DraftTeamSnapshot[] {
   return Array.from({ length: count }, (_, index) => ({
     teamId: String.fromCharCode(65 + index),
     memberCount: 1,
+    targetMemberCount: 6,
     tierCounts: { T1: 0, T2: 0, T3: 0, T4: 0 },
   }));
 }
@@ -43,7 +45,7 @@ function pick(
   return transition.cursor;
 }
 
-test("the fixed tiers follow the four-team snake order", () => {
+test("tier pools follow the four-team snake order", () => {
   const teamRows = teams(4);
   const poolRows = [...pool("T1", 4), ...pool("T2", 8), ...pool("T3", 1)];
   let cursor: DraftCursor = {
@@ -103,7 +105,7 @@ test("an exhausted tier skips the rest of its current snake round", () => {
 
 test("a full team is skipped while another team remains eligible", () => {
   const teamRows = teams(3);
-  teamRows[1].memberCount = 5;
+  teamRows[1].memberCount = 6;
   const poolRows = pool("T3", 2);
   const cursor: DraftCursor = {
     tier: "T3",
@@ -132,4 +134,35 @@ test("normalization marks the draft complete after T4 is exhausted", () => {
   const transition = normalizeDraftCursor(cursor, teamRows, []);
 
   assert.equal(transition.completed, true);
+});
+
+test("balanced drafts allocate everyone, including extra high-tier substitutes", () => {
+  for (const playerCount of [6, 11, 12, 13, 16, 17, 18, 29, 30, 61]) {
+    for (const allHighTier of [false, true]) {
+      const sizes = draftTeamSizes(playerCount);
+      const teamRows = teams(sizes.length).map((team, index) => ({
+        ...team, targetMemberCount: sizes[index],
+      }));
+      const poolRows = Array.from({ length: playerCount - sizes.length }, (_, index) => ({
+        registrationId: `player-${index}`,
+        tier: allHighTier ? "T1" as const : (["T1", "T2", "T3", "T4"] as const)[index % 4],
+        available: true,
+      }));
+      let transition = normalizeDraftCursor({ tier: "T1", tierRound: 1, round: 1, teamIndex: 0, direction: "forward" }, teamRows, poolRows);
+      let picks = 0;
+      while (!transition.completed) {
+        assert.ok(picks++ < playerCount, "draft must terminate");
+        const { cursor } = transition;
+        const team = teamRows[cursor.teamIndex];
+        const player = poolRows.find((player) => player.available && player.tier === cursor.tier);
+        assert.ok(player);
+        player.available = false;
+        team.memberCount++;
+        team.tierCounts[player.tier]++;
+        transition = nextDraftCursorAfterPick(cursor, teamRows, poolRows);
+      }
+      assert.equal(poolRows.filter((player) => player.available).length, 0);
+      assert.deepEqual(teamRows.map((team) => team.memberCount), sizes);
+    }
+  }
 });

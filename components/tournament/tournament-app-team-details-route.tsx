@@ -16,7 +16,7 @@ import type {
   ReactNode,
 } from 'react';
 import { useActionState } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   AlertTriangle,
@@ -277,7 +277,7 @@ function TeamDetailsView({
               <div className='mt-4 grid grid-cols-3 gap-4'>
                 <div>
                   <p className='m-0 font-display text-2xl font-bold'>
-                    {team.members.length}/7
+                    {team.members.length}
                   </p>
                   <p className='mt-1 mb-0 text-xs text-muted-foreground'>
                     Members
@@ -293,7 +293,7 @@ function TeamDetailsView({
                 </div>
                 <div>
                   <p className='m-0 font-display text-2xl font-bold'>
-                    {substitutes.length}/2
+                    {substitutes.length}
                   </p>
                   <p className='mt-1 mb-0 text-xs text-muted-foreground'>
                     Substitutes
@@ -363,7 +363,7 @@ function TeamDetailsView({
             </h2>
           </div>
           <div className='grid gap-3 tablet:grid-cols-2'>
-            {[0, 1].map((index) => {
+            {Array.from({ length: Math.max(1, substitutes.length) }, (_, index) => {
               const member = substitutes[index];
               return member ? (
                 <Link

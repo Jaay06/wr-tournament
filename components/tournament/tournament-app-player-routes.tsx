@@ -26,3 +26,19 @@ export function TournamentPlayerDetailsRoute(props: TournamentAppProps) {
     </TournamentAppRouteFrame>
   );
 }
+
+export function TournamentAdminPlayersRoute(props: TournamentAppProps) {
+  return (
+    <TournamentAppRouteFrame {...props}>
+      <PlayerDirectoryView organizer players={props.players} />
+    </TournamentAppRouteFrame>
+  );
+}
+
+export function TournamentAdminPlayerDetailsRoute(props: TournamentAppProps) {
+  return (
+    <TournamentAppRouteFrame {...props}>
+      <PlayerDetailsView organizer playerProfile={props.playerProfile} />
+    </TournamentAppRouteFrame>
+  );
+}

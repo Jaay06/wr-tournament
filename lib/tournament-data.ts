@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db";
+import { getTeamDraftStatus } from "@/lib/draft-data";
 import {
   announcements,
   notifications,
@@ -212,6 +213,7 @@ export async function getTeamDetails(
     .orderBy(asc(teamMembers.joinedAt));
 
   return {
+    draftStatus: await getTeamDraftStatus(db, team.id),
     id: team.id,
     name: team.name,
     status: team.status,

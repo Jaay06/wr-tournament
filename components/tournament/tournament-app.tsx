@@ -11,6 +11,8 @@ import { TournamentDashboardRoute } from './tournament-app-dashboard-route';
 import { TournamentInviteRoute } from './tournament-app-invite-view';
 import { TournamentAccountRoute } from './tournament-app-account-route';
 import {
+  TournamentAdminPlayerDetailsRoute,
+  TournamentAdminPlayersRoute,
   TournamentPlayerDetailsRoute,
   TournamentPlayersRoute,
 } from './tournament-app-player-routes';
@@ -54,6 +56,10 @@ export function TournamentApp(props: TournamentAppProps) {
       return <TournamentTierReviewRoute {...props} />;
     case 'admin-teams':
       return <TournamentAdminTeamsRoute {...props} />;
+    case 'admin-players':
+      return <TournamentAdminPlayersRoute {...props} />;
+    case 'admin-player-details':
+      return <TournamentAdminPlayerDetailsRoute {...props} />;
     case 'announcements':
       return <TournamentAnnouncementsRoute {...props} />;
     case 'admin-announcements':

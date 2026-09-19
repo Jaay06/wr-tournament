@@ -1,9 +1,14 @@
+import { MIN_DRAFT_TEAM_SIZE } from "./draft-setup";
+
 import type {
   TournamentMemberData,
   TournamentParticipantOption,
   TournamentRole,
   TournamentTier,
 } from "./tournament-types";
+
+// With floor(playerCount / 6) teams, the largest possible roster has 11 players.
+export const MAX_TEAM_MEMBERS = 2 * MIN_DRAFT_TEAM_SIZE - 1;
 
 export const starterRoles = [
   "Baron",
@@ -99,10 +104,6 @@ export function arrangeLineupAssignments(
     destination = { lineupPosition: "starter", starterRole: target.role };
   } else {
     if (source.lineupPosition === "substitute") return assignments;
-    const substituteCount = assignments.filter(
-      (assignment) => assignment.lineupPosition === "substitute",
-    ).length;
-    if (substituteCount >= 2) return assignments;
     destination = { lineupPosition: "substitute", starterRole: null };
   }
 
@@ -174,9 +175,6 @@ export function validateRoster(
   const blockingIssues: string[] = [];
   const warnings: string[] = [];
   const starters = members.filter((member) => member.lineupPosition === "starter");
-  const substitutes = members.filter(
-    (member) => member.lineupPosition === "substitute",
-  );
   const tierCounts: Record<TournamentTier, number> = {
     T1: 0,
     T2: 0,
@@ -184,8 +182,11 @@ export function validateRoster(
     T4: 0,
   };
 
-  if (members.length > 7) {
-    blockingIssues.push("A team can have no more than seven members.");
+  if (members.length > MAX_TEAM_MEMBERS) {
+    blockingIssues.push(`A team can have no more than ${MAX_TEAM_MEMBERS} members.`);
+  }
+  if (members.length < MIN_DRAFT_TEAM_SIZE) {
+    blockingIssues.push(`A team needs at least ${MIN_DRAFT_TEAM_SIZE} players, including the captain.`);
   }
 
   if (starters.length !== 5) {
@@ -194,10 +195,6 @@ export function validateRoster(
         ? `Add ${5 - starters.length} more starter${5 - starters.length === 1 ? "" : "s"}.`
         : "A team can have exactly five starters.",
     );
-  }
-
-  if (substitutes.length > 2) {
-    blockingIssues.push("A team can have no more than two substitutes.");
   }
 
   const assignedRoles = new Set<TournamentRole>();
@@ -239,15 +236,20 @@ export function validateRoster(
     tierCounts[member.approvedTier] += 1;
   }
 
-  if (tierCounts.T1 > 1) {
+  const starterTierCounts = { T1: 0, T2: 0, T3: 0, T4: 0 };
+  for (const member of starters) {
+    if (member.approvedTier) starterTierCounts[member.approvedTier] += 1;
+  }
+
+  if (starterTierCounts.T1 > 1) {
     blockingIssues.push(
-      `This roster has ${tierCounts.T1} T1 players; the maximum is one.`,
+      `The starting lineup has ${starterTierCounts.T1} T1 players; the maximum is one.`,
     );
   }
 
-  if (tierCounts.T2 > 2) {
+  if (starterTierCounts.T2 > 2) {
     blockingIssues.push(
-      `This roster has ${tierCounts.T2} T2 players; the maximum is two.`,
+      `The starting lineup has ${starterTierCounts.T2} T2 players; the maximum is two.`,
     );
   }
 

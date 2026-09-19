@@ -78,6 +78,9 @@ function getActiveKey(view: TournamentView) {
   }
   if (view === 'submitted') return 'builder';
   if (view === 'admin-teams') return 'teams-admin';
+  if (view === 'admin-players' || view === 'admin-player-details') {
+    return 'players-admin';
+  }
   if (view === 'admin-announcements') return 'announcements';
   if (view === 'admin-settings') return 'settings';
   if (view === 'admin-draft') return 'admin-draft';
@@ -140,6 +143,12 @@ export function TournamentAppShell({
       icon: UserRoundCheck,
     },
     { key: 'teams-admin', label: 'Teams', href: '/admin/teams', icon: Users },
+    {
+      key: 'players-admin',
+      label: 'Players',
+      href: '/admin/players',
+      icon: Search,
+    },
     {
       key: 'announcements',
       label: 'Announcements',
