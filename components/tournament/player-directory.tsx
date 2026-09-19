@@ -360,10 +360,12 @@ export function PlayerDirectoryView({
 }
 
 export function PlayerDetailsView({
+  adminControls,
   currentRegistrationId,
   organizer = false,
   playerProfile,
 }: {
+  adminControls?: ReactNode;
   currentRegistrationId?: string;
   organizer?: boolean;
   playerProfile?: TournamentPlayerProfileData | null;
@@ -488,6 +490,7 @@ export function PlayerDetailsView({
             </div>
           </div>
         </Card>
+        {adminControls}
       </div>
     </main>
   );

@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { redirect } from "next/navigation";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/db";
 import {
   announcements,
   notifications,
+  passwordResetTokens,
   playerRegistrations,
   teamInvites,
   teamJoinRequests,
@@ -83,6 +85,7 @@ function revalidateTournamentPages() {
   revalidatePath("/admin/settings");
   revalidatePath("/admin/announcements");
   revalidatePath("/admin/players");
+  revalidatePath("/admin/players/[registrationId]", "page");
   revalidatePath("/tournament/announcements");
   revalidatePath("/admin/teams");
   revalidatePath("/invite");
@@ -91,6 +94,7 @@ function revalidateTournamentPages() {
   revalidatePath("/tournament/team");
   revalidatePath("/tournament/teams");
   revalidatePath("/tournament/players");
+  revalidatePath("/tournament/players/[registrationId]", "page");
 }
 
 type OrganizerAccess = {
@@ -500,6 +504,238 @@ export async function deleteTeamAsOrganizer(
 
   revalidateTournamentPages();
   return { success: "Team deleted." };
+}
+
+export async function softDeletePlayerAsOrganizer(
+  _previousState: TeamAdminState,
+  formData: FormData,
+): Promise<TeamAdminState> {
+  void _previousState;
+  const accessResult = await getOrganizerAccess();
+  if ("error" in accessResult) return accessResult;
+  const { access } = accessResult;
+
+  const registrationId = teamIdSchema.safeParse(
+    formString(formData, "registrationId"),
+  );
+  if (!registrationId.success) {
+    return { code: "VALIDATION_ERROR", error: "That player could not be found." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await assertDraftRegistrationUnlocked(tx, registrationId.data);
+
+      const [player] = await tx
+        .select({
+          displayName: users.displayName,
+          registrationId: playerRegistrations.id,
+          role: users.role,
+          userId: users.id,
+        })
+        .from(playerRegistrations)
+        .innerJoin(
+          tournamentParticipants,
+          eq(playerRegistrations.participantId, tournamentParticipants.id),
+        )
+        .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+        .where(
+          and(
+            eq(playerRegistrations.id, registrationId.data),
+            isNull(users.deletedAt),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (!player) {
+        throw new AdminTeamActionError("NOT_FOUND", "That player no longer exists.");
+      }
+      if (player.role === "organizer") {
+        throw new AdminTeamActionError(
+          "FORBIDDEN",
+          "The organizer account cannot be deleted from player controls.",
+        );
+      }
+
+      const [membership] = await tx
+        .select({
+          isCaptain: teamMembers.isCaptain,
+          memberId: teamMembers.id,
+          teamId: teams.id,
+          teamName: teams.name,
+          teamStatus: teams.status,
+        })
+        .from(teamMembers)
+        .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+        .where(eq(teamMembers.registrationId, player.registrationId))
+        .limit(1);
+
+      const now = new Date();
+      await tx
+        .update(passwordResetTokens)
+        .set({ usedAt: now })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, player.userId),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        );
+      await tx
+        .update(teamInvites)
+        .set({ status: "revoked", respondedAt: now })
+        .where(
+          and(
+            eq(teamInvites.status, "pending"),
+            or(
+              eq(teamInvites.invitedRegistrationId, player.registrationId),
+              eq(teamInvites.invitedByRegistrationId, player.registrationId),
+            ),
+          ),
+        );
+      await tx
+        .update(teamJoinRequests)
+        .set({ status: "revoked", respondedAt: now })
+        .where(
+          and(
+            eq(teamJoinRequests.registrationId, player.registrationId),
+            eq(teamJoinRequests.status, "pending"),
+          ),
+        );
+
+      if (membership?.isCaptain) {
+        const teammates = await tx
+          .select({ userId: tournamentParticipants.userId })
+          .from(teamMembers)
+          .innerJoin(
+            playerRegistrations,
+            eq(teamMembers.registrationId, playerRegistrations.id),
+          )
+          .innerJoin(
+            tournamentParticipants,
+            eq(playerRegistrations.participantId, tournamentParticipants.id),
+          )
+          .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+          .where(
+            and(
+              eq(teamMembers.teamId, membership.teamId),
+              isNull(users.deletedAt),
+            ),
+          );
+        const recipients = [
+          ...new Set(
+            teammates
+              .map(({ userId }) => userId)
+              .filter(
+                (userId) =>
+                  userId !== player.userId && userId !== access.userId,
+              ),
+          ),
+        ];
+        if (recipients.length > 0) {
+          await tx.insert(notifications).values(
+            recipients.map((userId) => ({
+              userId,
+              type: "team_deleted",
+              message: `${membership.teamName} was deleted after ${player.displayName}'s account was removed.`,
+            })),
+          );
+        }
+        await tx.delete(teams).where(eq(teams.id, membership.teamId));
+      } else if (membership) {
+        const [captain] = await tx
+          .select({ userId: tournamentParticipants.userId })
+          .from(teamMembers)
+          .innerJoin(
+            playerRegistrations,
+            eq(teamMembers.registrationId, playerRegistrations.id),
+          )
+          .innerJoin(
+            tournamentParticipants,
+            eq(playerRegistrations.participantId, tournamentParticipants.id),
+          )
+          .where(
+            and(
+              eq(teamMembers.teamId, membership.teamId),
+              eq(teamMembers.isCaptain, true),
+            ),
+          )
+          .limit(1);
+
+        await tx.delete(teamMembers).where(eq(teamMembers.id, membership.memberId));
+
+        const rows = await tx
+          .select({
+            member: teamMembers,
+            registration: playerRegistrations,
+            user: users,
+          })
+          .from(teamMembers)
+          .innerJoin(
+            playerRegistrations,
+            eq(teamMembers.registrationId, playerRegistrations.id),
+          )
+          .innerJoin(
+            tournamentParticipants,
+            eq(playerRegistrations.participantId, tournamentParticipants.id),
+          )
+          .innerJoin(users, eq(tournamentParticipants.userId, users.id))
+          .where(eq(teamMembers.teamId, membership.teamId));
+        const validation = validateRoster(
+          rows.map(({ member, registration, user }) =>
+            validationMember(member, registration, user),
+          ),
+        );
+        const reopened = shouldReopenSubmittedTeam(
+          membership.teamStatus,
+          validation,
+        );
+        await tx
+          .update(teams)
+          .set(
+            reopened
+              ? { status: "draft", submittedAt: null, updatedAt: now }
+              : { updatedAt: now },
+          )
+          .where(eq(teams.id, membership.teamId));
+        if (
+          captain &&
+          captain.userId !== player.userId &&
+          captain.userId !== access.userId
+        ) {
+          await tx.insert(notifications).values({
+            userId: captain.userId,
+            type: "team_repaired",
+            message: reopened
+              ? `${access.displayName} removed ${player.displayName}'s account from ${membership.teamName} and returned the team to draft.`
+              : `${access.displayName} removed ${player.displayName}'s account from ${membership.teamName}.`,
+          });
+        }
+      }
+
+      const [deleted] = await tx
+        .update(users)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(and(eq(users.id, player.userId), isNull(users.deletedAt)))
+        .returning({ id: users.id });
+      if (!deleted) {
+        throw new AdminTeamActionError(
+          "CONFLICT",
+          "The player changed before the account could be deleted. Try again.",
+        );
+      }
+    });
+  } catch (error) {
+    if (error instanceof DraftActionError) {
+      return { code: error.code, error: error.message };
+    }
+    if (error instanceof AdminTeamActionError) {
+      return { code: error.code, error: error.message };
+    }
+    throw error;
+  }
+
+  revalidateTournamentPages();
+  redirect("/admin/players");
 }
 
 export async function organizerUpdateTeamLineup(
