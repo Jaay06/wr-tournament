@@ -66,7 +66,11 @@ function revalidateTournamentPages() {
   revalidatePath("/tournament/profile");
   revalidatePath("/tournament/team");
   revalidatePath("/tournament/teams");
+  revalidatePath("/tournament/players");
+  revalidatePath("/tournament/players/[registrationId]", "page");
   revalidatePath("/admin");
+  revalidatePath("/admin/players");
+  revalidatePath("/admin/players/[registrationId]", "page");
   revalidatePath("/admin/tier-review");
 }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { PlayerDetailsView, PlayerDirectoryView } from '@/components/tournament/player-directory';
+import { AdminPlayerControls } from '@/components/tournament/admin-player-controls';
 
 import { TournamentAppRouteFrame } from './tournament-app-route-frame';
 import type { TournamentAppProps } from './tournament-app-shared';
@@ -38,7 +39,15 @@ export function TournamentAdminPlayersRoute(props: TournamentAppProps) {
 export function TournamentAdminPlayerDetailsRoute(props: TournamentAppProps) {
   return (
     <TournamentAppRouteFrame {...props}>
-      <PlayerDetailsView organizer playerProfile={props.playerProfile} />
+      <PlayerDetailsView
+        adminControls={
+          props.playerProfile ? (
+            <AdminPlayerControls player={props.playerProfile} />
+          ) : undefined
+        }
+        organizer
+        playerProfile={props.playerProfile}
+      />
     </TournamentAppRouteFrame>
   );
 }
