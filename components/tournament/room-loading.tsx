@@ -10,6 +10,7 @@ type RoomLoadingProps = {
 
 const participantNavigation = [
   'Overview',
+  'Fixtures',
   'My team',
   'Browse teams',
   'Announcements',
@@ -17,6 +18,7 @@ const participantNavigation = [
 
 const organizerNavigation = [
   'Overview',
+  'Fixtures',
   'Tier review',
   'Teams',
   'Players',

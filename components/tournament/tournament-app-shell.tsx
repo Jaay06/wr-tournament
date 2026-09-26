@@ -10,6 +10,7 @@ import {
   Settings,
   ShieldCheck,
   Swords,
+  Trophy,
   UserRoundCheck,
   Users,
   UserGroup,
@@ -108,6 +109,7 @@ export function TournamentAppShell({
       href: '/tournament',
       icon: ShieldCheck,
     },
+    { key: 'fixtures', label: 'Fixtures', href: '/tournament/fixtures', icon: Trophy },
     { key: 'builder', label: 'My team', href: '/tournament/team', icon: Users },
     {
       key: 'teams',
@@ -136,6 +138,7 @@ export function TournamentAppShell({
   ];
   const organizerItems: NavigationItem[] = [
     { key: 'admin', label: 'Overview', href: '/admin', icon: ShieldCheck },
+    { key: 'admin-fixtures', label: 'Fixtures', href: '/admin/fixtures', icon: Trophy },
     {
       key: 'tier-review',
       label: 'Tier review',
