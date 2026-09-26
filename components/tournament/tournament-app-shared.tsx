@@ -47,6 +47,7 @@ import type {
   DraftSetupPlayer,
 } from '@/lib/tournament-types';
 import type { LineupDropTarget } from '@/lib/tournament-rules';
+import type { FixtureBoard, FixtureTeamOption } from '@/lib/fixture-types';
 
 export type TournamentView =
   | 'invite'
@@ -69,7 +70,9 @@ export type TournamentView =
   | 'admin-announcements'
   | 'admin-settings'
   | 'draft'
-  | 'admin-draft';
+  | 'admin-draft'
+  | 'fixtures'
+  | 'admin-fixtures';
 
 export type Tier = 'T1' | 'T2' | 'T3' | 'T4';
 export type Role = 'Baron' | 'Jungle' | 'Mid' | 'Dragon' | 'Support';
@@ -108,6 +111,9 @@ export type TournamentAppProps = {
   settings?: RoomSettings;
   draft?: DraftBoardData | null;
   draftSetupPlayers?: DraftSetupPlayer[];
+  fixtures?: FixtureBoard | null;
+  fixtureTeams?: FixtureTeamOption[];
+  fixturePreview?: boolean;
 };
 
 export type Player = {

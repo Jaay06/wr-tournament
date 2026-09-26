@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -51,6 +52,17 @@ export const draftPickSource = pgEnum("draft_pick_source", [
 export const draftDirection = pgEnum("draft_direction", [
   "forward",
   "reverse",
+]);
+export const fixturePhase = pgEnum("fixture_phase", [
+  "draft",
+  "league",
+  "playoffs",
+  "complete",
+]);
+export const fixtureStage = pgEnum("fixture_stage", [
+  "league",
+  "semifinal",
+  "final",
 ]);
 
 const timestamps = {
@@ -309,6 +321,97 @@ export const passwordResetTokens = pgTable(
   (table) => [
     uniqueIndex("password_reset_tokens_hash_unique").on(table.tokenHash),
     index("password_reset_tokens_user_idx").on(table.userId),
+  ],
+);
+
+/** The singleton fixture competition for the active tournament. */
+export const fixtureCompetitions = pgTable(
+  "fixture_competitions",
+  {
+    id: integer("id").default(1).primaryKey(),
+    version: integer("version").default(1).notNull(),
+    phase: fixturePhase("phase").default("draft").notNull(),
+    playoffOrder: jsonb("playoff_order").$type<string[] | null>(),
+    ...timestamps,
+  },
+  (table) => [
+    check("fixture_competitions_singleton_check", sql`${table.id} = 1`),
+    check("fixture_competitions_version_check", sql`${table.version} > 0`),
+  ],
+);
+
+export const fixtureEntries = pgTable(
+  "fixture_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => fixtureCompetitions.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "restrict" }),
+    seed: integer("seed").notNull(),
+  },
+  (table) => [
+    uniqueIndex("fixture_entries_competition_team_unique").on(
+      table.competitionId,
+      table.teamId,
+    ),
+    uniqueIndex("fixture_entries_competition_seed_unique").on(
+      table.competitionId,
+      table.seed,
+    ),
+    index("fixture_entries_team_idx").on(table.teamId),
+    check("fixture_entries_seed_check", sql`${table.seed} > 0`),
+  ],
+);
+
+export const fixtureMatches = pgTable(
+  "fixture_matches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    competitionId: integer("competition_id")
+      .notNull()
+      .references(() => fixtureCompetitions.id, { onDelete: "cascade" }),
+    stage: fixtureStage("stage").notNull(),
+    round: integer("round").notNull(),
+    position: integer("position").notNull(),
+    homeTeamId: uuid("home_team_id").references(() => teams.id, {
+      onDelete: "restrict",
+    }),
+    awayTeamId: uuid("away_team_id").references(() => teams.id, {
+      onDelete: "restrict",
+    }),
+    homeScore: integer("home_score"),
+    awayScore: integer("away_score"),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("fixture_matches_competition_slot_unique").on(
+      table.competitionId,
+      table.stage,
+      table.round,
+      table.position,
+    ),
+    index("fixture_matches_competition_idx").on(table.competitionId),
+    check("fixture_matches_round_check", sql`${table.round} > 0`),
+    check("fixture_matches_position_check", sql`${table.position} > 0`),
+    check(
+      "fixture_matches_distinct_teams_check",
+      sql`${table.homeTeamId} is null or ${table.awayTeamId} is null or ${table.homeTeamId} <> ${table.awayTeamId}`,
+    ),
+    check(
+      "fixture_matches_scores_pair_check",
+      sql`(${table.homeScore} is null and ${table.awayScore} is null) or (${table.homeScore} is not null and ${table.awayScore} is not null)`,
+    ),
+    check(
+      "fixture_matches_scores_team_check",
+      sql`${table.homeScore} is null or (${table.homeTeamId} is not null and ${table.awayTeamId} is not null)`,
+    ),
+    check(
+      "fixture_matches_bo3_score_check",
+      sql`${table.homeScore} is null or ((${table.homeScore} = 2 and ${table.awayScore} in (0, 1)) or (${table.awayScore} = 2 and ${table.homeScore} in (0, 1)))`,
+    ),
   ],
 );
 
