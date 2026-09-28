@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { RoleIcon } from '@/components/tournament/role-icon';
+import { ExportLinks } from '@/components/tournament/export-links';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -258,15 +259,18 @@ export function PlayerDirectoryView({
               Check Riot IDs, current ranks, approved tiers, role preferences, and team membership.
             </p>
           </div>
-          <Link
-            className={cn(
-              buttonVariants({ size: 'lg', variant: 'secondary' }),
-              'min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold phone:w-auto',
-            )}
-            href={teamsHref}
-          >
-            <Swords size={16} /> Browse teams
-          </Link>
+          <div className='flex flex-wrap items-center gap-2'>
+            {organizer ? <ExportLinks kind='players' /> : null}
+            <Link
+              className={cn(
+                buttonVariants({ size: 'lg', variant: 'secondary' }),
+                'min-h-11 w-full rounded-xl px-4 py-2.5 text-sm font-bold phone:w-auto',
+              )}
+              href={teamsHref}
+            >
+              <Swords size={16} /> Browse teams
+            </Link>
+          </div>
         </div>
 
         <Card className='rounded-card border-border bg-card p-4'>
