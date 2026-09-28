@@ -1,6 +1,7 @@
 "use client";
 
 import { OrganizerLineup } from "@/components/tournament/organizer-lineup";
+import { ExportLinks } from "@/components/tournament/export-links";
 
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -523,9 +524,12 @@ export function OrganizerTeamManager({
               Review live team membership, repair lineup slots, and unlock submissions when a registration change makes a roster invalid.
             </p>
           </div>
-          <span className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground">
-            {teams.length} {teams.length === 1 ? "TEAM" : "TEAMS"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportLinks kind="teams" />
+            <span className="rounded-lg border border-border bg-card px-3 py-1.5 font-mono text-2xs font-semibold tracking-[0.1em] text-muted-foreground">
+              {teams.length} {teams.length === 1 ? "TEAM" : "TEAMS"}
+            </span>
+          </div>
         </div>
 
         {teams.length === 0 ? (
