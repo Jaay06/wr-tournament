@@ -118,6 +118,11 @@ if (discordEnabled) {
     Discord({
       clientId: discordClientId as string,
       clientSecret: discordClientSecret as string,
+      // Discord now sends `iss=https://discord.com` on the OAuth callback
+      // (RFC 9207). Without an issuer configured, Auth.js falls back to
+      // "https://authjs.dev" and rejects every callback with
+      // OAUTH_INVALID_RESPONSE, surfacing as `error=Configuration`.
+      issuer: 'https://discord.com',
     }),
   );
 }
