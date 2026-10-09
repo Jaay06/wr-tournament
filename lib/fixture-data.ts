@@ -188,20 +188,35 @@ async function loadFixtureRows(executor: FixtureExecutor, competitionId: number)
 export async function getFixtureBoard(
   isOrganizer = false,
 ): Promise<FixtureBoard | null> {
-  return db.transaction(async (tx) => {
-    const competition = await getCompetition(tx);
-    if (!competition || (competition.phase === "draft" && !isOrganizer)) return null;
-    const { entries, matches } = await loadFixtureRows(tx, competition.id);
-    if (entries.length === 0) return null;
-    return {
-      version: competition.version,
-      phase: competition.phase,
-      entries,
-      matches,
-      standings: calculateStandings(entries, matches),
-      playoffOrder: competition.playoffOrder,
-    };
-  }, { isolationLevel: "repeatable read", accessMode: "read only" });
+  try {
+    return await db.transaction(async (tx) => {
+      const competition = await getCompetition(tx);
+      if (!competition || (competition.phase === "draft" && !isOrganizer)) return null;
+      const { entries, matches } = await loadFixtureRows(tx, competition.id);
+      if (entries.length === 0) return null;
+      return {
+        version: competition.version,
+        phase: competition.phase,
+        entries,
+        matches,
+        standings: calculateStandings(entries, matches),
+        playoffOrder: competition.playoffOrder,
+      };
+    }, { isolationLevel: "repeatable read", accessMode: "read only" });
+  } catch (error) {
+    // A database that has not run the fixtures migration yet has no
+    // fixture_* tables (Postgres 42P01). Treat the schedule as not
+    // prepared so the page renders its empty state instead of throwing.
+    if (isMissingFixtureTables(error)) return null;
+    throw error;
+  }
+}
+
+function isMissingFixtureTables(error: unknown): boolean {
+  const cause = (error as { cause?: { code?: string } })?.cause;
+  if (cause?.code === "42P01") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('relation "fixture_') && message.includes("does not exist");
 }
 
 /** Return all teams that an organizer can include in the schedule. */
